@@ -1,0 +1,20 @@
+// Démarre la connexion Google (OAuth). L'utilisateur doit être connecté au site.
+
+import { randomBytes } from "node:crypto";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { googleAuthUrl } from "@/lib/google";
+import { supabaseServer } from "@/lib/supabase/server";
+
+export async function GET() {
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.redirect(new URL("/connexion", process.env.APP_URL ?? "http://localhost:3000"));
+
+  const state = randomBytes(16).toString("hex");
+  const cookieStore = await cookies();
+  cookieStore.set("google_oauth_state", state, { httpOnly: true, maxAge: 600, path: "/" });
+  return NextResponse.redirect(googleAuthUrl(state));
+}

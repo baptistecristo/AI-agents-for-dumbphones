@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #faf8f3;
+  --ink: #1c2333;
+  --bleu: #22357e;
+  --bleu-fonce: #182456;
+  --jaune: #f5c518;
+  --bulle: #e8ecf7;
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-bleu: var(--bleu);
+  --color-bleu-fonce: var(--bleu-fonce);
+  --color-jaune: var(--jaune);
+  --color-bulle: var(--bulle);
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Landing : déroulé de l'appel, ligne par ligne */
+@keyframes line-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.call-line {
+  opacity: 0;
+  animation: line-in 0.5s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .call-line {
+    opacity: 1;
+    animation: none;
+  }
+}
