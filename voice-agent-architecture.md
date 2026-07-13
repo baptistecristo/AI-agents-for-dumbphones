@@ -244,4 +244,4 @@ user: "réserve chez X pour 2 à 20h"
 
 ---
 
-*Companion deliverable: `prospects.csv` — real businesses/communities/multipliers in the dumbphone & digital-detox space to gauge willingness-to-pay (see notes in chat on sourcing + GDPR).*
+*This is the original architecture spec. For where the project is headed (open-source, young-dumbphone mission, bilingual EN/FR), see [`open-source-launch-plan.md`](open-source-launch-plan.md).*

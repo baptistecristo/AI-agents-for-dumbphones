@@ -48,3 +48,14 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# ---- Private: eldercare-era sales/PII notes + outreach kits (never publish) ----
+# Real personal data (GDPR) and internal outreach material. Kept outside git,
+# in ../_private_ai_agent/. Listed here so they can never be re-added by accident.
+prospects.csv
+collaborators.csv
+painpoints.md
+groups-week1.md
+start-here.md
+recruit-collaborators.md
+co-builder-outreach.md

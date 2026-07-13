@@ -1,121 +1,140 @@
-# Plateforme d'agent vocal pour téléphones simples
+# Call an AI from your dumbphone
 
-Un assistant qu'on appelle depuis un **téléphone à touches** (dumbphone) : il gère
-l'agenda, les rappels, la météo, les itinéraires par SMS, retrouve les contacts —
-et **passe les appels pénibles à la place de la personne** (médecin, taxi,
-restaurant), avec compte-rendu par SMS. Toute l'intelligence est côté serveur ;
-le téléphone reste un simple terminal vocal.
+**Ditch the smartphone without losing the useful stuff.** Instead of an app, you
+**call a number and ask** — weather, directions, a reminder, your calendar, a quick
+text to someone. You keep the utility, you lose the doomscroll.
 
-Spécification d'origine : [`voice-agent-architecture.md`](voice-agent-architecture.md) ·
-Guide discovery : [`start-here.md`](start-here.md) · Prospects : [`prospects.csv`](prospects.csv)
+Open-source and **self-hostable end-to-end**: a phone number wired to a
+Pipecat pipeline (Silero VAD → faster-whisper → a local/EU LLM → Piper TTS), with all
+the skills living behind one clean API. No app store, no account on the phone — the
+handset stays a dumb terminal, the intelligence is on a server you control.
 
-## Ce qui est implémenté (Phase 0+ du doc d'archi)
+> **Bilingue EN/FR** — appelez un numéro depuis un téléphone à clapet et demandez ce
+> dont vous avez besoin (météo, itinéraire, rappel). Vous gardez l'utile, vous perdez
+> l'addiction. Auto-hébergeable, open-source, et la communauté ajoute les compétences.
 
-| Plan | Choix | Où |
+---
+
+## Status — early, working in code, seeking founding co-builders
+
+This is **not** a toy prototype. The full call-in flow works **end-to-end in code**:
+self-hosted voice pipeline, inbound + outbound calling, skills, auth, an EU database
+with encryption and a consent registry. What's *not* done yet is exactly where the fun
+open problems are — and where you come in:
+
+- 🎙️ **Bilingual EN/FR is half-built.** The code routes language per-call, but STT is
+  pinned to French and there's only a French Piper voice. Adding an **English voice +
+  per-caller language selection** is one of the two best first contributions.
+- 🧩 **Skills are a plugin surface.** Adding a **new skill** (a thing the agent can do on
+  a call) is a small, self-contained PR. This is the other best on-ramp.
+- 📞 **A live public call-in number** needs deployment + a phone number (a little money,
+  the maintainer's accounts) — held until the repo is contributor-ready.
+
+If you build voice AI, self-host things, or just want people to be able to leave the
+smartphone without going off-grid — **we'd love a few founding co-builders.** See
+[CONTRIBUTING.md](CONTRIBUTING.md) and the good-first-issues.
+
+---
+
+## How it works
+
+```
+Dumbphone ──call──▶ Phone number (Twilio / Telnyx trunk)
+                          │  media over WebSocket
+                          ▼
+        Self-hosted runtime (runtime/, Pipecat)
+        Silero VAD → faster-whisper (STT) → LLM → Piper (TTS)
+                          │  every tool-call is forwarded, never executed here
+                          ▼
+        Next.js API (web/)  ──▶  skills  ──▶  Open-Meteo · OpenRouteService
+        /api/tools/execute                     Google Calendar/Contacts · Twilio SMS
+                          │
+                          ▼
+        Supabase Postgres (EU) — encrypted tokens, consent registry, RLS
+```
+
+**One brain, swappable body.** All business logic — skills, prompts, PINs, consent —
+lives in `web/src/lib/` and is served over an API. The voice runtime is interchangeable:
+[Pipecat](https://github.com/pipecat-ai/pipecat) self-hosted (`runtime/`, the default) or
+[Vapi](https://vapi.ai) managed (`RUNTIME=vapi`) if you want the lowest latency without
+running infra. [LiveKit Agents](https://github.com/livekit/agents) is another self-host
+option. Adding a skill once makes it work on either runtime.
+
+## What's implemented
+
+| Layer | Choice | Where |
 |---|---|---|
-| Runtime vocal | **Auto-hébergé** (Pipecat + faster-whisper + Piper + Ollama/Mistral, option B du doc) — Vapi reste dispo en secours (`RUNTIME=vapi`) | `runtime/` + `web/src/lib/vapi.ts` |
-| Téléphonie | Trunk **Twilio** (ou Telnyx) — l'incompressible : un numéro ne se self-host pas | `runtime/server.py` |
+| Voice runtime | **Self-hosted** Pipecat + faster-whisper + Piper + Ollama/Mistral/Anthropic. Vapi available as a managed fallback (`RUNTIME=vapi`) | `runtime/` + `web/src/lib/vapi.ts` |
+| Telephony | **Twilio** (or Telnyx) trunk — a phone number is the one thing you can't self-host | `runtime/server.py` |
 | SMS + OTP | **Twilio** (Messages + Verify) | `web/src/lib/twilio.ts` |
-| Agent entrant | Prompt FR chaleureux/lent, confirmation avant action, PIN parlé | `web/src/lib/agents/inbound.ts` |
-| Appels sortants | **Moteur généralisé** : presets Docteur / Taxi / Restaurant / générique, DTMF, répondeur, retries, compte-rendu SMS | `web/src/lib/agents/outbound.ts` + `api/cron/outbound` |
-| Skills | agenda, rappels (+ « ai-je déjà… ? »), météo (Open-Meteo, gratuit), navigation-par-SMS (OpenRouteService), contacts, SMS dicté, mémoire, PIN | `web/src/lib/skills/` |
-| Commandes SMS | `METEO`, `AGENDA`, `RAPPEL 18h30 …`, `RAPPELS`, `FAIT`, `DEJA`, `ROUTE`, `AIDE`, `STOP/START` — inspiré de [Sift](https://github.com/edleeman17/sift) | `web/src/lib/sms-commands.ts` |
-| Données (EU) | Supabase Postgres : profils, téléphones, tokens OAuth **chiffrés AES-256-GCM**, registre de consentements append-only, rappels, mémoire, journaux d'appels/SMS, file d'appels sortants — RLS partout | `supabase/migrations/0001_init.sql` |
-| Web/app | Next.js 16 : landing FR, connexion par lien magique, onboarding 4 étapes (OTP téléphone → Google OAuth → consentements → PIN), tableau de bord famille | `web/src/app/` |
-| Sécurité | Caller-ID = identification ; **PIN parlé** pour les actions sensibles (le caller-ID se spoofe) ; confirmation orale en 2 temps ; contenu externe = données, jamais instructions | partout |
+| Inbound agent | System prompt + greeting, spoken-PIN gate before sensitive actions, two-step voice confirmation | `web/src/lib/agents/inbound.ts` |
+| Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
+| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), contacts, dictated SMS, memory, PIN | `web/src/lib/skills/` |
+| SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `DONE`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift) | `web/src/lib/sms-commands.ts` |
+| Data (EU) | Supabase Postgres: profiles, phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/0001_init.sql` |
+| Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent → PIN), dashboard | `web/src/app/` |
 
-Le nom de l'agent est configurable : `AGENT_NAME` (voix) + `NEXT_PUBLIC_BRAND_NAME` (site).
+> **Heads-up on framing:** this project began life aimed at *elderly* dumbphone users and
+> pivoted to *young people voluntarily switching* — the core skills transfer perfectly, but
+> some prompts and copy still carry the old tone (French, formal, eldercare). Repurposing
+> the **persona / system prompt** for the new mission is itself a great contribution. See
+> [`open-source-launch-plan.md`](open-source-launch-plan.md) for the full story.
 
-## Architecture (rappel)
+## Two ways to help in an afternoon
 
-```
-Dumbphone ──appel──▶ Numéro (Twilio via Vapi) ──▶ Vapi (STT Deepgram fr / LLM Claude / TTS 11labs)
-                                                     │ tool-calls (webhook)
-                                                     ▼
-                                    Next.js  /api/vapi/webhook ──▶ skills ──▶ Google / Open-Meteo / ORS / Twilio SMS
-                                                     │
-                                                     ▼
-                                        Supabase Postgres (EU)
-   Famille ──▶ site web (landing / onboarding / tableau de bord)
-   Crons (1 min) : rappels SMS · file d'appels sortants
-```
+1. **Add a skill** — a new thing the agent can do on a call (a fact lookup, a timer, a
+   transit query…). It's one small TypeScript function plus a tool schema. Walkthrough in
+   [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skill).
+2. **Add a language / voice** — an English (or other) Piper voice and per-caller language
+   selection, so the agent answers in the caller's language. Walkthrough in
+   [CONTRIBUTING.md](CONTRIBUTING.md#add-a-language-or-voice).
 
-## Mise en route, de zéro à l'appel
+Both ship to a real call-in number once the live demo is up. Tight feedback loop.
 
-### 1. Comptes à créer
-1. **Supabase** — projet en **région EU**. Récupérer URL + anon key + service_role key.
-2. **Twilio** — SID + token. Créer un service **Verify** (OTP). Pour un numéro FR :
-   prévoir le **bundle réglementaire** (justificatif d'adresse, quelques jours).
-3. **Google Cloud** — client OAuth « application web », redirect
-   `{APP_URL}/api/oauth/google/callback`, scopes agenda + contacts (sensitive → app
-   en mode test jusqu'à 100 utilisateurs, vérification Google ensuite).
-4. **OpenRouteService** (openrouteservice.org) — clé gratuite (itinéraires).
-5. *(Seulement si `RUNTIME=vapi`)* **Vapi** (vapi.ai) — clé API + secret webhook +
-   clés fournisseur (ElevenLabs, Deepgram, Anthropic) dans *Provider Keys*.
+## Run it locally
 
-### 2. Base de données
-Dans Supabase → SQL Editor, exécuter `supabase/migrations/0001_init.sql`.
+You can run everything without buying a phone number (test the pipeline over a local
+WebSocket / with ngrok). Full setup, accounts, and the "day the number arrives" checklist
+are in the sections below and in [`runtime/README.md`](runtime/README.md).
 
-### 3. Application
 ```bash
+# Web API + skills
 cd web
-cp .env.example .env.local    # remplir toutes les variables
+cp .env.example .env.local     # fill in the variables
 npm install
-npm run dev                   # http://localhost:3000
+npm run dev                    # http://localhost:3000
+
+# Voice runtime (separate terminal) — see runtime/README.md
+cd runtime
+pip install -r requirements.txt
+cp .env.example .env           # NEXT_API_URL, RUNTIME_API_SECRET, provider keys
+uvicorn server:app --port 8000
 ```
-En dev, exposer les webhooks avec `ngrok http 3000` et mettre l'URL ngrok dans `APP_URL`.
 
-### 4. Déploiement (Vercel, gratuit pour commencer)
-- Importer le repo, racine = `web/`, coller les variables d'env.
-- `vercel.json` programme déjà les 2 crons (rappels + appels sortants, chaque minute).
-- Mettre `APP_URL` = URL de prod.
+Database: run `supabase/migrations/0001_init.sql` in your Supabase SQL editor (choose an
+**EU region**). Weather (Open-Meteo) needs no key; directions use a free OpenRouteService
+key. The default LLM is fully local via Ollama — set `LLM_PROVIDER=mistral|anthropic` for
+higher quality at a few cents per call.
 
-### 5. Démarrer le runtime vocal auto-hébergé
-Voir [`runtime/README.md`](runtime/README.md) : un serveur EU (~10 €/mois),
-`pip install`, Ollama, `uvicorn server:app`. STT/TTS/LLM tournent en local ;
-le runtime appelle l'API Next (`RUNTIME_API_SECRET` partagé).
-*(Alternative managée : `RUNTIME=vapi` + `POST /api/admin/setup-vapi` — voir le code.)*
+## Design principles
 
-### 6. 📞 Le jour où le numéro arrive (dernière étape, 5 minutes)
-1. Acheter le numéro FR chez Twilio (bundle réglementaire déjà validé).
-2. Webhook **Voice** du numéro → `POST https://RUNTIME/twilio/inbound`.
-3. Webhook **Messaging** du numéro → `POST {APP_URL}/api/twilio/sms`.
-4. `TWILIO_FROM_NUMBER` = ce numéro (web/.env + runtime/.env).
-5. Appeler. C'est tout.
+- **Own your stack.** Default path is 100% self-hosted and local (Whisper + Piper +
+  Ollama). Managed providers are opt-in, never required.
+- **EU / privacy-first.** Data in an EU Postgres, OAuth tokens encrypted at rest, an
+  append-only revocable consent registry, RLS everywhere.
+- **The phone stays dumb.** No app, no account on the handset. Caller-ID identifies you; a
+  **spoken PIN** gates sensitive actions (caller-ID can be spoofed); sensitive actions get a
+  two-step voice confirmation.
+- **External content is data, never instructions.** Tool outputs are returned to the model
+  as data, never merged into the instruction channel.
 
-## Parcours utilisateur
-1. Un proche crée le compte sur le site (lien magique e-mail).
-2. Onboarding : identité + numéro du dumbphone (OTP SMS) → connexion Google
-   (optionnelle) → consentements (registre horodaté, révocable) → code PIN à 4 chiffres.
-3. La personne appelle le numéro : l'agent la reconnaît (caller-ID), la salue par
-   son prénom, parle lentement (débit 0.85).
-4. Actions sensibles (SMS dicté, appel sortant) : PIN parlé + confirmation orale.
-5. Missions sortantes : l'agent appelle le cabinet/taxi/restaurant (DTMF, répondeur,
-   3 tentatives max), puis SMS de compte-rendu. Pour le taxi, il demande que le
-   chauffeur **rappelle directement le client** à son arrivée (même téléphone).
+## Built on / inspired by
 
-## Coûts (petit budget, §10 du doc)
-- Runtime self-host : serveur EU ~10 €/mois **fixes**, STT/TTS/LLM locaux = 0 €/minute.
-- Météo : Open-Meteo, **0 €, sans clé**. Itinéraires : ORS gratuit (2000/j).
-- Vercel + Supabase : offres gratuites. Il ne reste que les minutes opérateur (~1-2 ct/min).
-- Si `LLM_PROVIDER=mistral|anthropic` : quelques centimes par appel, qualité supérieure.
+- **[Sift](https://github.com/edleeman17/sift)** (MIT) — a dumbphone companion; its
+  two-way SMS command model inspired `sms-commands.ts`.
+- **[Pipecat](https://github.com/pipecat-ai/pipecat)** / **[LiveKit Agents](https://github.com/livekit/agents)** — the self-hosted voice runtime.
+- **Open-Meteo** (free weather), **OpenRouteService** (EU directions).
 
-## Deux runtimes, une seule logique métier
-Les skills, prompts, PIN et consentements vivent dans `web/src/lib/` et sont servis
-par API (`/api/runtime/session`, `/api/tools/execute`). Le runtime vocal est
-interchangeable : [Pipecat](https://github.com/pipecat-ai/pipecat) auto-hébergé
-(`runtime/`, défaut) ou Vapi managé (`RUNTIME=vapi`) si on veut la meilleure latence
-sans infra. [LiveKit Agents](https://github.com/livekit/agents) reste une alternative
-self-host ; Vocode est à éviter (plus maintenu).
+## License
 
-## Projets open source utilisés / inspirations
-- **[Sift](https://github.com/edleeman17/sift)** (MIT) — « dumbphone companion » :
-  son modèle de commandes SMS bidirectionnelles a inspiré `sms-commands.ts`.
-- **Open-Meteo** (météo, gratuit), **OpenRouteService** (itinéraires, EU).
-- **Pipecat / LiveKit Agents** — cible de migration self-host (phase 2).
-
-## Reste à faire (phase 1 du doc)
-- Skill **Mail** (Gmail = scopes *restricted* → vérification CASA annuelle, à budgéter).
-- Microsoft 365 (Graph) en second fournisseur.
-- DPAs fournisseurs + effacement bout-en-bout automatisé (la base et les consentements sont prêts).
-- Bake-off voix (Vapi vs Retell), vérification par locuteur, numéro partagé multi-utilisateurs.
+[Apache-2.0](LICENSE). Copyright 2026 the AI-agents-for-dumbphones contributors.
