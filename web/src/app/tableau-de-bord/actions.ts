@@ -24,6 +24,25 @@ export async function toggleConsent(formData: FormData): Promise<void> {
   revalidatePath("/tableau-de-bord");
 }
 
+export async function updatePersonalization(formData: FormData): Promise<void> {
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/connexion");
+  const preferredName = String(formData.get("preferred_name") ?? "").trim();
+  const homeAddress = String(formData.get("home_address") ?? "").trim();
+  await supabaseAdmin()
+    .from("profiles")
+    .update({
+      preferred_name: preferredName || null,
+      home_address: homeAddress || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", user.id);
+  revalidatePath("/tableau-de-bord");
+}
+
 export async function signOut(): Promise<void> {
   const supabase = await supabaseServer();
   await supabase.auth.signOut();

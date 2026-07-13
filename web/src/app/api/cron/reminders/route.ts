@@ -1,5 +1,5 @@
-﻿// Cron (toutes les minutes) : envoie les rappels arrivÃ©s Ã  Ã©chÃ©ance par SMS
-// et reprogramme les rÃ©currents.
+// Cron (toutes les minutes) : envoie les rappels arrivés à échéance par SMS
+// et reprogramme les récurrents.
 
 import { NextResponse } from "next/server";
 import { safeEqual } from "@/lib/crypto";
@@ -20,7 +20,7 @@ function nextOccurrence(dueAt: string, recurrence: string): string {
 export async function GET(req: Request) {
   const secret = envOr("CRON_SECRET", "");
   if (!secret || !safeEqual(req.headers.get("authorization") ?? "", `Bearer ${secret}`)) {
-    return NextResponse.json({ error: "non autorisÃ©" }, { status: 401 });
+    return NextResponse.json({ error: "non autorisé" }, { status: 401 });
   }
 
   const db = supabaseAdmin();
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
       .maybeSingle();
     if (phone) {
       try {
-        await sendSms({ to: phone.e164, body: `ðŸ”” Rappel : ${r.text}`, userId: r.user_id, kind: "reminder" });
+        await sendSms({ to: phone.e164, body: `🔔 Rappel : ${r.text}`, userId: r.user_id, kind: "reminder" });
         sent++;
       } catch (err) {
         console.error("rappel SMS", r.id, err);

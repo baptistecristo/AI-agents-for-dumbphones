@@ -4,7 +4,7 @@
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
-import { signOut, toggleConsent } from "./actions";
+import { signOut, toggleConsent, updatePersonalization } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +123,40 @@ export default async function DashboardPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="mb-10">
+        <h2 className="mb-3 text-lg font-medium">Personnalisation de l&apos;agent</h2>
+        <p className="mb-3 text-sm text-neutral-500">
+          C&apos;est ici que se règle l&apos;agent : comment il vous appelle au téléphone, et l&apos;adresse
+          utilisée quand vous dites « chez moi ».
+        </p>
+        <form
+          action={updatePersonalization}
+          className="space-y-4 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800"
+        >
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">Comment l&apos;agent doit vous appeler</span>
+            <input
+              name="preferred_name"
+              defaultValue={profile?.preferred_name ?? ""}
+              placeholder="Ex. : Madame Martin, Jeanne…"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium">Adresse de « chez moi » (itinéraires)</span>
+            <input
+              name="home_address"
+              defaultValue={profile?.home_address ?? ""}
+              placeholder="Ex. : 12 rue de la Paix, 75002 Paris"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </label>
+          <button className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300">
+            Enregistrer
+          </button>
+        </form>
       </section>
 
       <section className="mb-10">

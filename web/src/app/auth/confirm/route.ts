@@ -1,4 +1,4 @@
-﻿// Confirmation du lien magique (e-mail) : vÃ©rifie le token puis redirige.
+﻿// Confirmation du lien magique (e-mail) : vérifie le token puis redirige.
 
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
@@ -10,7 +10,10 @@ export async function GET(req: Request) {
   const type = url.searchParams.get("type") as EmailOtpType | null;
   const rawNext = url.searchParams.get("next") ?? "/onboarding";
   // Anti open-redirect : uniquement un chemin relatif interne.
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\") ? rawNext : "/onboarding";
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\")
+      ? rawNext
+      : "/onboarding";
 
   if (tokenHash && type) {
     const supabase = await supabaseServer();

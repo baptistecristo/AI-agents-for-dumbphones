@@ -26,10 +26,13 @@ export async function POST(req: Request) {
   const body = params.Body ?? "";
 
   const db = supabaseAdmin();
+  // Même règle que le webhook vocal : seul un numéro VÉRIFIÉ (OTP) identifie
+  // un compte ; sinon, parcours non authentifié.
   const { data: phone } = await db
     .from("phones")
     .select("user_id")
     .eq("e164", from)
+    .not("verified_at", "is", null)
     .maybeSingle();
   await db.from("sms_logs").insert({
     user_id: phone?.user_id ?? null,

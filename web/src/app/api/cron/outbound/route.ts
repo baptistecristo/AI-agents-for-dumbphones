@@ -1,6 +1,6 @@
-﻿// Cron (toutes les minutes) : dÃ©pile la file d'appels sortants et lance les
-// missions via le moteur gÃ©nÃ©ralisÃ©. Un worker sÃ©parÃ© de la ligne entrante
-// (Â§7 : un appel de 4 minutes ne doit jamais bloquer l'entrant).
+﻿// Cron (toutes les minutes) : dépile la file d'appels sortants et lance les
+// missions via le moteur généralisé. Un worker séparé de la ligne entrante
+// (§7 : un appel de 4 minutes ne doit jamais bloquer l'entrant).
 
 import { NextResponse } from "next/server";
 import { buildOutboundAssistant, OutboundJob } from "@/lib/agents/outbound";
@@ -14,7 +14,7 @@ export const maxDuration = 60;
 export async function GET(req: Request) {
   const secret = envOr("CRON_SECRET", "");
   if (!secret || !safeEqual(req.headers.get("authorization") ?? "", `Bearer ${secret}`)) {
-    return NextResponse.json({ error: "non autorisÃ©" }, { status: 401 });
+    return NextResponse.json({ error: "non autorisé" }, { status: 401 });
   }
 
   const db = supabaseAdmin();
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   let launched = 0;
   for (const job of jobs ?? []) {
     if (!job.target_number) {
-      await db.from("outbound_jobs").update({ status: "failed", result: "Pas de numÃ©ro cible" }).eq("id", job.id);
+      await db.from("outbound_jobs").update({ status: "failed", result: "Pas de numéro cible" }).eq("id", job.id);
       continue;
     }
     const { data: profile } = await db.from("profiles").select("full_name").eq("id", job.user_id).single();
