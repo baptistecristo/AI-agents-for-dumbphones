@@ -13,6 +13,12 @@ handset stays a dumb terminal, the intelligence is on a server you control.
 > dont vous avez besoin (météo, itinéraire, rappel). Vous gardez l'utile, vous perdez
 > l'addiction. Auto-hébergeable, open-source, et la communauté ajoute les compétences.
 
+**Know [Sift](https://github.com/edleeman17/sift)?** Sift is a beloved dumbphone
+companion you *text* — `WEATHER`, `REMIND 18:30 …` — and it texts back. This project is
+that idea taken to **voice** (you *call* and just talk, no keywords to memorize) and made
+**self-hostable end-to-end**. We kept Sift's SMS-command model as a lighter, cheaper
+fallback (`web/src/lib/sms-commands.ts`) and put a full voice pipeline in front of it.
+
 ---
 
 ## Status — early, working in code, seeking founding co-builders
