@@ -9,7 +9,8 @@ text to someone. You keep the utility, you lose the doomscroll.
 Open-source: a phone number wired to a voice pipeline, with all the skills living
 behind one clean API. No app store, no account on the phone — the handset stays a dumb
 terminal, the intelligence is on a server. Today that server is [Vapi](https://vapi.ai),
-a managed platform. **Getting off it — onto the self-hosted Pipecat pipeline in
+a managed platform — rented, per-minute, and currently out of credit, which is why the
+demo number is silent. **Getting off it — onto the self-hosted Pipecat pipeline in
 `runtime/` — is the project's number one open problem**, and it's
 [Discussion #9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 
@@ -27,16 +28,22 @@ Sift's SMS-command model in the codebase as a lighter fallback
 
 ## Status — early, honest about what runs, seeking founding co-builders
 
-**What works:** you can call the agent and it answers, bilingual EN/FR, and it really
-does the skills below. Inbound + outbound calling, auth, an EU database with encryption
-and a consent registry are all live. That flow runs on **Vapi** (`RUNTIME=vapi`).
+**What works:** the agent has answered a real phone call and done the skills below,
+bilingual EN/FR — that happened, on a rented number. Inbound + outbound calling, auth,
+an EU database with encryption and a consent registry are built and deployed. CI builds
+the web app and imports the runtime on every push.
 
-**What doesn't:** the self-hosted Pipecat runtime in `runtime/` is **scaffolding that
-has never placed a call** — treat it as a starting point, not a working pipeline. And
+**What's dead right now:** the demo number. It answered — then the maintainer ran out
+of **Vapi** credits. At the measured ~$0.14/minute, one person cannot keep a public
+demo breathing out of pocket. That is not a footnote, it's the whole argument: **the
+project's own demo is dead because of the exact dependency the project wants to remove.**
+
+**What has never worked:** the self-hosted Pipecat runtime in `runtime/` is
+**scaffolding that has never placed a call** — a starting point, not a pipeline. And
 **no Twilio account is connected**, so anything that delivers by SMS (directions,
-dictated texts, the SMS command router) can't actually send.
+dictated texts, the SMS command router) can't send.
 
-That gap *is* the invitation. The fun open problems:
+Those gaps *are* the invitation. The fun open problems:
 
 - 🎙️ **Bilingual EN/FR works.** Each caller has a preferred language
   (`profiles.preferred_language`); the session hands it to the runtime, which picks the
@@ -47,13 +54,14 @@ That gap *is* the invitation. The fun open problems:
 - 🧩 **Skills are a plugin surface.** Adding a **new skill** (a thing the agent can do on
   a call) is a small, self-contained PR. This is one of the two best on-ramps; a **third
   language** is the other.
-- 🔌 **Getting off Vapi** — the biggest one. `runtime/` has the shape of a Pipecat
-  pipeline (Silero VAD → faster-whisper → local LLM → Piper) but has never carried a
-  real call. If you self-host voice, this is the problem:
+- 🔌 **Getting off Vapi** — the biggest one, and now the loudest. `runtime/` has the
+  shape of a Pipecat pipeline (Silero VAD → faster-whisper → local LLM → Piper) but has
+  never carried a real call. Make it carry one and the demo stops being rented. If you
+  self-host voice, this is the problem:
   [Discussion #9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
-- 📞 **The call-in number is live but unpublished** — one call to the 180s cap costs
-  real money and nothing yet rate-limits a redial. Inbound rate limiting is what stands
-  between it and the README.
+- 📞 **The number is capped and rate-limited now** — 180s per call, 5 calls per caller
+  per hour, 60 a day across everyone. That was the last thing standing between it and
+  this README. Now it's the credits.
 
 If you build voice AI, self-host things, or just want people to be able to leave the
 smartphone without going off-grid — **we'd love a few founding co-builders.** See
@@ -92,10 +100,11 @@ is drawn the way it is.
 
 | Layer | Choice | Where |
 |---|---|---|
-| Voice runtime | **Vapi** (`RUNTIME=vapi`) — the only one that runs. Self-hosted Pipecat + faster-whisper + Piper + Ollama is scaffolded but has never placed a call ([#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9)) | `web/src/lib/vapi.ts` + `runtime/` |
+| Voice runtime | **Vapi** (`RUNTIME=vapi`) — the only one that has ever carried a call, and it's out of credit. Self-hosted Pipecat + faster-whisper + Piper + Ollama is scaffolded but has never placed one ([#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9)) | `web/src/lib/vapi.ts` + `runtime/` |
 | Telephony | Vapi's number today. A **Twilio**/Telnyx trunk is what the self-hosted path needs — a phone number is the one thing you can't self-host | `runtime/server.py` |
 | SMS + OTP | **Twilio** (Messages + Verify) — coded, but **no Twilio account is connected**, so nothing actually sends yet | `web/src/lib/twilio.ts` |
 | Inbound agent | Bilingual (EN/FR) system prompt + greeting, switches language mid-call, spoken-PIN gate before sensitive actions, two-step voice confirmation | `web/src/lib/agents/inbound.ts` |
+| Public-number guard | 180s per call, plus rate limiting: 5 calls per caller per hour, 20/day, 60/day across everyone. Over the limit, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
 | Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), contacts, dictated SMS, memory, PIN | `web/src/lib/skills/` |
 | SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `DONE`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift) | `web/src/lib/sms-commands.ts` |
@@ -116,7 +125,8 @@ is drawn the way it is.
    [CONTRIBUTING.md](CONTRIBUTING.md#add-a-language-or-voice).
 
 Honest caveat: you can test both against the web API, but not against a live call —
-placing calls costs money and runs on the maintainer's Vapi account for now.
+calls run on the maintainer's rented Vapi account, which is out of credit. One more
+reason the self-hosted runtime matters: it's the version you could run yourself.
 
 ## Run it locally
 
