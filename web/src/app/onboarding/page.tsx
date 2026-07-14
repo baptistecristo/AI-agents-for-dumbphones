@@ -1,13 +1,14 @@
 // Onboarding — « l'unique écran que le client payant touche vraiment » (§5).
-// 4 étapes : téléphone (OTP) -> Google -> consentements -> code PIN.
+// 3 étapes : téléphone (OTP) -> Google -> consentements.
+// (Plus de code PIN à choisir : l'auth en appel se fait par code jetable SMS.)
 
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 import { saveConsents, skipGoogle } from "./actions";
-import { PhoneStep, PinStep } from "./steps";
+import { PhoneStep } from "./steps";
 
-const STEPS = ["phone", "google", "consents", "pin"] as const;
+const STEPS = ["phone", "google", "consents"] as const;
 
 export default async function OnboardingPage() {
   const supabase = await supabaseServer();
@@ -22,7 +23,8 @@ export default async function OnboardingPage() {
     .eq("id", user.id)
     .single();
   const step = profile?.onboarding_step ?? "phone";
-  if (step === "done") redirect("/tableau-de-bord");
+  // "pin" est un état hérité (l'étape a été retirée) : on le traite comme terminé.
+  if (step === "done" || step === "pin") redirect("/tableau-de-bord");
   const stepIndex = STEPS.indexOf(step as (typeof STEPS)[number]);
 
   return (
@@ -90,8 +92,6 @@ export default async function OnboardingPage() {
           </form>
         </section>
       )}
-
-      {step === "pin" && <PinStep />}
     </main>
   );
 }

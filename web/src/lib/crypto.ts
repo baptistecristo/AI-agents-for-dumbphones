@@ -1,14 +1,7 @@
 // Chiffrement applicatif des secrets (refresh tokens OAuth) : AES-256-GCM.
 // La clé ENCRYPTION_KEY (32 octets, base64) ne quitte jamais le serveur.
-// Hachage du PIN parlé : scrypt (résistant au brute-force).
 
-import {
-  createCipheriv,
-  createDecipheriv,
-  randomBytes,
-  scryptSync,
-  timingSafeEqual,
-} from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
 import { env } from "./env";
 
 function key(): Buffer {
@@ -29,19 +22,6 @@ export function decrypt(payload: string): string {
   const decipher = createDecipheriv("aes-256-gcm", key(), Buffer.from(ivB64, "base64"));
   decipher.setAuthTag(Buffer.from(tagB64, "base64"));
   return Buffer.concat([decipher.update(Buffer.from(encB64, "base64")), decipher.final()]).toString("utf8");
-}
-
-export function hashPin(pin: string): string {
-  const salt = randomBytes(16);
-  const hash = scryptSync(pin.normalize("NFKC"), salt, 32);
-  return `${salt.toString("base64")}.${hash.toString("base64")}`;
-}
-
-export function verifyPin(pin: string, stored: string): boolean {
-  const [saltB64, hashB64] = stored.split(".");
-  const expected = Buffer.from(hashB64, "base64");
-  const actual = scryptSync(pin.normalize("NFKC"), Buffer.from(saltB64, "base64"), 32);
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
 // Comparaison en temps constant de deux chaînes (secrets d'en-tête).

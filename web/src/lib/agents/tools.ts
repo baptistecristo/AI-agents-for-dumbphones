@@ -96,7 +96,7 @@ export function agentTools() {
       "Compute a route and text the steps to the user by SMS, in addition to the spoken summary.",
       {
         destination: { type: "string", description: "Destination address or place" },
-        origin: { type: "string", description: "Starting point. If absent: ask 'where are you?' or use the home address." },
+        origin: { type: "string", description: "Starting point. If absent: ask 'where are you?'. The home address is only available after the user passes the code." },
         mode: { type: "string", enum: ["walking", "driving", "transit"], description: "Travel mode" },
       },
       ["destination"],
@@ -113,7 +113,7 @@ export function agentTools() {
     // --- Messages ---
     serverTool(
       "send_sms",
-      "PROPOSE to send a dictated SMS. With confirmed=false: returns the text to read back out loud. confirmed=true only after an explicit 'yes'. Sensitive action: requires the verified PIN.",
+      "PROPOSE to send a dictated SMS. With confirmed=false: returns the text to read back out loud. confirmed=true only after an explicit 'yes'. Protected action: requires the SMS code first (request_code then verify_code).",
       {
         to_name: { type: "string", description: "Recipient name (resolved via contacts)" },
         to_number: { type: "string", description: "Or a direct E.164 number" },
@@ -126,7 +126,7 @@ export function agentTools() {
     // --- Appels sortants (Rendez-vous / Taxi / Résa) ---
     serverTool(
       "place_call",
-      "PROPOSE to place a call on the user's behalf (book an appointment, a taxi, a restaurant…). With confirmed=false: returns a mission recap to read out loud. confirmed=true only after an explicit 'yes'. Sensitive action: requires the verified PIN. The result will be sent by SMS.",
+      "PROPOSE to place a call on the user's behalf (book an appointment, a taxi, a restaurant…). With confirmed=false: returns a mission recap to read out loud. confirmed=true only after an explicit 'yes'. Protected action: requires the SMS code first (request_code then verify_code). The result will be sent by SMS.",
       {
         kind: {
           type: "string",
@@ -160,12 +160,17 @@ export function agentTools() {
       ["query"],
     ),
 
-    // --- Sécurité ---
+    // --- Sécurité : code jetable par SMS (voix ou clavier/DTMF) ---
     serverTool(
-      "verify_pin",
-      "Verify the user's spoken PIN. Required before any sensitive action (sending a message, placing a call). NEVER repeat the PIN out loud.",
-      { pin: { type: "string", description: "The dictated 4-digit code" } },
-      ["pin"],
+      "request_code",
+      "Send a one-time 4-digit code by SMS to the user's registered number. Call this the first time the user asks for anything protected (reading their calendar/contacts/reminders/notes, changing their calendar, sending an SMS, placing a call).",
+      {},
+    ),
+    serverTool(
+      "verify_code",
+      "Verify the one-time code the user says or types on the keypad. On success, protected actions are unlocked for the rest of the call. NEVER repeat the code out loud.",
+      { code: { type: "string", description: "The 4 digits the user said or keyed in" } },
+      ["code"],
     ),
   ];
 }

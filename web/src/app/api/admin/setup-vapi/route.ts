@@ -22,9 +22,6 @@ export async function POST(req: Request) {
   const generic = buildInboundAssistant({
     userId: null,
     preferredName: null,
-    homeAddress: null,
-    memories: [],
-    pinConfigured: false,
     language: defaultLanguage(),
   });
 

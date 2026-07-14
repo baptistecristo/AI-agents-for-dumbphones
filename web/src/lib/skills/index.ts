@@ -48,9 +48,13 @@ export async function executeTool(name: string, args: any, session: CallSession)
       case "mark_done":
         return await markDone(session, args);
       case "get_weather":
+        // Météo libre : la ville du domicile suffit (sensibilité faible), l'adresse
+        // n'est jamais prononcée.
         return await getWeather(session, args, await homeAddressOf(session.userId));
       case "get_directions":
-        return await getDirections(session, args, await homeAddressOf(session.userId));
+        // L'adresse du domicile ne sert d'origine/destination qu'une fois vérifié
+        // (un itinéraire depuis/vers « la maison » révélerait l'adresse).
+        return await getDirections(session, args, session.verified ? await homeAddressOf(session.userId) : null);
       case "find_contact":
         return await findContact(session, args);
       case "send_sms":

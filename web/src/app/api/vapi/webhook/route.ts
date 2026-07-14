@@ -16,14 +16,14 @@ export const maxDuration = 60;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-async function callerContextFor(phoneE164: string | null): Promise<CallerContext & { fullName: string | null }> {
-  const empty = {
+// Le caller-ID identifie la personne (pour savoir à quel numéro envoyer le code),
+// mais ne débloque RIEN de sensible : aucune donnée perso (adresse, mémoires) n'est
+// préchargée dans le prompt. L'agent lit ces données via des outils, une fois le
+// code vérifié.
+async function callerContextFor(phoneE164: string | null): Promise<CallerContext> {
+  const empty: CallerContext = {
     userId: null,
     preferredName: null,
-    homeAddress: null,
-    memories: [],
-    pinConfigured: false,
-    fullName: null,
     language: defaultLanguage(), // appelant inconnu -> env DEFAULT_LANGUAGE
   };
   if (!phoneE164) return empty;
@@ -35,21 +35,14 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
     .not("verified_at", "is", null)
     .maybeSingle();
   if (!phone) return empty;
-  const [{ data: profile }, { data: memories }] = await Promise.all([
-    db
-      .from("profiles")
-      .select("full_name, preferred_name, home_address, pin_hash, preferred_language")
-      .eq("id", phone.user_id)
-      .single(),
-    db.from("memories").select("key, value").eq("user_id", phone.user_id).limit(30),
-  ]);
+  const { data: profile } = await db
+    .from("profiles")
+    .select("full_name, preferred_name, preferred_language")
+    .eq("id", phone.user_id)
+    .single();
   return {
     userId: phone.user_id,
     preferredName: profile?.preferred_name || profile?.full_name || null,
-    fullName: profile?.full_name ?? null,
-    homeAddress: profile?.home_address ?? null,
-    memories: memories ?? [],
-    pinConfigured: Boolean(profile?.pin_hash),
     language: normalizeLanguage(profile?.preferred_language),
   };
 }

@@ -1,9 +1,8 @@
 "use server";
 
-// Server Actions de l'onboarding : téléphone (OTP) -> Google -> consentements -> PIN.
+// Server Actions de l'onboarding : téléphone (OTP) -> Google -> consentements.
 
 import { redirect } from "next/navigation";
-import { hashPin } from "@/lib/crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 import { checkPhoneVerification, startPhoneVerification } from "@/lib/twilio";
@@ -95,18 +94,7 @@ export async function saveConsents(formData: FormData): Promise<void> {
   }));
   const db = supabaseAdmin();
   await db.from("consents").insert(rows);
-  await db.from("profiles").update({ onboarding_step: "pin" }).eq("id", userId);
-  redirect("/onboarding");
-}
-
-export async function savePin(_prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string }> {
-  const userId = await currentUserId();
-  const pin = String(formData.get("pin") ?? "").replace(/\D/g, "");
-  const confirm = String(formData.get("pin_confirm") ?? "").replace(/\D/g, "");
-  if (pin.length !== 4) return { ok: false, message: "Le code doit faire exactement 4 chiffres." };
-  if (pin !== confirm) return { ok: false, message: "Les deux codes ne correspondent pas." };
-  const db = supabaseAdmin();
-  await db.from("profiles").update({ pin_hash: hashPin(pin), onboarding_step: "done" }).eq("id", userId);
+  // Plus d'étape PIN : l'auth en appel se fait par code jetable (SMS) au moment voulu.
+  await db.from("profiles").update({ onboarding_step: "done" }).eq("id", userId);
   redirect("/tableau-de-bord");
-  return { ok: true, message: "" };
 }

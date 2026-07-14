@@ -70,13 +70,12 @@ export async function POST(req: Request) {
   }
 
   // ---------------------------------------------------------- appel entrant
+  // Le caller-ID identifie la personne mais ne débloque rien : aucune PII (adresse,
+  // mémoires) dans le prompt. Les données se lisent via des outils après le code.
   const caller = body.caller_number ?? null;
   let ctx = {
     userId: null as string | null,
     preferredName: null as string | null,
-    homeAddress: null as string | null,
-    memories: [] as { key: string; value: string }[],
-    pinConfigured: false,
     language: defaultLanguage(), // appelant inconnu -> env DEFAULT_LANGUAGE
   };
   if (caller) {
@@ -87,20 +86,14 @@ export async function POST(req: Request) {
       .not("verified_at", "is", null)
       .maybeSingle();
     if (phone) {
-      const [{ data: profile }, { data: memories }] = await Promise.all([
-        db
-          .from("profiles")
-          .select("full_name, preferred_name, home_address, pin_hash, preferred_language")
-          .eq("id", phone.user_id)
-          .single(),
-        db.from("memories").select("key, value").eq("user_id", phone.user_id).limit(30),
-      ]);
+      const { data: profile } = await db
+        .from("profiles")
+        .select("full_name, preferred_name, preferred_language")
+        .eq("id", phone.user_id)
+        .single();
       ctx = {
         userId: phone.user_id,
         preferredName: profile?.preferred_name || profile?.full_name || null,
-        homeAddress: profile?.home_address ?? null,
-        memories: memories ?? [],
-        pinConfigured: Boolean(profile?.pin_hash),
         language: normalizeLanguage(profile?.preferred_language),
       };
     }

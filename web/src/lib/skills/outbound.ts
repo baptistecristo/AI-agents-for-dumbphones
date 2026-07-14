@@ -31,8 +31,8 @@ export async function placeCall(
     });
   if (!session.verified) {
     return t(session, {
-      fr: "REFUS : le code PIN n'a pas été vérifié. Demander le code à 4 chiffres et appeler verify_pin d'abord.",
-      en: "REFUSED: the PIN has not been verified. Ask for the 4-digit code and call verify_pin first.",
+      fr: "REFUS : le code n'a pas été vérifié. Appelle request_code puis verify_code d'abord.",
+      en: "REFUSED: the code hasn't been verified. Call request_code then verify_code first.",
     });
   }
 

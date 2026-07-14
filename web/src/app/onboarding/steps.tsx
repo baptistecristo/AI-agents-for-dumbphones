@@ -3,7 +3,7 @@
 // Étapes interactives de l'onboarding (composants client).
 
 import { useActionState, useState } from "react";
-import { confirmOtp, saveIdentity, savePin, sendOtp } from "./actions";
+import { confirmOtp, saveIdentity, sendOtp } from "./actions";
 
 export function PhoneStep() {
   const [sendState, sendAction, sending] = useActionState(sendOtp, null);
@@ -95,50 +95,6 @@ export function PhoneStep() {
           )}
         </form>
       )}
-    </section>
-  );
-}
-
-export function PinStep() {
-  const [state, action, pending] = useActionState(savePin, null);
-  return (
-    <section>
-      <h1 className="text-2xl font-semibold">Le code secret à 4 chiffres</h1>
-      <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-        Avant d'envoyer un SMS ou de passer un appel à ta place, l'assistant te demandera ce code
-        à voix haute. Un numéro d'appelant peut être usurpé ; le code protège les actions sensibles.
-      </p>
-      <form action={action} className="mt-8 space-y-4">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">Code (4 chiffres, facile à retenir)</span>
-          <input
-            name="pin"
-            required
-            inputMode="numeric"
-            maxLength={4}
-            placeholder="••••"
-            className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-center text-2xl tracking-widest dark:border-neutral-700 dark:bg-neutral-900"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">Confirme le code</span>
-          <input
-            name="pin_confirm"
-            required
-            inputMode="numeric"
-            maxLength={4}
-            placeholder="••••"
-            className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-center text-2xl tracking-widest dark:border-neutral-700 dark:bg-neutral-900"
-          />
-        </label>
-        {state && !state.ok && <p className="text-sm text-red-600">{state.message}</p>}
-        <button
-          disabled={pending}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-lg font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-900"
-        >
-          {pending ? "Enregistrement…" : "Terminer l'installation"}
-        </button>
-      </form>
     </section>
   );
 }
