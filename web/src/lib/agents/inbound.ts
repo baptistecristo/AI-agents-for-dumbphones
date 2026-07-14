@@ -167,7 +167,13 @@ export function buildInboundAssistant(ctx: CallerContext) {
     firstMessage: inboundFirstMessage(ctx),
     firstMessageMode: "assistant-speaks-first",
     silenceTimeoutSeconds: 30,
-    maxDurationSeconds: 900,
+    // Plafond de coût sur une surface publique : le numéro est joignable par
+    // n'importe qui, et une minute de voix coûte ~0,14 $ (dont 45 % de TTS).
+    // 180 s borne l'appel le plus long à ~0,42 $ au lieu de ~2,10 $.
+    // Ce n'est PAS une limite de débit : rien n'empêche encore un même
+    // appelant de rappeler en boucle. Cf. la mission sortante, laissée à
+    // 600 s — c'est nous qui la déclenchons, elle n'est pas exposée.
+    maxDurationSeconds: 180,
     server: webhookServer(),
     serverMessages: ["tool-calls", "end-of-call-report", "status-update"],
   };
