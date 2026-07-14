@@ -18,8 +18,6 @@
 import { envOr } from "./env";
 import { supabaseAdmin } from "./supabase/admin";
 
-const ANONYMOUS = "__anonymous__";
-
 const num = (name: string, fallback: string) => {
   const parsed = Number(envOr(name, fallback));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : Number(fallback);
@@ -27,14 +25,22 @@ const num = (name: string, fallback: string) => {
 
 export type RateVerdict = { allowed: true } | { allowed: false; scope: "caller" | "global" };
 
-async function countInboundSince(sinceMs: number, fromNumber?: string): Promise<number> {
+// `fromNumber` omis -> compteur global. `null` -> le seau des appelants en
+// numéro masqué, que le webhook journalise avec from_number = NULL : il faut
+// donc interroger IS NULL, pas une valeur sentinelle. Une sentinelle
+// ("__anonymous__") ne correspondait à aucune ligne, le compteur des masqués
+// lisait toujours 0, et masquer son numéro suffisait à contourner la limite
+// par appelant. Vérifié en base : 8 lignes à NULL, 0 à '__anonymous__'.
+async function countInboundSince(sinceMs: number, fromNumber?: string | null): Promise<number> {
   const since = new Date(Date.now() - sinceMs).toISOString();
   let q = supabaseAdmin()
     .from("call_logs")
     .select("id", { count: "exact", head: true })
     .eq("direction", "inbound")
     .gte("started_at", since);
-  if (fromNumber !== undefined) q = q.eq("from_number", fromNumber);
+  if (fromNumber !== undefined) {
+    q = fromNumber === null ? q.is("from_number", null) : q.eq("from_number", fromNumber);
+  }
   const { count, error } = await q;
   if (error) throw error;
   return count ?? 0;
@@ -46,10 +52,9 @@ async function countInboundSince(sinceMs: number, fromNumber?: string): Promise<
 // base pour personnaliser l'appel, et l'appel échouerait quelques lignes plus
 // bas. Mieux vaut un appel refusé qu'une facture non bornée.
 export async function inboundRateVerdict(callerNumber: string | null): Promise<RateVerdict> {
-  const bucket = callerNumber ?? ANONYMOUS;
   const [callerHour, callerDay, globalDay] = await Promise.all([
-    countInboundSince(60 * 60 * 1000, bucket),
-    countInboundSince(24 * 60 * 60 * 1000, bucket),
+    countInboundSince(60 * 60 * 1000, callerNumber),
+    countInboundSince(24 * 60 * 60 * 1000, callerNumber),
     countInboundSince(24 * 60 * 60 * 1000),
   ]);
 
