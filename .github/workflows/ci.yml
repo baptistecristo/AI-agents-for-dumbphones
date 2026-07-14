@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: web — build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+
+  runtime:
+    name: runtime — tests
+    runs-on: ubuntu-latest
+    env:
+      # Le runtime exige ce secret au chargement de config.py. Valeur bidon : les
+      # tests ne joignent aucune API.
+      RUNTIME_API_SECRET: ci-dummy-secret
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+        working-directory: runtime
+      # Le vrai garde-fou. Les tests ne touchent que config.py ; c'est bot.py qui
+      # avait importé pendant des mois un chemin Pipecat inexistant, parce que
+      # personne ne l'avait jamais lancé. Cette ligne l'aurait vu le premier jour.
+      - run: python -c "import bot, server"
+        working-directory: runtime
+      - run: python -m unittest discover -s tests
+        working-directory: runtime
