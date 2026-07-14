@@ -3,7 +3,7 @@
 
 import { NextResponse } from "next/server";
 import twilio from "twilio";
-import { envOr } from "@/lib/env";
+import { APP_URL, envOr } from "@/lib/env";
 import { handleSmsCommand } from "@/lib/sms-commands";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
   // Authenticité Twilio (signature X-Twilio-Signature)
   const signature = req.headers.get("x-twilio-signature") ?? "";
-  const url = `${envOr("APP_URL", "http://localhost:3000")}/api/twilio/sms`;
+  const url = `${APP_URL()}/api/twilio/sms`;
   const valid = twilio.validateRequest(envOr("TWILIO_AUTH_TOKEN", ""), signature, url, params);
   if (!valid && process.env.NODE_ENV === "production") {
     return new NextResponse("signature invalide", { status: 401 });

@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { APP_URL } from "@/lib/env";
 import { googleAuthUrl } from "@/lib/google";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -11,7 +12,7 @@ export async function GET() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL("/connexion", process.env.APP_URL ?? "http://localhost:3000"));
+  if (!user) return NextResponse.redirect(new URL("/connexion", APP_URL()));
 
   const state = randomBytes(16).toString("hex");
   const cookieStore = await cookies();
