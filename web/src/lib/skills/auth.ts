@@ -39,8 +39,8 @@ export async function requestCode(session: CallSession): Promise<SkillResult> {
     });
   }
   return t(session, {
-    fr: "Je viens de t'envoyer un code à 4 chiffres par SMS. Dis-le-moi, ou tape-le sur ton clavier.",
-    en: "I just texted you a 4-digit code. Say it, or type it on your keypad.",
+    fr: "Je viens de t'envoyer un code à 4 chiffres par SMS. Dis-le-moi, ou tape-le sur ton clavier puis dièse.",
+    en: "I just texted you a 4-digit code. Say it, or type it on your keypad then press pound.",
   });
 }
 

@@ -149,6 +149,10 @@ export function buildInboundAssistant(ctx: CallerContext) {
     },
     firstMessage: inboundFirstMessage(ctx),
     firstMessageMode: "assistant-speaks-first",
+    // Saisie du code au clavier (DTMF) en plus de la voix : plus fiable que la
+    // transcription sur des chiffres, et le code n'est pas prononcé à voix haute.
+    // La personne tape ses 4 chiffres puis « # » (ou attend l'expiration).
+    keypadInputPlan: { enabled: true, delimiters: ["#"], timeoutSeconds: 6 },
     silenceTimeoutSeconds: 30,
     // Plafond de coût sur une surface publique : le numéro est joignable par
     // n'importe qui, et une minute de voix coûte ~0,14 $ (dont 45 % de TTS).
