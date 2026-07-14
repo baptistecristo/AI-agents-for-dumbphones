@@ -1,24 +1,24 @@
 // Landing — la page vitrine. Le héros n'est pas un slogan : c'est un appel
-// retranscrit, qui se déroule comme en direct. Le lecteur (souvent l'enfant
-// adulte qui équipe son parent) comprend le produit en écoutant Jeanne.
+// retranscrit, qui se déroule comme en direct. Le lecteur (quelqu'un qui a
+// quitté son smartphone, ou y pense) comprend le produit en écoutant l'appel.
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
 
 const CALL: { who: "j" | "a"; text: string }[] = [
-  { who: "j", text: "Allô ? Dites-moi, j'ai quelque chose chez le docteur cette semaine, non ?" },
-  { who: "a", text: "Bonjour Jeanne ! Oui : docteur Martin, jeudi à 10 heures." },
-  { who: "j", text: "Ah oui. Vous pouvez me le rappeler la veille ?" },
-  { who: "a", text: "Bien sûr. Je vous enverrai un message mercredi à 18 heures. C'est noté ?" },
-  { who: "j", text: "C'est noté. Et il fera beau, jeudi ?" },
-  { who: "a", text: "Plutôt, oui : du soleil et 21 degrés. Parfait pour y aller à pied." },
+  { who: "j", text: "Salut ! Je retrouve Léa au café Oberkampf. C'est par où, depuis chez moi ?" },
+  { who: "a", text: "Salut Sam. Douze minutes à pied : rue de la Fontaine au Roi, puis deuxième à gauche. Je t'envoie les étapes par SMS ?" },
+  { who: "j", text: "Ouais. Et il pleut, dehors ?" },
+  { who: "a", text: "Non — 19 degrés, ciel dégagé. Ça se couvre en fin de journée par contre." },
+  { who: "j", text: "Ok. Tu peux me rappeler d'appeler le proprio demain à 18 heures ?" },
+  { who: "a", text: "Noté : un SMS demain à 18 heures. Autre chose ?" },
 ];
 
 const CAPACITES: { icon: string; titre: string; texte: string }[] = [
-  { icon: "📅", titre: "L'agenda", texte: "« Qu'est-ce que j'ai demain ? » — les rendez-vous, dits de vive voix, ajoutés ou déplacés à la demande." },
-  { icon: "🔔", titre: "Les rappels", texte: "Médicaments, anniversaires, la veille d'un rendez-vous. Le rappel arrive par SMS, à l'heure dite." },
-  { icon: "🌤", titre: "La météo", texte: "Aujourd'hui ou demain, pour savoir s'il faut un parapluie avant de sortir." },
+  { icon: "📅", titre: "L'agenda", texte: "« Qu'est-ce que j'ai demain ? » — tes rendez-vous, dits de vive voix, ajoutés ou déplacés à la demande." },
+  { icon: "🔔", titre: "Les rappels", texte: "« Rappelle-moi d'appeler le proprio à 18 heures. » Le rappel arrive par SMS, à l'heure dite." },
+  { icon: "🌤", titre: "La météo", texte: "Aujourd'hui ou demain, pour savoir si tu sors en veste ou en t-shirt." },
   { icon: "🗺", titre: "Le chemin", texte: "L'itinéraire expliqué à voix haute, puis envoyé par SMS, étape par étape, pour le suivre en route." },
-  { icon: "📞", titre: "Les appels difficiles", texte: "Prendre rendez-vous chez le médecin, réserver un taxi ou une table : l'assistant appelle, négocie, et rend compte par SMS." },
+  { icon: "📞", titre: "Les appels que tu n'as pas envie de passer", texte: "Réserver une table, un taxi, prendre un rendez-vous : l'assistant appelle, négocie, et rend compte par SMS." },
   { icon: "✉️", titre: "Les messages", texte: "Un SMS dicté à voix haute, relu avant l'envoi. Rien ne part sans un « oui » clair." },
 ];
 
@@ -38,7 +38,7 @@ export default function Home() {
             href="/connexion"
             className="rounded-lg bg-bleu px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-bleu-fonce"
           >
-            Équiper un proche
+            Créer mon compte
           </a>
         </nav>
       </header>
@@ -47,38 +47,38 @@ export default function Home() {
       <section className="mx-auto grid max-w-6xl gap-12 px-6 pb-20 pt-12 md:grid-cols-2 md:items-center md:pt-20">
         <div>
           <h1 className="font-display text-4xl leading-tight md:text-5xl">
-            Il n'y a rien à installer.
+            Tu as largué le smartphone.
             <br />
             <span className="relative inline-block">
-              Il suffit d'appeler.
+              Garde le côté utile.
               <span aria-hidden className="absolute inset-x-0 bottom-1 -z-10 h-3 bg-jaune/70" />
             </span>
           </h1>
           <p className="mt-6 max-w-md text-lg leading-relaxed text-ink/80">
-            {brand} est un assistant au bout du fil, pour celles et ceux qui préfèrent un téléphone
-            simple. Agenda, rappels, itinéraires — et même les coups de fil pénibles, passés à leur
-            place. D'une voix calme, qui prend son temps.
+            {brand} est un assistant au bout du fil, pour celles et ceux qui ont troqué le
+            doomscroll contre un téléphone simple. Météo, itinéraires, rappels, un SMS dicté, une
+            table réservée : tu appelles, tu demandes, tu raccroches. Et tu retournes à ta vie.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <a
               href="/connexion"
               className="rounded-xl bg-bleu px-6 py-4 text-lg font-bold text-white shadow-md transition hover:bg-bleu-fonce"
             >
-              Créer le compte d'un proche →
+              Créer mon compte →
             </a>
             <p className="text-sm text-ink/60">
-              Installation en 10 minutes,
+              Prêt en 10 minutes.
               <br />
-              par un membre de la famille.
+              Un dumbphone et ce site suffisent.
             </p>
           </div>
         </div>
 
         {/* Signature : l'appel qui se déroule en direct */}
-        <figure aria-label="Exemple d'appel entre Jeanne et l'assistant" className="rounded-2xl border border-ink/10 bg-white p-6 shadow-xl shadow-bleu/5">
+        <figure aria-label="Exemple d'appel entre Sam et l'assistant" className="rounded-2xl border border-ink/10 bg-white p-6 shadow-xl shadow-bleu/5">
           <figcaption className="mb-5 flex items-center gap-2 border-b border-ink/10 pb-4 text-sm text-ink/60">
             <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
-            Appel en cours — Jeanne, 84 ans, depuis son téléphone à touches
+            Appel en cours — Sam, depuis son téléphone à touches
           </figcaption>
           <div className="space-y-3">
             {CALL.map((line, i) => (
@@ -101,7 +101,7 @@ export default function Home() {
       {/* ----------------------------------------------------- bande jaune */}
       <div className="bg-jaune">
         <p className="mx-auto max-w-6xl px-6 py-4 text-center font-bold tracking-wide text-ink">
-          Aucune application. Aucun écran. Aucun mot de passe. Juste sa voix.
+          Aucune application. Aucun écran. Aucun compte à scroller. Juste ta voix.
         </p>
       </div>
 
@@ -112,21 +112,21 @@ export default function Home() {
           {[
             {
               n: "1",
-              titre: "Un proche prépare le compte",
+              titre: "Tu crées ton compte",
               texte:
-                "Sur ce site : le numéro de téléphone du parent, son agenda Google si on le souhaite, un code secret à quatre chiffres. Dix minutes, une seule fois.",
+                "Sur ce site : ton numéro, ton agenda Google si tu veux, un code secret à quatre chiffres. Dix minutes, une seule fois.",
             },
             {
               n: "2",
-              titre: "La personne appelle son numéro",
+              titre: "Tu appelles ton numéro",
               texte:
-                "Depuis son téléphone habituel, même le plus simple. L'assistant décroche, la reconnaît, l'appelle par son prénom et parle lentement.",
+                "Depuis ton dumbphone — ou n'importe quel téléphone. L'assistant décroche, te reconnaît, et va droit au but.",
             },
             {
               n: "3",
               titre: "Les choses se font",
               texte:
-                "Rendez-vous notés, rappels envoyés, taxi réservé. Tout ce qui engage est relu à voix haute et confirmé avant d'être fait. Compte-rendu par SMS.",
+                "Itinéraire par SMS, rappel programmé, table réservée. Tout ce qui engage est relu à voix haute et confirmé avant d'être fait. Compte-rendu par SMS.",
             },
           ].map((s) => (
             <div key={s.n} className="relative rounded-2xl border border-ink/10 bg-white p-6">
@@ -143,7 +143,7 @@ export default function Home() {
       {/* ---------------------------------------------------------- capacités */}
       <section className="border-y border-ink/10 bg-white">
         <div className="mx-auto max-w-6xl px-6 py-20">
-          <h2 className="font-display text-3xl">Ce qu'on peut lui demander</h2>
+          <h2 className="font-display text-3xl">Ce que tu peux lui demander</h2>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {CAPACITES.map((c) => (
               <div key={c.titre} className="rounded-2xl bg-paper p-6">
@@ -156,22 +156,22 @@ export default function Home() {
             ))}
           </div>
           <p className="mt-8 text-sm text-ink/60">
-            Et par SMS aussi : envoyez <span className="font-mono font-bold">METEO</span>,{" "}
+            Et par SMS aussi : envoie <span className="font-mono font-bold">METEO</span>,{" "}
             <span className="font-mono font-bold">AGENDA</span> ou{" "}
-            <span className="font-mono font-bold">RAPPEL 18h médicament</span> au même numéro.
+            <span className="font-mono font-bold">RAPPEL 18h appeler le proprio</span> au même numéro.
           </p>
         </div>
       </section>
 
       {/* ----------------------------------------------------------- confiance */}
       <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="font-display text-3xl">Pensé pour rassurer, d'abord</h2>
+        <h2 className="font-display text-3xl">Conçu pour être sûr, pas pour te retenir</h2>
         <div className="mt-10 grid gap-8 md:grid-cols-3">
           <div>
             <h3 className="text-lg font-bold">🔐 Un code secret, à l'oral</h3>
             <p className="mt-2 leading-relaxed text-ink/75">
-              Envoyer un message ou passer un appel exige le code à quatre chiffres de la personne.
-              Un numéro imité ne suffit pas.
+              Envoyer un message ou passer un appel à ta place exige ton code à quatre chiffres.
+              Un numéro d'appelant peut être usurpé ; le code, non.
             </p>
           </div>
           <div>
@@ -185,7 +185,7 @@ export default function Home() {
             <h3 className="text-lg font-bold">🇪🇺 Des données en Europe</h3>
             <p className="mt-2 leading-relaxed text-ink/75">
               Consentements enregistrés et révocables, données hébergées en Europe, droit à
-              l'effacement. La famille voit tout sur le tableau de bord.
+              l'effacement. Tu vois tout sur ton tableau de bord. Et le code est open-source.
             </p>
           </div>
         </div>
@@ -195,10 +195,10 @@ export default function Home() {
       <section className="bg-bleu">
         <div className="mx-auto max-w-6xl px-6 py-16 text-center">
           <h2 className="font-display text-3xl text-white">
-            Offrez un coup de main au bout du fil.
+            Garde l'utile. Largue le reste.
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-white/80">
-            Créez le compte, reliez son téléphone, choisissez ensemble le code secret. Il ne reste
+            Crée ton compte, relie ton numéro, choisis ton code secret. Il ne reste
             plus qu'à appeler.
           </p>
           <a

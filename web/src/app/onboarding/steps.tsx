@@ -14,8 +14,8 @@ export function PhoneStep() {
     <section>
       <h1 className="text-2xl font-semibold">Le téléphone à relier</h1>
       <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-        C'est le numéro depuis lequel la personne appellera son assistant. Un code de vérification
-        lui sera envoyé par SMS.
+        C'est le numéro depuis lequel tu appelleras ton assistant. Un code de vérification
+        arrive par SMS.
       </p>
 
       <form
@@ -27,14 +27,14 @@ export function PhoneStep() {
       >
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Nom complet</span>
-          <input name="full_name" placeholder="Jeanne Dupont" className="w-full rounded-lg border border-neutral-300 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900" />
+          <input name="full_name" placeholder="Sam Riviere" className="w-full rounded-lg border border-neutral-300 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium">Comment l'assistant doit l'appeler</span>
-          <input name="preferred_name" placeholder="Jeanne" className="w-full rounded-lg border border-neutral-300 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900" />
+          <span className="mb-1 block text-sm font-medium">Comment l'assistant doit t'appeler</span>
+          <input name="preferred_name" placeholder="Sam" className="w-full rounded-lg border border-neutral-300 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium">Adresse du domicile (pour les itinéraires)</span>
+          <span className="mb-1 block text-sm font-medium">Ton adresse (pour les itinéraires depuis « chez moi »)</span>
           <input name="home_address" placeholder="12 rue des Lilas, 75011 Paris" className="w-full rounded-lg border border-neutral-300 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900" />
         </label>
         <button className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-900">
@@ -68,7 +68,7 @@ export function PhoneStep() {
         <form action={confirmAction} className="space-y-4">
           <input type="hidden" name="e164" value={sendState.e164} />
           <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-            Code envoyé au {sendState.e164}. Saisissez-le ci-dessous.
+            Code envoyé au {sendState.e164}. Saisis-le ci-dessous.
           </p>
           <label className="block">
             <span className="mb-1 block text-sm font-medium">Code reçu par SMS</span>
@@ -105,8 +105,8 @@ export function PinStep() {
     <section>
       <h1 className="text-2xl font-semibold">Le code secret à 4 chiffres</h1>
       <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-        Avant d'envoyer un message ou de passer un appel à la place de la personne, l'assistant
-        demandera ce code à voix haute. C'est la protection contre les numéros usurpés.
+        Avant d'envoyer un SMS ou de passer un appel à ta place, l'assistant te demandera ce code
+        à voix haute. Un numéro d'appelant peut être usurpé ; le code protège les actions sensibles.
       </p>
       <form action={action} className="mt-8 space-y-4">
         <label className="block">
@@ -121,7 +121,7 @@ export function PinStep() {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium">Confirmez le code</span>
+          <span className="mb-1 block text-sm font-medium">Confirme le code</span>
           <input
             name="pin_confirm"
             required

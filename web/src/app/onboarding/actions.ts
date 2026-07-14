@@ -34,7 +34,7 @@ export async function sendOtp(_prev: unknown, formData: FormData): Promise<{ ok:
     return { ok: true, message: "Code envoyé par SMS.", e164 };
   } catch (err) {
     console.error("OTP send", err);
-    return { ok: false, message: "Impossible d'envoyer le code (service SMS). Réessayez." };
+    return { ok: false, message: "Impossible d'envoyer le code (service SMS). Réessaie." };
   }
 }
 
@@ -44,9 +44,9 @@ export async function confirmOtp(_prev: unknown, formData: FormData): Promise<{ 
   const code = String(formData.get("code") ?? "").trim();
   try {
     const ok = await checkPhoneVerification(e164, code);
-    if (!ok) return { ok: false, message: "Code incorrect. Réessayez." };
+    if (!ok) return { ok: false, message: "Code incorrect. Réessaie." };
   } catch {
-    return { ok: false, message: "Vérification impossible. Redemandez un code." };
+    return { ok: false, message: "Vérification impossible. Redemande un code." };
   }
   const db = supabaseAdmin();
   await db.from("phones").upsert(

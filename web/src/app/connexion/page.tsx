@@ -1,7 +1,7 @@
 "use client";
 
-// Connexion / inscription par lien magique (e-mail). Pensé pour être fait par
-// un proche (« la famille qui achète ») autant que par l'utilisateur final.
+// Connexion / inscription par lien magique (e-mail). L'utilisateur du
+// dumbphone crée son propre compte, une fois, depuis n'importe quel navigateur.
 
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -22,7 +22,7 @@ export default function ConnexionPage() {
       options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=/onboarding` },
     });
     setLoading(false);
-    if (error) setError("L'envoi a échoué. Vérifiez l'adresse et réessayez.");
+    if (error) setError("L'envoi a échoué. Vérifie l'adresse et réessaie.");
     else setSent(true);
   }
 
@@ -30,14 +30,14 @@ export default function ConnexionPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
       <h1 className="text-3xl font-semibold tracking-tight">Se connecter</h1>
       <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-        Recevez un lien de connexion par e-mail. Pas de mot de passe à retenir.
+        Reçois un lien de connexion par e-mail. Pas de mot de passe à retenir.
       </p>
 
       {sent ? (
         <div className="mt-8 rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
           <p className="font-medium">C'est envoyé 📬</p>
           <p className="mt-1 text-sm">
-            Ouvrez l'e-mail reçu à <strong>{email}</strong> et cliquez sur le lien pour continuer.
+            Ouvre l'e-mail reçu à <strong>{email}</strong> et clique sur le lien pour continuer.
           </p>
         </div>
       ) : (
@@ -64,7 +64,7 @@ export default function ConnexionPage() {
         </form>
       )}
       <p className="mt-8 text-center text-sm text-neutral-500">
-        Première visite ? Le lien crée votre compte automatiquement.
+        Première visite ? Le lien crée ton compte automatiquement.
       </p>
     </main>
   );

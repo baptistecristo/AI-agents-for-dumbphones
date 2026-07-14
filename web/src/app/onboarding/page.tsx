@@ -42,15 +42,15 @@ export default async function OnboardingPage() {
         <section>
           <h1 className="text-2xl font-semibold">Connecter l'agenda et les contacts</h1>
           <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-            En connectant le compte Google de la personne, l'assistant pourra lire et gérer ses
-            rendez-vous et retrouver ses contacts. Les accès sont chiffrés et révocables à tout moment.
+            En connectant ton compte Google, l'assistant pourra lire et gérer tes rendez-vous et
+            retrouver tes contacts. Les accès sont chiffrés et révocables à tout moment.
           </p>
           <div className="mt-8 space-y-3">
             <a
               href="/api/oauth/google"
               className="block w-full rounded-lg bg-neutral-900 px-4 py-3 text-center text-lg font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
             >
-              Connecter le compte Google
+              Connecter mon compte Google
             </a>
             <form action={skipGoogle}>
               <button className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900">
@@ -65,14 +65,14 @@ export default async function OnboardingPage() {
         <section>
           <h1 className="text-2xl font-semibold">Ce que l'assistant a le droit de faire</h1>
           <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-            Chaque autorisation est enregistrée, horodatée et révocable. C'est vous qui décidez.
+            Chaque autorisation est enregistrée, horodatée et révocable. C'est toi qui décides.
           </p>
           <form action={saveConsents} className="mt-8 space-y-3">
             {[
               ["calendar", "Lire et modifier l'agenda", true],
               ["contacts", "Lire les contacts", true],
               ["sms", "Envoyer des SMS (rappels, itinéraires, comptes-rendus)", true],
-              ["outbound_calls", "Passer des appels à ma place (médecin, taxi, restaurant)", true],
+              ["outbound_calls", "Passer des appels à ma place (restaurant, taxi, rendez-vous)", true],
               ["memory", "Retenir mes préférences (lieux, personnes, habitudes)", true],
               ["recording", "Enregistrer et transcrire les appels pour le suivi", false],
             ].map(([source, label, def]) => (

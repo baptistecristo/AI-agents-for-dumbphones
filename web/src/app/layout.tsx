@@ -21,7 +21,7 @@ const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
 export const metadata: Metadata = {
   title: `${brand} — l'assistant qu'on appelle, tout simplement`,
   description:
-    "Un assistant vocal au bout du fil pour ceux qui préfèrent un téléphone simple : agenda, rappels, itinéraires, et des appels passés à leur place. Aucune application.",
+    "Tu as quitté le smartphone, garde le côté utile : appelle un numéro pour la météo, un itinéraire, un rappel, un SMS dicté ou une table réservée. Aucune application. Open-source.",
 };
 
 export default function RootLayout({

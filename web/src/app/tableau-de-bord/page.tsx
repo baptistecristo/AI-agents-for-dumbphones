@@ -1,5 +1,5 @@
 // Tableau de bord : ce que l'assistant a fait (appels, SMS), rappels à venir,
-// connexions et consentements. Lisible par la famille comme par l'utilisateur.
+// connexions et consentements. Tout est visible, rien n'est caché.
 
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -73,14 +73,14 @@ export default async function DashboardPage() {
           href="/api/oauth/google"
           className="mb-8 block rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
         >
-          ⚠️ Connectez le compte Google pour activer l'agenda et les contacts →
+          ⚠️ Connecte ton compte Google pour activer l'agenda et les contacts →
         </a>
       )}
 
       <section className="mb-10">
         <h2 className="mb-3 text-lg font-medium">Derniers appels</h2>
         <div className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-          {(calls ?? []).length === 0 && <p className="p-4 text-sm text-neutral-500">Aucun appel pour l'instant. Appelez le numéro de l'assistant pour essayer !</p>}
+          {(calls ?? []).length === 0 && <p className="p-4 text-sm text-neutral-500">Aucun appel pour l'instant. Appelle ton numéro pour essayer !</p>}
           {(calls ?? []).map((c, i) => (
             <div key={i} className="flex items-baseline justify-between gap-4 p-4">
               <div>
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
 
       {(jobs ?? []).length > 0 && (
         <section className="mb-10">
-          <h2 className="mb-3 text-lg font-medium">Missions (appels passés à votre place)</h2>
+          <h2 className="mb-3 text-lg font-medium">Missions (appels passés à ta place)</h2>
           <div className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
             {(jobs ?? []).map((j, i) => (
               <div key={i} className="p-4">
@@ -128,19 +128,19 @@ export default async function DashboardPage() {
       <section className="mb-10">
         <h2 className="mb-3 text-lg font-medium">Personnalisation de l&apos;agent</h2>
         <p className="mb-3 text-sm text-neutral-500">
-          C&apos;est ici que se règle l&apos;agent : comment il vous appelle au téléphone, et l&apos;adresse
-          utilisée quand vous dites « chez moi ».
+          C&apos;est ici que se règle l&apos;agent : comment il t&apos;appelle au téléphone, et l&apos;adresse
+          utilisée quand tu dis « chez moi ».
         </p>
         <form
           action={updatePersonalization}
           className="space-y-4 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800"
         >
           <label className="block text-sm">
-            <span className="mb-1 block font-medium">Comment l&apos;agent doit vous appeler</span>
+            <span className="mb-1 block font-medium">Comment l&apos;agent doit t&apos;appeler</span>
             <input
               name="preferred_name"
               defaultValue={profile?.preferred_name ?? ""}
-              placeholder="Ex. : Madame Martin, Jeanne…"
+              placeholder="Ex. : Sam, Camille…"
               className="w-full rounded-lg border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
             />
           </label>
@@ -186,7 +186,7 @@ export default async function DashboardPage() {
       </section>
 
       <footer className="text-xs text-neutral-400">
-        Vos données restent en Europe. Export et suppression du compte : écrivez-nous (droit à l'effacement, RGPD).
+        Tes données restent en Europe. Export et suppression du compte : écris-nous (droit à l'effacement, RGPD).
       </footer>
     </main>
   );
