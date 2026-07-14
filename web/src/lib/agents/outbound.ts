@@ -4,8 +4,9 @@
 // vocaux (DTMF), gère le répondeur, poursuit un objectif borné, puis rend
 // compte via l'outil report_outcome -> SMS à l'utilisateur.
 
-import { APP_URL, envOr } from "../env";
+import { envOr } from "../env";
 import { Language } from "../language";
+import { webhookServer } from "../vapi";
 
 export type OutboundJob = {
   id: string;
@@ -73,7 +74,7 @@ ${KIND_GUIDANCE[job.kind]}
 }
 
 export function buildOutboundAssistant(job: OutboundJob) {
-  const serverUrl = `${APP_URL()}/api/vapi/webhook`;
+  const server = webhookServer();
   return {
     name: `mission-${job.kind}-${job.id.slice(0, 8)}`,
     voice: {
@@ -112,7 +113,7 @@ export function buildOutboundAssistant(job: OutboundJob) {
               required: ["status", "details"],
             },
           },
-          server: { url: serverUrl },
+          server,
         },
       ],
     },
@@ -120,7 +121,7 @@ export function buildOutboundAssistant(job: OutboundJob) {
     firstMessageMode: "assistant-waits-for-user",
     silenceTimeoutSeconds: 20,
     maxDurationSeconds: 600,
-    server: { url: serverUrl },
+    server,
     serverMessages: ["tool-calls", "end-of-call-report", "status-update"],
     metadata: { outbound_job_id: job.id },
   };

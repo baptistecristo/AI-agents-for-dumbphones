@@ -4,7 +4,7 @@
 // Les descriptions sont en anglais : elles sont lues par le LLM (qui gère
 // aussi bien les appels FR que EN), pas par l'utilisateur.
 
-import { APP_URL } from "../env";
+import { webhookServer } from "../vapi";
 
 function serverTool(
   name: string,
@@ -20,7 +20,7 @@ function serverTool(
       description,
       parameters: { type: "object", properties, required },
     },
-    server: { url: `${APP_URL()}/api/vapi/webhook` },
+    server: webhookServer(),
   };
 }
 

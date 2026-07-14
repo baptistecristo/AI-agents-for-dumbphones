@@ -4,9 +4,22 @@
 
 import { timingSafeEqual } from "node:crypto";
 
-import { env, envOr } from "./env";
+import { APP_URL, env, envOr } from "./env";
 
 const VAPI_BASE = "https://api.vapi.ai";
+
+// Tout objet `server` envoyé à Vapi doit passer par ici. Sans credentialId,
+// Vapi appelle notre webhook sans le header X-Vapi-Secret : isValidVapiRequest
+// renvoie 401 en prod et plus rien n'aboutit — ni appel entrant, ni tool-call.
+// Le credential est de type « Bearer Token », Header Name X-Vapi-Secret,
+// préfixe Bearer désactivé (mode legacy, équivalent de l'ancien server.secret).
+export function webhookServer(): { url: string; credentialId?: string } {
+  const credentialId = envOr("VAPI_WEBHOOK_CREDENTIAL_ID", "");
+  return {
+    url: `${APP_URL()}/api/vapi/webhook`,
+    ...(credentialId ? { credentialId } : {}),
+  };
+}
 
 async function vapiFetch(path: string, init?: RequestInit): Promise<unknown> {
   const res = await fetch(`${VAPI_BASE}${path}`, {
@@ -58,7 +71,7 @@ export async function attachPhoneNumber(phoneNumberId: string, fallbackAssistant
   await vapiFetch(`/phone-number/${phoneNumberId}`, {
     method: "PATCH",
     body: JSON.stringify({
-      server: { url: `${envOr("APP_URL", "http://localhost:3000")}/api/vapi/webhook` },
+      server: webhookServer(),
       ...(fallbackAssistantId ? { fallbackDestination: undefined, assistantId: fallbackAssistantId } : {}),
     }),
   });

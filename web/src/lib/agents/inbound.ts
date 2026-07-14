@@ -5,6 +5,7 @@
 
 import { envOr } from "../env";
 import { Language } from "../language";
+import { webhookServer } from "../vapi";
 import { agentTools } from "./tools";
 
 export const agentName = () => envOr("AGENT_NAME", "Agent");
@@ -167,7 +168,7 @@ export function buildInboundAssistant(ctx: CallerContext) {
     firstMessageMode: "assistant-speaks-first",
     silenceTimeoutSeconds: 30,
     maxDurationSeconds: 900,
-    server: { url: `${envOr("APP_URL", "http://localhost:3000")}/api/vapi/webhook` },
+    server: webhookServer(),
     serverMessages: ["tool-calls", "end-of-call-report", "status-update"],
   };
 }
