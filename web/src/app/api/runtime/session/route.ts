@@ -1,13 +1,15 @@
 // Runtime self-host -> ouverture de session d'appel.
 // Le runtime (Pipecat) envoie le numéro appelant et l'id d'appel opérateur ;
-// on renvoie le prompt système personnalisé + le message d'accueil, et on
-// crée la ligne de journal qui servira de session (PIN, user) aux outils.
+// on renvoie le prompt système personnalisé + le message d'accueil + la langue
+// de l'appel, et on crée la ligne de journal qui servira de session (PIN,
+// user, langue) aux outils.
 
 import { NextResponse } from "next/server";
-import { agentName, inboundSystemPrompt } from "@/lib/agents/inbound";
+import { inboundFirstMessage, inboundSystemPrompt } from "@/lib/agents/inbound";
 import { outboundSystemPrompt } from "@/lib/agents/outbound";
 import { safeEqual } from "@/lib/crypto";
 import { env } from "@/lib/env";
+import { defaultLanguage, normalizeLanguage } from "@/lib/language";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function authorized(req: Request): boolean {
@@ -29,7 +31,12 @@ export async function POST(req: Request) {
     if (!body.job_id) return NextResponse.json({ error: "job_id requis" }, { status: 400 });
     const { data: job } = await db.from("outbound_jobs").select("*").eq("id", body.job_id).single();
     if (!job) return NextResponse.json({ error: "job introuvable" }, { status: 404 });
-    const { data: profile } = await db.from("profiles").select("full_name").eq("id", job.user_id).single();
+    const { data: profile } = await db
+      .from("profiles")
+      .select("full_name, preferred_language")
+      .eq("id", job.user_id)
+      .single();
+    const language = normalizeLanguage(profile?.preferred_language);
 
     await db.from("call_logs").upsert(
       {
@@ -38,6 +45,7 @@ export async function POST(req: Request) {
         direction: "outbound",
         agent: job.kind,
         to_number: job.target_number,
+        language,
       },
       { onConflict: "vapi_call_id" },
     );
@@ -53,8 +61,10 @@ export async function POST(req: Request) {
         constraints: job.constraints ?? {},
         callback_number: job.callback_number,
         user_full_name: profile?.full_name ?? null,
+        user_language: language,
       }),
       first_message: null, // sortant : on attend que l'interlocuteur décroche et parle
+      language,
       job_id: job.id,
     });
   }
@@ -67,6 +77,7 @@ export async function POST(req: Request) {
     homeAddress: null as string | null,
     memories: [] as { key: string; value: string }[],
     pinConfigured: false,
+    language: defaultLanguage(), // appelant inconnu -> env DEFAULT_LANGUAGE
   };
   if (caller) {
     const { data: phone } = await db
@@ -77,7 +88,11 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (phone) {
       const [{ data: profile }, { data: memories }] = await Promise.all([
-        db.from("profiles").select("full_name, preferred_name, home_address, pin_hash").eq("id", phone.user_id).single(),
+        db
+          .from("profiles")
+          .select("full_name, preferred_name, home_address, pin_hash, preferred_language")
+          .eq("id", phone.user_id)
+          .single(),
         db.from("memories").select("key, value").eq("user_id", phone.user_id).limit(30),
       ]);
       ctx = {
@@ -86,6 +101,7 @@ export async function POST(req: Request) {
         homeAddress: profile?.home_address ?? null,
         memories: memories ?? [],
         pinConfigured: Boolean(profile?.pin_hash),
+        language: normalizeLanguage(profile?.preferred_language),
       };
     }
   }
@@ -97,16 +113,15 @@ export async function POST(req: Request) {
       direction: "inbound",
       agent: "assistant",
       from_number: caller,
+      language: ctx.language,
     },
     { onConflict: "vapi_call_id" },
   );
 
-  const name = agentName();
   return NextResponse.json({
     call_id: body.provider_call_id,
     system_prompt: inboundSystemPrompt(ctx),
-    first_message: ctx.preferredName
-      ? `Bonjour ${ctx.preferredName} ! Ici ${name}. Que puis-je faire pour vous ?`
-      : `Bonjour ! Ici ${name}, votre assistant. Que puis-je faire pour vous ?`,
+    first_message: inboundFirstMessage(ctx),
+    language: ctx.language,
   });
 }

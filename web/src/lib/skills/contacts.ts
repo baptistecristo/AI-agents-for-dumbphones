@@ -2,12 +2,20 @@
 
 import { google } from "googleapis";
 import { googleFor } from "../google";
-import { CallSession, SkillResult } from "./types";
+import { CallSession, SkillResult, t } from "./types";
 
 export async function findContact(session: CallSession, args: { name: string }): Promise<SkillResult> {
-  if (!session.userId) return "Appelant non identifié : pas d'accès aux contacts.";
+  if (!session.userId)
+    return t(session, {
+      fr: "Appelant non identifié : pas d'accès aux contacts.",
+      en: "Unidentified caller: no access to contacts.",
+    });
   const auth = await googleFor(session.userId);
-  if (!auth) return "Le compte Google n'est pas connecté (à faire sur le site).";
+  if (!auth)
+    return t(session, {
+      fr: "Le compte Google n'est pas connecté (à faire sur le site).",
+      en: "The Google account isn't connected (to do on the website).",
+    });
   const people = google.people({ version: "v1", auth });
   const res = await people.people.searchContacts({
     query: args.name,
@@ -15,13 +23,20 @@ export async function findContact(session: CallSession, args: { name: string }):
     pageSize: 3,
   });
   const results = res.data.results ?? [];
-  if (results.length === 0) return `Aucun contact trouvé pour « ${args.name} ».`;
+  if (results.length === 0)
+    return t(session, {
+      fr: `Aucun contact trouvé pour « ${args.name} ».`,
+      en: `No contact found for "${args.name}".`,
+    });
   const lines = results.map((r) => {
-    const name = r.person?.names?.[0]?.displayName ?? "Sans nom";
-    const phone = r.person?.phoneNumbers?.[0]?.value ?? "pas de numéro";
+    const name = r.person?.names?.[0]?.displayName ?? t(session, { fr: "Sans nom", en: "No name" });
+    const phone = r.person?.phoneNumbers?.[0]?.value ?? t(session, { fr: "pas de numéro", en: "no number" });
     return `- ${name} : ${phone}`;
   });
-  return `Contacts trouvés :\n${lines.join("\n")}`;
+  return t(session, {
+    fr: `Contacts trouvés :\n${lines.join("\n")}`,
+    en: `Contacts found:\n${lines.join("\n")}`,
+  });
 }
 
 // Résout un nom -> numéro E.164 (utilisé par send_sms et place_call)

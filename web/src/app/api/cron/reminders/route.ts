@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { safeEqual } from "@/lib/crypto";
 import { envOr } from "@/lib/env";
+import { normalizeLanguage } from "@/lib/language";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/twilio";
 
@@ -42,7 +43,16 @@ export async function GET(req: Request) {
       .maybeSingle();
     if (phone) {
       try {
-        await sendSms({ to: phone.e164, body: `🔔 Rappel : ${r.text}`, userId: r.user_id, kind: "reminder" });
+        const { data: profile } = await db
+          .from("profiles")
+          .select("preferred_language")
+          .eq("id", r.user_id)
+          .maybeSingle();
+        const body =
+          normalizeLanguage(profile?.preferred_language) === "en"
+            ? `🔔 Reminder: ${r.text}`
+            : `🔔 Rappel : ${r.text}`;
+        await sendSms({ to: phone.e164, body, userId: r.user_id, kind: "reminder" });
         sent++;
       } catch (err) {
         console.error("rappel SMS", r.id, err);

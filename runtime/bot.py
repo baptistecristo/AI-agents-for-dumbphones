@@ -84,6 +84,12 @@ async def run_call(
     session = await api_client.open_session(call_id, direction, caller_number, job_id)
     job_id = session.get("job_id") or job_id
 
+    # Langue de la session ("fr" | "en") : pilote la voix Piper ET la langue Whisper.
+    # STT épinglé (pas d'auto-détection) : le WhisperSTTService de Pipecat exige une
+    # langue concrète — run_stt fait assert_given(settings.language) avant transcribe.
+    language = session.get("language", "fr")
+    stt_language = Language.EN if language == "en" else Language.FR
+
     transport = FastAPIWebsocketTransport(
         websocket=websocket,
         params=FastAPIWebsocketParams(
@@ -98,12 +104,13 @@ async def run_call(
         device=config.WHISPER_DEVICE,
         settings=WhisperSTTService.Settings(
             model=config.WHISPER_MODEL,
-            language=Language.FR,
+            language=stt_language,
         ),
     )
 
+    # Voix Piper monolingue : elle reste fixe pendant tout l'appel (voir README).
     tts = PiperTTSService(
-        voice_id=config.PIPER_VOICE,
+        voice_id=config.piper_voice_for(language),
         download_dir=Path(__file__).parent / "models",
     )
 

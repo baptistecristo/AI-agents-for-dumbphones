@@ -32,8 +32,16 @@ TELNYX_API_KEY = os.getenv("TELNYX_API_KEY", "")
 WHISPER_MODEL = env("WHISPER_MODEL", "medium")
 WHISPER_DEVICE = env("WHISPER_DEVICE", "auto")  # cpu | cuda | auto
 
-# TTS local (Piper) : voix française, téléchargée automatiquement au 1er appel
-PIPER_VOICE = env("PIPER_VOICE", "fr_FR-siwis-medium")
+# TTS local (Piper) : une voix par langue, téléchargées automatiquement au 1er appel.
+# La langue de la session (renvoyée par /api/runtime/session) choisit la voix.
+# Rétro-compat : l'ancienne variable PIPER_VOICE, si définie, sert de voix FR.
+PIPER_VOICE_FR = env("PIPER_VOICE_FR", os.getenv("PIPER_VOICE") or "fr_FR-siwis-medium")
+PIPER_VOICE_EN = env("PIPER_VOICE_EN", "en_US-lessac-medium")
+
+
+def piper_voice_for(language: str) -> str:
+    """Voix Piper correspondant à la langue de session ("fr" par défaut)."""
+    return PIPER_VOICE_EN if language == "en" else PIPER_VOICE_FR
 
 # Cerveau : ollama (100 % local) | mistral (API EU) | anthropic (qualité max)
 LLM_PROVIDER = env("LLM_PROVIDER", "ollama")

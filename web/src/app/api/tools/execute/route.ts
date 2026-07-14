@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { safeEqual } from "@/lib/crypto";
 import { env } from "@/lib/env";
+import { normalizeLanguage } from "@/lib/language";
 import { executeTool } from "@/lib/skills";
 import { handleReportOutcome } from "@/lib/skills/outbound-report";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
 
   const { data } = await supabaseAdmin()
     .from("call_logs")
-    .select("user_id, from_number, pin_verified")
+    .select("user_id, from_number, pin_verified, language")
     .eq("vapi_call_id", body.call_id)
     .maybeSingle();
 
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
     userId: data?.user_id ?? null,
     callerNumber: data?.from_number ?? null,
     pinVerified: data?.pin_verified ?? false,
+    language: normalizeLanguage(data?.language), // absent -> 'fr'
   });
   return NextResponse.json({ result });
 }

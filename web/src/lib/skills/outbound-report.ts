@@ -1,8 +1,20 @@
 // Clôture des missions sortantes — partagé entre le webhook Vapi et le
 // runtime self-host : compte-rendu (report_outcome) et fin d'appel sans rapport.
+// Les SMS envoyés au client suivent sa langue préférée (profiles.preferred_language).
 
+import { Language, normalizeLanguage } from "../language";
 import { supabaseAdmin } from "../supabase/admin";
 import { sendSms } from "../twilio";
+
+async function languageOf(userId: string | null): Promise<Language> {
+  if (!userId) return "fr";
+  const { data } = await supabaseAdmin()
+    .from("profiles")
+    .select("preferred_language")
+    .eq("id", userId)
+    .maybeSingle();
+  return normalizeLanguage(data?.preferred_language);
+}
 
 export async function handleReportOutcome(
   jobId: string,
@@ -26,7 +38,9 @@ export async function handleReportOutcome(
     })
     .eq("id", jobId);
   if (job.callback_number) {
-    const prefix = args.status === "success" ? "✅" : args.status === "voicemail" ? "📞 Répondeur —" : "⚠️";
+    const lang = await languageOf(job.user_id);
+    const voicemail = lang === "en" ? "📞 Voicemail —" : "📞 Répondeur —";
+    const prefix = args.status === "success" ? "✅" : args.status === "voicemail" ? voicemail : "⚠️";
     await sendSms({
       to: job.callback_number,
       body: `${prefix} ${args.details}`,
@@ -53,9 +67,13 @@ export async function closeJobWithoutReport(jobId: string): Promise<void> {
     .update({ status: exhausted ? "failed" : "pending", updated_at: new Date().toISOString() })
     .eq("id", jobId);
   if (exhausted && job.callback_number) {
+    const lang = await languageOf(job.user_id);
     await sendSms({
       to: job.callback_number,
-      body: "⚠️ Je n'ai pas réussi à joindre le destinataire malgré plusieurs essais. On réessaiera plus tard.",
+      body:
+        lang === "en"
+          ? "⚠️ I couldn't reach them despite several tries. We'll try again later."
+          : "⚠️ Je n'ai pas réussi à joindre le destinataire malgré plusieurs essais. On réessaiera plus tard.",
       userId: job.user_id,
       kind: "outbound_report",
     });

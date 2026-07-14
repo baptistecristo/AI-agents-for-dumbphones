@@ -1,46 +1,54 @@
 // Skill Météo — Open-Meteo (gratuit, sans clé API : parfait pour le budget mini).
 
-import { CallSession, SkillResult } from "./types";
+import { CallSession, SkillResult, t } from "./types";
 
-const WMO_FR: Record<number, string> = {
-  0: "grand soleil",
-  1: "plutôt dégagé",
-  2: "partiellement nuageux",
-  3: "couvert",
-  45: "brouillard",
-  48: "brouillard givrant",
-  51: "bruine légère",
-  53: "bruine",
-  55: "bruine forte",
-  61: "pluie légère",
-  63: "pluie",
-  65: "forte pluie",
-  71: "neige légère",
-  73: "neige",
-  75: "forte neige",
-  80: "averses légères",
-  81: "averses",
-  82: "fortes averses",
-  95: "orages",
-  96: "orages avec grêle",
-  99: "gros orages avec grêle",
+const WMO: Record<number, { fr: string; en: string }> = {
+  0: { fr: "grand soleil", en: "clear skies" },
+  1: { fr: "plutôt dégagé", en: "mostly clear" },
+  2: { fr: "partiellement nuageux", en: "partly cloudy" },
+  3: { fr: "couvert", en: "overcast" },
+  45: { fr: "brouillard", en: "fog" },
+  48: { fr: "brouillard givrant", en: "freezing fog" },
+  51: { fr: "bruine légère", en: "light drizzle" },
+  53: { fr: "bruine", en: "drizzle" },
+  55: { fr: "bruine forte", en: "heavy drizzle" },
+  61: { fr: "pluie légère", en: "light rain" },
+  63: { fr: "pluie", en: "rain" },
+  65: { fr: "forte pluie", en: "heavy rain" },
+  71: { fr: "neige légère", en: "light snow" },
+  73: { fr: "neige", en: "snow" },
+  75: { fr: "forte neige", en: "heavy snow" },
+  80: { fr: "averses légères", en: "light showers" },
+  81: { fr: "averses", en: "showers" },
+  82: { fr: "fortes averses", en: "heavy showers" },
+  95: { fr: "orages", en: "thunderstorms" },
+  96: { fr: "orages avec grêle", en: "thunderstorms with hail" },
+  99: { fr: "gros orages avec grêle", en: "severe thunderstorms with hail" },
 };
 
 export async function getWeather(
-  _session: CallSession,
+  session: CallSession,
   args: { city?: string; day?: string },
   homeCityFallback?: string | null,
 ): Promise<SkillResult> {
   const city = args.city || homeCityFallback;
-  if (!city) return "Pour quelle ville ? (aucune ville de domicile n'est enregistrée)";
+  if (!city)
+    return t(session, {
+      fr: "Pour quelle ville ? (aucune ville de domicile n'est enregistrée)",
+      en: "For which city? (no home city is set)",
+    });
 
   const geo = (await (
     await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&language=fr&count=1`,
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&language=${session.language}&count=1`,
     )
   ).json()) as { results?: { latitude: number; longitude: number; name: string }[] };
   const place = geo.results?.[0];
-  if (!place) return `Je ne trouve pas la ville « ${city} ».`;
+  if (!place)
+    return t(session, {
+      fr: `Je ne trouve pas la ville « ${city} ».`,
+      en: `I can't find the city "${city}".`,
+    });
 
   const fc = (await (
     await fetch(
@@ -56,13 +64,22 @@ export async function getWeather(
       precipitation_probability_max: number[];
     };
   };
-  if (!fc.daily) return "Le service météo ne répond pas, réessayez plus tard.";
+  if (!fc.daily)
+    return t(session, {
+      fr: "Le service météo ne répond pas, réessayez plus tard.",
+      en: "The weather service isn't responding, try again later.",
+    });
 
   const idx = args.day === "tomorrow" ? 1 : 0;
-  const label = idx === 1 ? "Demain" : "Aujourd'hui";
-  const code = WMO_FR[fc.daily.weather_code[idx]] ?? "temps incertain";
+  const label = t(session, idx === 1 ? { fr: "Demain", en: "Tomorrow" } : { fr: "Aujourd'hui", en: "Today" });
+  const code = WMO[fc.daily.weather_code[idx]]
+    ? t(session, WMO[fc.daily.weather_code[idx]])
+    : t(session, { fr: "temps incertain", en: "uncertain weather" });
   const tmax = Math.round(fc.daily.temperature_2m_max[idx]);
   const tmin = Math.round(fc.daily.temperature_2m_min[idx]);
   const rain = fc.daily.precipitation_probability_max[idx];
-  return `${label} à ${place.name} : ${code}, entre ${tmin} et ${tmax} degrés${rain >= 30 ? `, ${rain} % de risque de pluie — prévoir un parapluie` : ""}.`;
+  return t(session, {
+    fr: `${label} à ${place.name} : ${code}, entre ${tmin} et ${tmax} degrés${rain >= 30 ? `, ${rain} % de risque de pluie — prévoir un parapluie` : ""}.`,
+    en: `${label} in ${place.name}: ${code}, between ${tmin} and ${tmax} degrees${rain >= 30 ? `, ${rain}% chance of rain — bring an umbrella` : ""}.`,
+  });
 }

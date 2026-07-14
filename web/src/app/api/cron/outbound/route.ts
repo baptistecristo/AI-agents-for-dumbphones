@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { buildOutboundAssistant, OutboundJob } from "@/lib/agents/outbound";
 import { safeEqual } from "@/lib/crypto";
 import { env, envOr } from "@/lib/env";
+import { normalizeLanguage } from "@/lib/language";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { startOutboundCall } from "@/lib/vapi";
 
@@ -32,7 +33,11 @@ export async function GET(req: Request) {
       await db.from("outbound_jobs").update({ status: "failed", result: "Pas de numéro cible" }).eq("id", job.id);
       continue;
     }
-    const { data: profile } = await db.from("profiles").select("full_name").eq("id", job.user_id).single();
+    const { data: profile } = await db
+      .from("profiles")
+      .select("full_name, preferred_language")
+      .eq("id", job.user_id)
+      .single();
     const assistantJob: OutboundJob = {
       id: job.id,
       kind: job.kind,
@@ -42,6 +47,7 @@ export async function GET(req: Request) {
       constraints: job.constraints ?? {},
       callback_number: job.callback_number,
       user_full_name: profile?.full_name ?? null,
+      user_language: normalizeLanguage(profile?.preferred_language),
     };
     try {
       let callId: string;
@@ -81,6 +87,7 @@ export async function GET(req: Request) {
           vapi_call_id: callId,
           agent: job.kind,
           to_number: job.target_number,
+          language: assistantJob.user_language,
         },
         { onConflict: "vapi_call_id" },
       );

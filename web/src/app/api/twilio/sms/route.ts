@@ -41,8 +41,10 @@ export async function POST(req: Request) {
     body,
   });
 
+  // NB : les commandes SMS restent en français pour l'instant (bonne première
+  // issue) ; on passe quand même la langue par défaut pour typer la session.
   const reply = await handleSmsCommand(
-    { callId: "sms", userId: phone?.user_id ?? null, callerNumber: from, pinVerified: false },
+    { callId: "sms", userId: phone?.user_id ?? null, callerNumber: from, pinVerified: false, language: "fr" },
     body,
   );
 

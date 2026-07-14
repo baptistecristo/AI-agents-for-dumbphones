@@ -1,16 +1,25 @@
 // Contexte d'exécution d'un outil pendant un appel.
+
+import { Language } from "../language";
+
 export type CallSession = {
   callId: string; // id d'appel Vapi
   userId: string | null;
   callerNumber: string | null;
   pinVerified: boolean;
+  language: Language; // langue de l'appel (profil, sinon DEFAULT_LANGUAGE)
 };
 
-// Chaque skill renvoie un texte français que l'agent lira/paraphrasera.
+// Chaque skill renvoie un texte (dans la langue de l'appel) que l'agent lira/paraphrasera.
 export type SkillResult = string;
 
-export function frDate(iso: string | Date): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+// Sélection FR/EN d'une chaîne destinée à l'appelant.
+export function t(session: Pick<CallSession, "language">, s: { fr: string; en: string }): string {
+  return session.language === "en" ? s.en : s.fr;
+}
+
+export function formatDate(iso: string | Date, language: Language): string {
+  return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "fr-FR", {
     weekday: "long",
     day: "numeric",
     month: "long",

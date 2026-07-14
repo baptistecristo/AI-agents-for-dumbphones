@@ -28,11 +28,15 @@ self-hosted voice pipeline, inbound + outbound calling, skills, auth, an EU data
 with encryption and a consent registry. What's *not* done yet is exactly where the fun
 open problems are — and where you come in:
 
-- 🎙️ **Bilingual EN/FR is half-built.** The code routes language per-call, but STT is
-  pinned to French and there's only a French Piper voice. Adding an **English voice +
-  per-caller language selection** is one of the two best first contributions.
+- 🎙️ **Bilingual EN/FR works.** Each caller has a preferred language
+  (`profiles.preferred_language`); the session hands it to the runtime, which picks the
+  Whisper language and a per-language Piper voice (`PIPER_VOICE_FR` / `PIPER_VOICE_EN`),
+  and skills answer in the caller's language. The agent even switches language mid-call
+  if you do — though Piper voices are monolingual, so the *voice* stays the session's
+  until someone builds mid-call voice switching (a great issue, see below).
 - 🧩 **Skills are a plugin surface.** Adding a **new skill** (a thing the agent can do on
-  a call) is a small, self-contained PR. This is the other best on-ramp.
+  a call) is a small, self-contained PR. This is one of the two best on-ramps; a **third
+  language** is the other.
 - 📞 **A live public call-in number** needs deployment + a phone number (a little money,
   the maintainer's accounts) — held until the repo is contributor-ready.
 
@@ -73,26 +77,25 @@ option. Adding a skill once makes it work on either runtime.
 | Voice runtime | **Self-hosted** Pipecat + faster-whisper + Piper + Ollama/Mistral/Anthropic. Vapi available as a managed fallback (`RUNTIME=vapi`) | `runtime/` + `web/src/lib/vapi.ts` |
 | Telephony | **Twilio** (or Telnyx) trunk — a phone number is the one thing you can't self-host | `runtime/server.py` |
 | SMS + OTP | **Twilio** (Messages + Verify) | `web/src/lib/twilio.ts` |
-| Inbound agent | System prompt + greeting, spoken-PIN gate before sensitive actions, two-step voice confirmation | `web/src/lib/agents/inbound.ts` |
+| Inbound agent | Bilingual (EN/FR) system prompt + greeting, switches language mid-call, spoken-PIN gate before sensitive actions, two-step voice confirmation | `web/src/lib/agents/inbound.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
 | Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), contacts, dictated SMS, memory, PIN | `web/src/lib/skills/` |
 | SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `DONE`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift) | `web/src/lib/sms-commands.ts` |
-| Data (EU) | Supabase Postgres: profiles, phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/0001_init.sql` |
+| Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
 | Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent → PIN), dashboard | `web/src/app/` |
 
-> **Heads-up on framing:** this project began life aimed at *elderly* dumbphone users and
-> pivoted to *young people voluntarily switching* — the core skills transfer perfectly, but
-> some prompts and copy still carry the old tone (French, formal, eldercare). Repurposing
-> the **persona / system prompt** for the new mission is itself a great contribution. See
-> [`open-source-launch-plan.md`](open-source-launch-plan.md) for the full story.
+> **History:** the project began life aimed at *elderly* dumbphone users; the persona,
+> prompts, and outbound missions are now fully pivoted to the young-dumbphone mission —
+> see [`open-source-launch-plan.md`](open-source-launch-plan.md) for the story.
 
 ## Two ways to help in an afternoon
 
 1. **Add a skill** — a new thing the agent can do on a call (a fact lookup, a timer, a
    transit query…). It's one small TypeScript function plus a tool schema. Walkthrough in
    [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skill).
-2. **Add a language / voice** — an English (or other) Piper voice and per-caller language
-   selection, so the agent answers in the caller's language. Walkthrough in
+2. **Add a *third* language (ES / DE / …) or mid-call voice switching** — EN and FR ship
+   already; a new language is the same four touch points, additive. Or make the TTS voice
+   follow the caller when they change language mid-call. Walkthrough in
    [CONTRIBUTING.md](CONTRIBUTING.md#add-a-language-or-voice).
 
 Both ship to a real call-in number once the live demo is up. Tight feedback loop.
@@ -117,8 +120,8 @@ cp .env.example .env           # NEXT_API_URL, RUNTIME_API_SECRET, provider keys
 uvicorn server:app --port 8000
 ```
 
-Database: run `supabase/migrations/0001_init.sql` in your Supabase SQL editor (choose an
-**EU region**). Weather (Open-Meteo) needs no key; directions use a free OpenRouteService
+Database: run the files in `supabase/migrations/` (in order) in your Supabase SQL editor
+(choose an **EU region**). Weather (Open-Meteo) needs no key; directions use a free OpenRouteService
 key. The default LLM is fully local via Ollama — set `LLM_PROVIDER=mistral|anthropic` for
 higher quality at a few cents per call.
 

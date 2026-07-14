@@ -1,16 +1,18 @@
 // Skill Appels sortants — crée un job dans la file ; le cron /api/cron/outbound
 // déclenche l'appel via le moteur généralisé (agents/outbound.ts).
+// NB : la valeur « docteur » est conservée sur le fil (compat DB) mais couvre
+// toute prise de rendez-vous (médecin, coiffeur, garage…).
 
 import { supabaseAdmin } from "../supabase/admin";
 import { resolveContactNumber } from "./contacts";
 import { recall } from "./memory";
-import { CallSession, SkillResult } from "./types";
+import { CallSession, SkillResult, t } from "./types";
 
-const KIND_LABEL: Record<string, string> = {
-  docteur: "appeler le cabinet médical",
-  taxi: "réserver un taxi",
-  resto: "réserver le restaurant",
-  generic: "passer l'appel",
+const KIND_LABEL: Record<string, { fr: string; en: string }> = {
+  docteur: { fr: "appeler pour prendre le rendez-vous", en: "call to book the appointment" },
+  taxi: { fr: "réserver un taxi", en: "book a taxi" },
+  resto: { fr: "réserver le restaurant", en: "book the restaurant" },
+  generic: { fr: "passer l'appel", en: "place the call" },
 };
 
 export async function placeCall(
@@ -24,9 +26,16 @@ export async function placeCall(
     confirmed: boolean;
   },
 ): Promise<SkillResult> {
-  if (!session.userId) return "Appelant non identifié : appel impossible.";
+  if (!session.userId)
+    return t(session, {
+      fr: "Appelant non identifié : appel impossible.",
+      en: "Unidentified caller: can't place a call.",
+    });
   if (!session.pinVerified) {
-    return "REFUS : le code PIN n'a pas été vérifié. Demander le code à 4 chiffres et appeler verify_pin d'abord.";
+    return t(session, {
+      fr: "REFUS : le code PIN n'a pas été vérifié. Demander le code à 4 chiffres et appeler verify_pin d'abord.",
+      en: "REFUSED: the PIN has not been verified. Ask for the 4-digit code and call verify_pin first.",
+    });
   }
 
   // Résolution du numéro cible : argument direct > contacts Google > mémoire
@@ -40,11 +49,18 @@ export async function placeCall(
     }
   }
   if (!target) {
-    return `Je n'ai pas le numéro de ${args.target_name ?? "ce destinataire"}. Demander le numéro à l'utilisateur (ou l'enregistrer en mémoire pour la prochaine fois).`;
+    return t(session, {
+      fr: `Je n'ai pas le numéro de ${args.target_name ?? "ce destinataire"}. Demander le numéro à l'utilisateur (ou l'enregistrer en mémoire pour la prochaine fois).`,
+      en: `I don't have the number for ${args.target_name ?? "this recipient"}. Ask the user for the number (or save it to memory for next time).`,
+    });
   }
 
   if (!args.confirmed) {
-    return `PROPOSITION (récapituler à voix haute puis demander confirmation) : je vais ${KIND_LABEL[args.kind]} au ${target}${args.target_name ? ` (${args.target_name})` : ""}. Mission : ${args.goal}${args.constraints ? `. Contraintes : ${args.constraints}` : ""}. Le résultat arrivera par SMS.`;
+    const label = t(session, KIND_LABEL[args.kind] ?? KIND_LABEL.generic);
+    return t(session, {
+      fr: `PROPOSITION (récapituler à voix haute puis demander confirmation) : je vais ${label} au ${target}${args.target_name ? ` (${args.target_name})` : ""}. Mission : ${args.goal}${args.constraints ? `. Contraintes : ${args.constraints}` : ""}. Le résultat arrivera par SMS.`,
+      en: `PROPOSAL (recap out loud, then ask for confirmation): I will ${label} at ${target}${args.target_name ? ` (${args.target_name})` : ""}. Mission: ${args.goal}${args.constraints ? `. Constraints: ${args.constraints}` : ""}. The result will arrive by SMS.`,
+    });
   }
 
   const { error } = await supabaseAdmin().from("outbound_jobs").insert({
@@ -56,6 +72,13 @@ export async function placeCall(
     constraints: args.constraints ? { note: args.constraints } : {},
     callback_number: session.callerNumber ?? "",
   });
-  if (error) return "Je n'ai pas réussi à programmer cet appel, désolé.";
-  return `C'est noté. Je m'en occupe dans les prochaines minutes et j'envoie le compte-rendu par SMS. Vous pouvez raccrocher tranquillement.`;
+  if (error)
+    return t(session, {
+      fr: "Je n'ai pas réussi à programmer cet appel, désolé.",
+      en: "I couldn't schedule that call, sorry.",
+    });
+  return t(session, {
+    fr: `C'est noté. Je m'en occupe dans les prochaines minutes et j'envoie le compte-rendu par SMS. Tu peux raccrocher tranquillement.`,
+    en: `Done. I'll take care of it in the next few minutes and text you the outcome by SMS. You can hang up.`,
+  });
 }

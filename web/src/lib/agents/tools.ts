@@ -1,6 +1,8 @@
 // Définitions des outils (skills) exposés à l'agent vocal, au format Vapi
 // (JSON Schema). L'exécution réelle est dans src/lib/skills/*, appelée par
 // /api/vapi/webhook. Un outil = une capacité ; un service externe = un module.
+// Les descriptions sont en anglais : elles sont lues par le LLM (qui gère
+// aussi bien les appels FR que EN), pas par l'utilisateur.
 
 import { APP_URL } from "../env";
 
@@ -27,27 +29,27 @@ export function agentTools() {
     // --- Agenda (Google Calendar) ---
     serverTool(
       "list_events",
-      "Liste les rendez-vous de l'agenda de l'utilisateur pour un jour donné.",
-      { day: { type: "string", description: "Jour demandé au format AAAA-MM-JJ, ou 'today'/'tomorrow'" } },
+      "List the user's calendar events for a given day.",
+      { day: { type: "string", description: "Requested day as YYYY-MM-DD, or 'today'/'tomorrow'" } },
       ["day"],
     ),
     serverTool(
       "create_event",
-      "PROPOSE un nouveau rendez-vous dans l'agenda. Si confirmed=false, renvoie une proposition à lire à voix haute. Ne passe confirmed=true qu'après un 'oui' explicite de l'utilisateur.",
+      "PROPOSE a new calendar event. With confirmed=false it returns a proposal to read out loud. Only pass confirmed=true after an explicit spoken 'yes' from the user.",
       {
-        title: { type: "string", description: "Titre du rendez-vous" },
-        start: { type: "string", description: "Début au format ISO 8601, ex: 2026-07-15T14:00:00" },
-        duration_minutes: { type: "number", description: "Durée en minutes (60 par défaut)" },
-        confirmed: { type: "boolean", description: "true uniquement après confirmation orale explicite" },
+        title: { type: "string", description: "Event title" },
+        start: { type: "string", description: "Start in ISO 8601, e.g. 2026-07-15T14:00:00" },
+        duration_minutes: { type: "number", description: "Duration in minutes (default 60)" },
+        confirmed: { type: "boolean", description: "true only after explicit spoken confirmation" },
       },
       ["title", "start", "confirmed"],
     ),
     serverTool(
       "move_event",
-      "PROPOSE de déplacer un rendez-vous existant. Même règle de confirmation que create_event.",
+      "PROPOSE to move an existing event. Same confirmation rule as create_event.",
       {
-        event_query: { type: "string", description: "Mots du titre ou moment du rendez-vous à déplacer" },
-        new_start: { type: "string", description: "Nouveau début, format ISO 8601" },
+        event_query: { type: "string", description: "Words from the title or the time of the event to move" },
+        new_start: { type: "string", description: "New start, ISO 8601" },
         confirmed: { type: "boolean" },
       },
       ["event_query", "new_start", "confirmed"],
@@ -56,24 +58,24 @@ export function agentTools() {
     // --- Rappels ---
     serverTool(
       "set_reminder",
-      "Programme un rappel qui sera envoyé par SMS (ou rappel vocal) au moment voulu.",
+      "Schedule a reminder to be sent by SMS at the requested time.",
       {
-        text: { type: "string", description: "Texte du rappel, ex: 'prendre le médicament du soir'" },
-        due_at: { type: "string", description: "Quand, format ISO 8601" },
-        recurrence: { type: "string", enum: ["none", "daily", "weekly", "monthly"], description: "Récurrence" },
+        text: { type: "string", description: "Reminder text, e.g. 'take the bread out of the oven'" },
+        due_at: { type: "string", description: "When, ISO 8601" },
+        recurrence: { type: "string", enum: ["none", "daily", "weekly", "monthly"], description: "Recurrence" },
       },
       ["text", "due_at"],
     ),
-    serverTool("list_reminders", "Liste les rappels à venir de l'utilisateur.", {}),
+    serverTool("list_reminders", "List the user's upcoming reminders.", {}),
     serverTool(
       "did_i_already",
-      "Répond à « est-ce que j'ai déjà fait X aujourd'hui ? » en consultant les rappels marqués faits.",
-      { what: { type: "string", description: "L'action demandée, ex: 'pris mes médicaments'" } },
+      "Answer 'did I already do X today?' by checking reminders marked as done.",
+      { what: { type: "string", description: "The action asked about, e.g. 'watered the plants'" } },
       ["what"],
     ),
     serverTool(
       "mark_done",
-      "Marque une action/rappel comme fait (ex: l'utilisateur dit qu'il vient de prendre son médicament).",
+      "Mark an action/reminder as done (e.g. the user says they just did it).",
       { what: { type: "string" } },
       ["what"],
     ),
@@ -81,21 +83,21 @@ export function agentTools() {
     // --- Météo ---
     serverTool(
       "get_weather",
-      "Donne la météo pour une ville (aujourd'hui ou demain).",
+      "Give the weather for a city (today or tomorrow).",
       {
-        city: { type: "string", description: "Ville. Si absent, utiliser la ville du domicile." },
-        day: { type: "string", enum: ["today", "tomorrow"], description: "Jour" },
+        city: { type: "string", description: "City. If absent, use the user's home city." },
+        day: { type: "string", enum: ["today", "tomorrow"], description: "Day" },
       },
     ),
 
     // --- Navigation par SMS ---
     serverTool(
       "get_directions",
-      "Calcule un itinéraire et envoie les étapes par SMS à l'utilisateur, en plus du résumé vocal.",
+      "Compute a route and text the steps to the user by SMS, in addition to the spoken summary.",
       {
-        destination: { type: "string", description: "Adresse ou lieu d'arrivée" },
-        origin: { type: "string", description: "Point de départ. Si absent : demander « où êtes-vous ? » ou utiliser le domicile." },
-        mode: { type: "string", enum: ["walking", "driving", "transit"], description: "Mode de déplacement" },
+        destination: { type: "string", description: "Destination address or place" },
+        origin: { type: "string", description: "Starting point. If absent: ask 'where are you?' or use the home address." },
+        mode: { type: "string", enum: ["walking", "driving", "transit"], description: "Travel mode" },
       },
       ["destination"],
     ),
@@ -103,34 +105,39 @@ export function agentTools() {
     // --- Contacts ---
     serverTool(
       "find_contact",
-      "Cherche un contact (téléphone) dans le carnet d'adresses Google de l'utilisateur.",
-      { name: { type: "string", description: "Nom ou surnom du contact" } },
+      "Search a contact (phone number) in the user's Google address book.",
+      { name: { type: "string", description: "Contact name or nickname" } },
       ["name"],
     ),
 
     // --- Messages ---
     serverTool(
       "send_sms",
-      "PROPOSE d'envoyer un SMS dicté. Si confirmed=false : renvoie le texte à relire à voix haute. confirmed=true seulement après 'oui' explicite. Action sensible : nécessite le PIN vérifié.",
+      "PROPOSE to send a dictated SMS. With confirmed=false: returns the text to read back out loud. confirmed=true only after an explicit 'yes'. Sensitive action: requires the verified PIN.",
       {
-        to_name: { type: "string", description: "Nom du destinataire (sera résolu via les contacts)" },
-        to_number: { type: "string", description: "Ou numéro E.164 direct" },
-        body: { type: "string", description: "Texte du message dicté" },
+        to_name: { type: "string", description: "Recipient name (resolved via contacts)" },
+        to_number: { type: "string", description: "Or a direct E.164 number" },
+        body: { type: "string", description: "Dictated message text" },
         confirmed: { type: "boolean" },
       },
       ["body", "confirmed"],
     ),
 
-    // --- Appels sortants (Docteur / Taxi / Résa) ---
+    // --- Appels sortants (Rendez-vous / Taxi / Résa) ---
     serverTool(
       "place_call",
-      "PROPOSE de passer un appel à la place de l'utilisateur (médecin, taxi, restaurant…). Si confirmed=false : renvoie un récapitulatif de la mission à lire. confirmed=true seulement après 'oui' explicite. Action sensible : nécessite le PIN vérifié. Le résultat sera envoyé par SMS.",
+      "PROPOSE to place a call on the user's behalf (book an appointment, a taxi, a restaurant…). With confirmed=false: returns a mission recap to read out loud. confirmed=true only after an explicit 'yes'. Sensitive action: requires the verified PIN. The result will be sent by SMS.",
       {
-        kind: { type: "string", enum: ["docteur", "taxi", "resto", "generic"], description: "Type de mission" },
-        goal: { type: "string", description: "Objectif précis en français, ex: 'prendre un rendez-vous chez le Dr Martin cette semaine, plutôt le matin'" },
-        target_name: { type: "string", description: "Nom de l'établissement/la personne à appeler" },
-        target_number: { type: "string", description: "Numéro à appeler si connu (sinon il sera cherché dans les contacts/mémoire)" },
-        constraints: { type: "string", description: "Contraintes utiles : créneaux, nombre de personnes, adresse de prise en charge…" },
+        kind: {
+          type: "string",
+          enum: ["docteur", "taxi", "resto", "generic"],
+          description:
+            "Mission preset. 'docteur' = any appointment booking (doctor, hairdresser, garage… — legacy value name), 'taxi' = taxi booking, 'resto' = restaurant booking, 'generic' = anything else.",
+        },
+        goal: { type: "string", description: "Precise goal, e.g. 'book a haircut this week, mornings preferred'" },
+        target_name: { type: "string", description: "Name of the place/person to call" },
+        target_number: { type: "string", description: "Number to call if known (otherwise looked up in contacts/memory)" },
+        constraints: { type: "string", description: "Useful constraints: time slots, number of people, pickup address…" },
         confirmed: { type: "boolean" },
       },
       ["kind", "goal", "confirmed"],
@@ -139,25 +146,25 @@ export function agentTools() {
     // --- Mémoire ---
     serverTool(
       "remember",
-      "Retient une information durable sur l'utilisateur (ex: 'mon médecin traitant est le Dr Martin, 01 23 45 67 89').",
+      "Store a durable fact about the user (e.g. 'my mechanic is Garage Dupont, 01 23 45 67 89').",
       {
-        key: { type: "string", description: "Sujet court, ex: 'médecin traitant'" },
-        value: { type: "string", description: "L'information à retenir" },
+        key: { type: "string", description: "Short topic, e.g. 'mechanic'" },
+        value: { type: "string", description: "The information to remember" },
       },
       ["key", "value"],
     ),
     serverTool(
       "recall",
-      "Recherche dans la mémoire de l'utilisateur (lieux, personnes, préférences déjà notées).",
-      { query: { type: "string", description: "Ce qu'on cherche" } },
+      "Search the user's memory (places, people, preferences already noted).",
+      { query: { type: "string", description: "What to look for" } },
       ["query"],
     ),
 
     // --- Sécurité ---
     serverTool(
       "verify_pin",
-      "Vérifie le code PIN parlé de l'utilisateur. Obligatoire avant toute action sensible (envoyer un message, passer un appel). Ne JAMAIS répéter le PIN à voix haute.",
-      { pin: { type: "string", description: "Le code à 4 chiffres dicté" } },
+      "Verify the user's spoken PIN. Required before any sensitive action (sending a message, placing a call). NEVER repeat the PIN out loud.",
+      { pin: { type: "string", description: "The dictated 4-digit code" } },
       ["pin"],
     ),
   ];

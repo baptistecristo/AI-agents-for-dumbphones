@@ -2,6 +2,13 @@
 
 _Working session recap, 2026-07-13. This file supersedes the elderly-focused framing in `README.md` / `painpoints.md` / `prospects.csv` as the project's direction._
 
+> **2026-07-14 build session:** Tracks 1, 2, 3 and 5 landed — persona pivoted (EN+FR),
+> bilingual pipeline live in code (`preferred_language` column → per-language Whisper +
+> Piper voices → localized skills), outbound missions de-medicalized, CONTRIBUTING
+> updated and 7 good-first-issue drafts in `.github/GOOD_FIRST_ISSUES.md`. The remaining
+> blocker is **Track 4 (live call-in number)** — it needs the maintainer's accounts
+> (Vercel/Supabase/host/Twilio) and a little money.
+
 ---
 
 ## 1. The pivot
@@ -58,18 +65,18 @@ The code already routes language per-call, so this is additive:
 ## 6. The plan — tracks & sequence
 
 ### Track 1 — Story & persona pivot _(free, no accounts — can start now)_
-- [ ] Lock the bilingual one-liner / mission statement
-- [ ] Rewrite the agent persona + system prompt (EN + FR) for the young-dumbphone user
-- [ ] Rewrite `README.md` around the new mission (hero → demo → how it works → how to add a skill)
+- [x] Lock the bilingual one-liner / mission statement
+- [x] Rewrite the agent persona + system prompt (EN + FR) for the young-dumbphone user
+- [x] Rewrite `README.md` around the new mission (hero → demo → how it works → how to add a skill)
 
 ### Track 2 — Bilingual support _(code — mostly solo)_
-- [ ] EN + FR STT (whisper language handling)
-- [ ] Add an EN Piper voice + per-call voice selection
-- [ ] Bilingual prompts + greetings, language detection
+- [x] EN + FR STT (whisper language handling)
+- [x] Add an EN Piper voice + per-call voice selection
+- [x] Bilingual prompts + greetings, language detection
 
 ### Track 3 — Trim skills for the pivot _(code — solo)_
-- [ ] Keep weather / directions / reminders / agenda / memory / SMS
-- [ ] Decide fate of the eldercare outbound missions (drop medical framing; keep generic booking?)
+- [x] Keep weather / directions / reminders / agenda / memory / SMS
+- [x] Decide fate of the eldercare outbound missions (drop medical framing; keep generic booking?) → done: generic appointment preset replaces the doctor mission; taxi/resto/generic kept
 
 ### Track 4 — Live call-in number _(needs the user's accounts + money)_
 - [ ] Deploy web app + Supabase (env, run migration `supabase/migrations/0001_init.sql`)
@@ -78,9 +85,9 @@ The code already routes language per-call, so this is additive:
 - [ ] Make one real call end-to-end
 
 ### Track 5 — Repo contributor-readiness _(solo)_
-- [ ] `CONTRIBUTING.md`
-- [ ] 5–8 "good first issue" tickets — especially "add a skill" and "add a language" (best contributor on-ramps)
-- [ ] Demo GIF / audio + the call-in number in the README
+- [x] `CONTRIBUTING.md`
+- [x] 5–8 "good first issue" tickets — 7 drafts in `.github/GOOD_FIRST_ISSUES.md` (skills, third language, mid-call voice switch, bilingual SMS, dashboard toggle, demo assets)
+- [ ] Demo GIF / audio + the call-in number in the README _(blocked on Track 4)_
 
 ### Track 6 — Launch _(with the user, later)_
 - [ ] Show HN: _"Show HN: Call an AI from your dumbphone so you don't need a smartphone"_

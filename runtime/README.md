@@ -5,7 +5,7 @@ sauf l'incompressible — l'opérateur téléphonique (Twilio ou Telnyx en trunk
 
 ```
 téléphone ⇄ opérateur (Twilio/Telnyx) ⇄ WS média ⇄ ce serveur :
-  VAD Silero (local) → faster-whisper FR (local) → LLM → Piper FR (local)
+  VAD Silero (local) → faster-whisper FR/EN (local) → LLM → Piper FR/EN (local)
                                              │
                                              └── outils → API Next.js (/api/tools/execute)
 ```
@@ -47,6 +47,24 @@ Côté `web/.env.local` : `RUNTIME=selfhost`, `RUNTIME_URL=https://HOTE`,
 | `ollama` | aucune (local) | correcte (qwen2.5:7b) — à tester sérieusement | 0 € |
 | `mistral` | API Mistral (France 🇫🇷, données EU) | bonne | ~cents/appel |
 | `anthropic` | API Anthropic (US, DPA nécessaire) | la meilleure | ~cents/appel |
+
+## Langues (FR / EN)
+
+L'API Next.js renvoie la langue de la session dans `POST /api/runtime/session`
+(`"language": "fr" | "en"` ; défaut `fr` si absent). Le runtime s'en sert pour :
+
+- **STT** : faster-whisper est épinglé sur la langue de session — pas
+  d'auto-détection, le `WhisperSTTService` de Pipecat exige une langue concrète.
+- **TTS** : la voix Piper correspondante est choisie à l'ouverture de l'appel :
+  `PIPER_VOICE_FR` (défaut `fr_FR-siwis-medium`) ou `PIPER_VOICE_EN`
+  (défaut `en_US-lessac-medium`). L'ancienne variable `PIPER_VOICE` reste
+  acceptée : si elle est définie, elle sert de voix FR.
+
+**Limite assumée** : les voix Piper sont monolingues. Si l'appelant change de
+langue en cours d'appel, la voix de session est conservée (l'agent parlera avec
+un accent) et la transcription de l'autre langue sera dégradée puisque Whisper
+est épinglé. Le changement de voix/langue en cours d'appel est un
+« good first issue ».
 
 ## Limites connues (v1)
 

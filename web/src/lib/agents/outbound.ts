@@ -1,10 +1,14 @@
 // Moteur d'appels sortants généralisé (§7 du doc d'archi).
-// Un seul moteur, des "presets" par mission : Docteur, Taxi, Restaurant, générique.
+// Un seul moteur, des "presets" par mission : Rendez-vous, Taxi, Restaurant, générique.
+// NB : la valeur de kind « docteur » est conservée telle quelle sur le fil et en
+// base (compatibilité avec les jobs existants), mais elle couvre désormais toute
+// prise de rendez-vous (médecin, coiffeur, garage…).
 // L'agent appelle un humain (secrétariat, central taxi…), navigue les serveurs
 // vocaux (DTMF), gère le répondeur, poursuit un objectif borné, puis rend
 // compte via l'outil report_outcome -> SMS à l'utilisateur.
 
 import { APP_URL, envOr } from "../env";
+import { Language } from "../language";
 
 export type OutboundJob = {
   id: string;
@@ -15,19 +19,20 @@ export type OutboundJob = {
   constraints: Record<string, unknown>;
   callback_number: string;
   user_full_name: string | null;
+  user_language: Language; // langue préférée du client (compte-rendu, ouverture d'appel)
 };
 
 const KIND_GUIDANCE: Record<OutboundJob["kind"], string> = {
-  docteur: `# Mission type : cabinet médical
-- Tu appelles un cabinet médical pour prendre, déplacer ou confirmer un rendez-vous.
+  docteur: `# Mission type : prise de rendez-vous
+- Tu appelles un établissement qui prend des rendez-vous (cabinet médical, coiffeur, garage…) pour prendre, déplacer ou confirmer un rendez-vous.
 - Serveur vocal : écoute les options et utilise l'outil dtmf pour taper le bon chiffre (souvent « secrétariat » ou « rendez-vous »).
-- Avec la secrétaire : donne le nom du patient, la raison EN UN MOT (consultation, renouvellement…), et les disponibilités. Ne révèle AUCUN détail médical au-delà du strict nécessaire.
-- Note précisément : date, heure, praticien, consignes (à jeun, carte vitale…).
-- Répondeur : laisse un message bref — nom du patient, demande de rendez-vous, numéro de rappel — puis report_outcome avec status "voicemail".`,
+- Avec l'interlocuteur : donne le nom du client, la raison EN UN MOT (consultation, coupe, révision…), et les disponibilités. Ne révèle AUCUN détail personnel au-delà du strict nécessaire à la prise de rendez-vous.
+- Note précisément : date, heure, personne/praticien, consignes éventuelles.
+- Répondeur : laisse un message bref — nom du client, demande de rendez-vous, numéro de rappel — puis report_outcome avec status "voicemail".`,
   taxi: `# Mission type : réservation de taxi
 - Tu appelles une compagnie de taxi ou un chauffeur pour réserver une course.
 - Donne : adresse de prise en charge, destination, horaire, nom du client.
-- IMPORTANT : demande à ce que le chauffeur appelle DIRECTEMENT le client à son arrivée, au numéro de rappel fourni. C'est le téléphone personnel du client : le chauffeur doit l'utiliser plutôt que d'attendre devant la porte.
+- IMPORTANT : le client n'a pas de smartphone, donc pas d'appli ni de notification. Demande à ce que le chauffeur appelle DIRECTEMENT le client à son arrivée, au numéro de rappel fourni, plutôt que d'attendre devant la porte.
 - Confirme le prix approximatif si proposé, sans jamais t'engager sur un paiement.`,
   resto: `# Mission type : réservation de restaurant
 - Tu appelles un restaurant pour réserver une table.
@@ -40,10 +45,14 @@ const KIND_GUIDANCE: Record<OutboundJob["kind"], string> = {
 
 export function outboundSystemPrompt(job: OutboundJob): string {
   const clientName = job.user_full_name ?? "le client";
-  return `Tu es un assistant téléphonique qui appelle POUR LE COMPTE de ${clientName}. Tu parles français, poliment et efficacement.
+  const openingLine =
+    job.user_language === "en"
+      ? `« Hello, I'm the automated assistant of ${clientName}, I'm calling on their behalf. » Si l'interlocuteur parle français, poursuis en français.`
+      : `« Bonjour, je suis l'assistant automatique de ${clientName}, je vous appelle de sa part. »`;
+  return `Tu es un assistant téléphonique qui appelle POUR LE COMPTE de ${clientName}. Tu parles ${job.user_language === "en" ? "anglais (bascule en français si l'interlocuteur parle français)" : "français"}, poliment et efficacement.
 
 # Transparence (obligation légale)
-Dès le début : « Bonjour, je suis l'assistant automatique de ${clientName}, je vous appelle de sa part. » Ne te fais JAMAIS passer pour un humain si on te pose la question.
+Dès le début : ${openingLine} Ne te fais JAMAIS passer pour un humain si on te pose la question.
 
 # Objectif de cet appel
 ${job.goal}
@@ -63,7 +72,7 @@ ${KIND_GUIDANCE[job.kind]}
 
 # Ce que tu rapportes (report_outcome)
 - status: success | failed | voicemail | needs_user
-- details: tout ce que le client doit savoir, en français clair (date, heure, nom, prix, consignes). C'est ce texte qui lui sera envoyé par SMS : rédige-le pour lui.`;
+- details: tout ce que le client doit savoir, ${job.user_language === "en" ? "en anglais clair" : "en français clair"} (date, heure, nom, prix, consignes). C'est ce texte qui lui sera envoyé par SMS : rédige-le pour lui, dans sa langue.`;
 }
 
 export function buildOutboundAssistant(job: OutboundJob) {
@@ -74,9 +83,9 @@ export function buildOutboundAssistant(job: OutboundJob) {
       provider: "11labs",
       voiceId: envOr("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB"),
       model: "eleven_multilingual_v2",
-      speed: 1.0, // débit normal : ici on parle à un professionnel, pas au senior
+      speed: 1.0,
     },
-    transcriber: { provider: "deepgram", model: "nova-2", language: "fr" },
+    transcriber: { provider: "deepgram", model: "nova-2", language: job.user_language },
     model: {
       // Le planificateur d'appels sortants mérite le modèle fort (§3 du doc :
       // deux niveaux de modèle ; ici c'est le cas "hard reasoning").
@@ -93,14 +102,14 @@ export function buildOutboundAssistant(job: OutboundJob) {
           function: {
             name: "report_outcome",
             description:
-              "Rapporte le résultat final de la mission. À appeler UNE fois, avant de raccrocher.",
+              "Report the final outcome of the mission. Call it ONCE, before hanging up.",
             parameters: {
               type: "object",
               properties: {
                 status: { type: "string", enum: ["success", "failed", "voicemail", "needs_user"] },
                 details: {
                   type: "string",
-                  description: "Compte-rendu en français destiné au client (sera envoyé par SMS).",
+                  description: "Summary written for the client in their language (it will be sent to them by SMS).",
                 },
               },
               required: ["status", "details"],

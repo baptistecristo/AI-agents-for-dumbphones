@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { buildInboundAssistant, CallerContext } from "@/lib/agents/inbound";
+import { defaultLanguage, normalizeLanguage } from "@/lib/language";
 import { executeTool } from "@/lib/skills";
 import { closeJobWithoutReport, handleReportOutcome } from "@/lib/skills/outbound-report";
 import { CallSession } from "@/lib/skills/types";
@@ -15,7 +16,15 @@ export const maxDuration = 60;
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 async function callerContextFor(phoneE164: string | null): Promise<CallerContext & { fullName: string | null }> {
-  const empty = { userId: null, preferredName: null, homeAddress: null, memories: [], pinConfigured: false, fullName: null };
+  const empty = {
+    userId: null,
+    preferredName: null,
+    homeAddress: null,
+    memories: [],
+    pinConfigured: false,
+    fullName: null,
+    language: defaultLanguage(), // appelant inconnu -> env DEFAULT_LANGUAGE
+  };
   if (!phoneE164) return empty;
   const db = supabaseAdmin();
   const { data: phone } = await db
@@ -26,7 +35,11 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
     .maybeSingle();
   if (!phone) return empty;
   const [{ data: profile }, { data: memories }] = await Promise.all([
-    db.from("profiles").select("full_name, preferred_name, home_address, pin_hash").eq("id", phone.user_id).single(),
+    db
+      .from("profiles")
+      .select("full_name, preferred_name, home_address, pin_hash, preferred_language")
+      .eq("id", phone.user_id)
+      .single(),
     db.from("memories").select("key, value").eq("user_id", phone.user_id).limit(30),
   ]);
   return {
@@ -36,13 +49,14 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
     homeAddress: profile?.home_address ?? null,
     memories: memories ?? [],
     pinConfigured: Boolean(profile?.pin_hash),
+    language: normalizeLanguage(profile?.preferred_language),
   };
 }
 
 async function sessionFor(callId: string): Promise<CallSession> {
   const { data } = await supabaseAdmin()
     .from("call_logs")
-    .select("user_id, from_number, pin_verified, direction")
+    .select("user_id, from_number, pin_verified, direction, language")
     .eq("vapi_call_id", callId)
     .maybeSingle();
   return {
@@ -50,6 +64,7 @@ async function sessionFor(callId: string): Promise<CallSession> {
     userId: data?.user_id ?? null,
     callerNumber: data?.from_number ?? null,
     pinVerified: data?.pin_verified ?? false,
+    language: normalizeLanguage(data?.language),
   };
 }
 
@@ -77,6 +92,7 @@ export async function POST(req: Request) {
             direction: "inbound",
             agent: "assistant",
             from_number: callerNumber,
+            language: ctx.language,
           },
           { onConflict: "vapi_call_id" },
         );

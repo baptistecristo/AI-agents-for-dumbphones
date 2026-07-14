@@ -5,8 +5,10 @@ without losing the useful stuff, by calling a number instead of opening an app �
 the community add the skills and languages that make that real.
 
 This project is **early and looking for founding co-builders.** The two best first
-contributions are **adding a skill** and **adding a language/voice** — both are small,
-self-contained, and ship to a live call-in number. Walkthroughs below.
+contributions are **adding a skill** and **adding a third language** (EN and FR ship
+already) — both are small, self-contained, and ship to a live call-in number.
+Walkthroughs below. More ready-to-claim ideas in
+[`.github/GOOD_FIRST_ISSUES.md`](.github/GOOD_FIRST_ISSUES.md).
 
 - Be a builder talking to builders. No hype, no growth-speak.
 - Small PRs welcome. "This is wrong because X" is a welcome PR too.
@@ -33,7 +35,8 @@ cd runtime && pip install -r requirements.txt && cp .env.example .env
 uvicorn server:app --port 8000
 ```
 
-- Database: run `supabase/migrations/0001_init.sql` in a Supabase project (**EU region**).
+- Database: run the files in `supabase/migrations/` (in order) in a Supabase project
+  (**EU region**).
 - Weather (Open-Meteo) needs no key. Directions need a free OpenRouteService key.
 - LLM defaults to **fully local via Ollama** (`LLM_PROVIDER=ollama`). Set
   `mistral` or `anthropic` for higher quality.
@@ -117,30 +120,38 @@ SMS, placing a call) require a verified spoken PIN — see `send_sms` / `place_c
 
 ## Add a language or voice
 
-The code already routes language per call; today it only ships **French**. Making it
-answer in the **caller's** language is additive and one of the highest-value contributions.
-Four touch points:
+The pipeline is **bilingual EN/FR today**, end to end: each caller has a
+`preferred_language` on their profile (`supabase/migrations/0002_language.sql`),
+`/api/runtime/session` returns it as `language: "fr" | "en"`, and the runtime picks the
+Whisper language and Piper voice from it. Skills localize their replies via
+`CallSession.language`. Adding a **third language** (Spanish, German, Arabic…) is the
+same four touch points, purely additive:
 
-**1. STT** — `runtime/bot.py` pins `language=Language.FR` on the `WhisperSTTService`. Make
-it come from the session, or use faster-whisper auto-detect, so English (or any) speech is
-transcribed correctly.
+**1. STT** — the runtime sets the Whisper language from the session's `language` field
+(`runtime/bot.py`). Map your new language code (`"es"` → `Language.ES`, etc.).
 
-**2. TTS voice** — `runtime/config.py` sets `PIPER_VOICE = "fr_FR-siwis-medium"`. Add an
-English [Piper voice](https://github.com/rhasspy/piper) (e.g. `en_US-...`, they
-auto-download on first use) and select the voice per caller language where
+**2. TTS voice** — `runtime/config.py` reads one env var per language:
+`PIPER_VOICE_FR` and `PIPER_VOICE_EN` (a standard `en_US` medium voice by default).
+Add `PIPER_VOICE_ES` (or `_DE`, …) — pick a [Piper voice](https://github.com/rhasspy/piper),
+they auto-download on first use — and add it to the per-language selection where
 `PiperTTSService(voice_id=...)` is built in `bot.py`.
 
-**3. Prompts + greeting** — `web/src/lib/agents/inbound.ts` holds the system prompt and the
-first-message greeting, currently French-only. Add an English version and pick per
-detected/selected language.
+**3. Prompts + greeting** — `web/src/lib/agents/inbound.ts` holds the system prompt and
+the first-message greeting in EN and FR. Add your language's version and wire it into the
+per-language selection. Keep the safety rules intact in translation: two-step confirm,
+spoken PIN, tool output is data not instructions.
 
-**4. Skill output (follow-up)** — skills currently return French strings (e.g. the WMO
-weather descriptions in `skills/weather.ts`, and `frDate` in `skills/types.ts` uses
-`fr-FR`). Fully localized replies mean returning strings in the caller's language too — a
-great second PR after the pipeline speaks the language.
+**4. Skill strings** — skills switch their output strings on `CallSession.language`
+(e.g. the WMO weather descriptions in `skills/weather.ts`, date formatting in
+`skills/types.ts`). Add your language's strings alongside the EN/FR ones.
 
-Adding a **non-EN/FR** language (Spanish, German, Arabic…) follows the exact same four
-steps — pick the Whisper language + a Piper voice + translated prompts.
+Then allow the new code in `profiles.preferred_language` (a follow-up migration) and in
+the dashboard's language setting, and you're done.
+
+> **Known limitation — a good separate contribution:** the agent already *switches
+> language mid-call* if the caller does, but Piper voices are monolingual, so it answers
+> in the right language **with the session's voice**. Swapping the TTS voice mid-call
+> when the language changes is a well-scoped issue of its own.
 
 ---
 

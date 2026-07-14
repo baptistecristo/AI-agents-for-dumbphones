@@ -11,7 +11,7 @@ import { placeCall } from "./outbound";
 import { checkPin } from "./pin";
 import { didIAlready, listReminders, markDone, setReminder } from "./reminders";
 import { sendDictatedSms } from "./sms";
-import { CallSession } from "./types";
+import { CallSession, t } from "./types";
 import { getWeather } from "./weather";
 
 async function homeAddressOf(userId: string | null): Promise<string | null> {
@@ -55,10 +55,13 @@ export async function executeTool(name: string, args: any, session: CallSession)
       case "verify_pin":
         return await checkPin(session, args);
       default:
-        return `Outil inconnu : ${name}.`;
+        return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.` });
     }
   } catch (err) {
     console.error(`Outil ${name} en erreur`, err);
-    return "Désolé, ce service ne répond pas pour le moment.";
+    return t(session, {
+      fr: "Désolé, ce service ne répond pas pour le moment.",
+      en: "Sorry, that service isn't responding right now.",
+    });
   }
 }

@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { buildInboundAssistant } from "@/lib/agents/inbound";
 import { env, envOr } from "@/lib/env";
+import { defaultLanguage } from "@/lib/language";
 import { attachPhoneNumber, upsertAssistant } from "@/lib/vapi";
 
 export async function POST(req: Request) {
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
     homeAddress: null,
     memories: [],
     pinConfigured: false,
+    language: defaultLanguage(),
   });
 
   const assistant = await upsertAssistant(envOr("VAPI_ASSISTANT_ID", "") || undefined, generic);

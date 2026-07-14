@@ -2,7 +2,7 @@
 
 import { google } from "googleapis";
 import { googleFor } from "../google";
-import { CallSession, SkillResult, frDate, parisDayBounds } from "./types";
+import { CallSession, SkillResult, formatDate, parisDayBounds, t } from "./types";
 
 async function calendarFor(session: CallSession) {
   if (!session.userId) return null;
@@ -11,12 +11,15 @@ async function calendarFor(session: CallSession) {
   return google.calendar({ version: "v3", auth });
 }
 
-const NOT_CONNECTED =
-  "Le compte Google n'est pas connecté. La personne (ou sa famille) doit le connecter sur le site.";
+const notConnected = (session: CallSession) =>
+  t(session, {
+    fr: "Le compte Google n'est pas connecté. Il faut le connecter sur le site.",
+    en: "The Google account isn't connected. It needs to be connected on the website.",
+  });
 
 export async function listEvents(session: CallSession, args: { day: string }): Promise<SkillResult> {
   const cal = await calendarFor(session);
-  if (!cal) return NOT_CONNECTED;
+  if (!cal) return notConnected(session);
   const { start, end, label } = parisDayBounds(args.day);
   const res = await cal.events.list({
     calendarId: "primary",
@@ -27,12 +30,18 @@ export async function listEvents(session: CallSession, args: { day: string }): P
     maxResults: 10,
   });
   const items = res.data.items ?? [];
-  if (items.length === 0) return `Aucun rendez-vous le ${label}.`;
+  if (items.length === 0)
+    return t(session, { fr: `Aucun rendez-vous le ${label}.`, en: `No events on ${label}.` });
   const lines = items.map((e) => {
-    const when = e.start?.dateTime ? frDate(e.start.dateTime) : "toute la journée";
-    return `- ${e.summary ?? "Sans titre"} : ${when}${e.location ? `, à ${e.location}` : ""}`;
+    const when = e.start?.dateTime
+      ? formatDate(e.start.dateTime, session.language)
+      : t(session, { fr: "toute la journée", en: "all day" });
+    return `- ${e.summary ?? t(session, { fr: "Sans titre", en: "Untitled" })} : ${when}${e.location ? t(session, { fr: `, à ${e.location}`, en: `, at ${e.location}` }) : ""}`;
   });
-  return `Rendez-vous du ${label} :\n${lines.join("\n")}`;
+  return t(session, {
+    fr: `Rendez-vous du ${label} :\n${lines.join("\n")}`,
+    en: `Events on ${label}:\n${lines.join("\n")}`,
+  });
 }
 
 export async function createEvent(
@@ -40,10 +49,13 @@ export async function createEvent(
   args: { title: string; start: string; duration_minutes?: number; confirmed: boolean },
 ): Promise<SkillResult> {
   const cal = await calendarFor(session);
-  if (!cal) return NOT_CONNECTED;
+  if (!cal) return notConnected(session);
   const durationMin = args.duration_minutes ?? 60;
   if (!args.confirmed) {
-    return `PROPOSITION (à lire à voix haute puis demander confirmation) : créer le rendez-vous « ${args.title} » le ${frDate(args.start)}, durée ${durationMin} minutes.`;
+    return t(session, {
+      fr: `PROPOSITION (à lire à voix haute puis demander confirmation) : créer le rendez-vous « ${args.title} » le ${formatDate(args.start, session.language)}, durée ${durationMin} minutes.`,
+      en: `PROPOSAL (read out loud, then ask for confirmation): create the event "${args.title}" on ${formatDate(args.start, session.language)}, duration ${durationMin} minutes.`,
+    });
   }
   const startDate = new Date(args.start);
   const endDate = new Date(startDate.getTime() + durationMin * 60_000);
@@ -55,7 +67,10 @@ export async function createEvent(
       end: { dateTime: endDate.toISOString(), timeZone: "Europe/Paris" },
     },
   });
-  return `C'est fait : « ${args.title} » est noté le ${frDate(args.start)}.`;
+  return t(session, {
+    fr: `C'est fait : « ${args.title} » est noté le ${formatDate(args.start, session.language)}.`,
+    en: `Done: "${args.title}" is booked on ${formatDate(args.start, session.language)}.`,
+  });
 }
 
 export async function moveEvent(
@@ -63,7 +78,7 @@ export async function moveEvent(
   args: { event_query: string; new_start: string; confirmed: boolean },
 ): Promise<SkillResult> {
   const cal = await calendarFor(session);
-  if (!cal) return NOT_CONNECTED;
+  if (!cal) return notConnected(session);
   // Cherche l'évènement dans les 30 prochains jours
   const now = new Date();
   const res = await cal.events.list({
@@ -76,10 +91,17 @@ export async function moveEvent(
     maxResults: 3,
   });
   const ev = (res.data.items ?? [])[0];
-  if (!ev?.id) return `Je ne trouve pas de rendez-vous correspondant à « ${args.event_query} » dans le mois qui vient.`;
-  const oldWhen = ev.start?.dateTime ? frDate(ev.start.dateTime) : "?";
+  if (!ev?.id)
+    return t(session, {
+      fr: `Je ne trouve pas de rendez-vous correspondant à « ${args.event_query} » dans le mois qui vient.`,
+      en: `I can't find an event matching "${args.event_query}" in the coming month.`,
+    });
+  const oldWhen = ev.start?.dateTime ? formatDate(ev.start.dateTime, session.language) : "?";
   if (!args.confirmed) {
-    return `PROPOSITION : déplacer « ${ev.summary} » (actuellement le ${oldWhen}) au ${frDate(args.new_start)}. Demander confirmation.`;
+    return t(session, {
+      fr: `PROPOSITION : déplacer « ${ev.summary} » (actuellement le ${oldWhen}) au ${formatDate(args.new_start, session.language)}. Demander confirmation.`,
+      en: `PROPOSAL: move "${ev.summary}" (currently on ${oldWhen}) to ${formatDate(args.new_start, session.language)}. Ask for confirmation.`,
+    });
   }
   const oldStart = ev.start?.dateTime ? new Date(ev.start.dateTime) : new Date(args.new_start);
   const oldEnd = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(oldStart.getTime() + 3600_000);
@@ -93,5 +115,8 @@ export async function moveEvent(
       end: { dateTime: new Date(newStart.getTime() + durMs).toISOString(), timeZone: "Europe/Paris" },
     },
   });
-  return `C'est fait : « ${ev.summary} » est déplacé au ${frDate(args.new_start)}.`;
+  return t(session, {
+    fr: `C'est fait : « ${ev.summary} » est déplacé au ${formatDate(args.new_start, session.language)}.`,
+    en: `Done: "${ev.summary}" is moved to ${formatDate(args.new_start, session.language)}.`,
+  });
 }
