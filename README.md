@@ -111,10 +111,6 @@ is drawn the way it is.
 | Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
 | Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent → PIN), dashboard | `web/src/app/` |
 
-> **History:** the project began life aimed at *elderly* dumbphone users; the persona,
-> prompts, and outbound missions are now fully pivoted to the young-dumbphone mission —
-> see [`open-source-launch-plan.md`](open-source-launch-plan.md) for the story.
-
 ## Two ways to help in an afternoon
 
 1. **Add a skill** — a new thing the agent can do on a call (a fact lookup, a timer, a

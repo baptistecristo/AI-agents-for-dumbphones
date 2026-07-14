@@ -12,7 +12,7 @@ create table public.profiles (
   preferred_name text,                -- comment l'agent doit appeler la personne
   locale text not null default 'fr-FR',
   home_address text,                  -- pour la navigation ("chez moi")
-  voice_speed numeric not null default 0.85, -- débit ralenti par défaut (personnes âgées)
+  voice_speed numeric not null default 0.85, -- débit par défaut (réglable par appelant)
   pin_hash text,                      -- scrypt du PIN parlé (actions sensibles)
   onboarding_step text not null default 'phone', -- phone | google | consents | pin | done
   created_at timestamptz not null default now(),
@@ -135,9 +135,9 @@ create table public.outbound_jobs (
   kind text not null,                 -- docteur | taxi | resto | generic
   goal text not null,                 -- objectif en français clair
   target_number text,                 -- numéro à appeler (si connu)
-  target_name text,                   -- "Cabinet du Dr Martin"
+  target_name text,                   -- "Le Petit Bistrot"
   constraints jsonb not null default '{}'::jsonb, -- créneaux, nb personnes, adresse…
-  callback_number text not null,      -- numéro du senior à tenir informé
+  callback_number text not null,      -- numéro à tenir informé
   status text not null default 'pending', -- pending | calling | done | failed | needs_user
   attempts int not null default 0,
   max_attempts int not null default 3,

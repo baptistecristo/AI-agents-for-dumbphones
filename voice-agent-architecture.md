@@ -64,7 +64,7 @@ This one decision drives cost, latency, EU-compliance and time-to-demo. Three vi
 
 ### Recommendation: **start on A, design for B.**
 
-- **Now (smallest budget, fastest proof):** managed platform. At a handful of users, per-minute pricing beats paying for idle GPU/servers, and it hands you the *genuinely hard* parts for free: sub-second latency, endpointing, and **barge-in** (letting the user interrupt) — which matter enormously for elderly users.
+- **Now (smallest budget, fastest proof):** managed platform. At a handful of users, per-minute pricing beats paying for idle GPU/servers, and it hands you the *genuinely hard* parts for free: sub-second latency, endpointing, and **barge-in** (letting the user interrupt) — which matter enormously over a phone call.
 - **Later (cost + EU residency):** migrate the runtime to **self-hosted LiveKit Agents or Pipecat** in an EU region once minutes justify the fixed cost. Because your *tool/skill layer is provider-agnostic* (next section), this migration doesn't touch your business logic.
 - **Cascaded, not pure speech-to-speech (C):** keep STT→LLM→TTS as discrete stages. You need deterministic tool-calling and an explicit "confirm before send/book" step; cascaded gives you a text checkpoint at every turn to enforce that. Revisit C for natural chit-chat once the action layer is rock-solid.
 
@@ -93,7 +93,7 @@ mic audio ─▶ [STT streaming] ─▶ partial+final transcript
 
 - **STT:** Deepgram Nova (streaming, good FR, cheap) or OpenAI `gpt-4o-transcribe`. Self-host path for cost: **faster-whisper (large-v3)** on a small GPU/CPU — near-zero marginal cost at volume.
 - **LLM (agent brain):** two-tier — a **cheap fast model** for ordinary turns (Claude Haiku / GPT-4o-mini class) and a **stronger model** (Claude Opus/Sonnet) only for hard reasoning or the outbound-call planner. Keep it swappable behind one interface. (You're already in the Claude ecosystem — Claude for the brain is a natural default, but don't hard-wire it.)
-- **TTS:** ElevenLabs Multilingual (best FR naturalness) or **Cartesia** (fast + cheaper). Self-host path: **Piper** (free, decent FR) to crush cost. *Slow the speech rate for elderly users* — a first-class product requirement, not a nice-to-have.
+- **TTS:** ElevenLabs Multilingual (best FR naturalness) or **Cartesia** (fast + cheaper). Self-host path: **Piper** (free, decent FR) to crush cost. *Speech rate is tunable per caller* (`voice_speed`) — a first-class product requirement, not a nice-to-have.
 - **Turn-taking / barge-in / endpointing:** provided by the platform (A) or LiveKit/Pipecat (B). Do not build this yourself.
 
 **Latency budget target:** < 1.2s end-of-user-speech → first agent audio. Stream everything; start TTS on the first sentence, not the full response.
@@ -228,7 +228,7 @@ user: "réserve chez X pour 2 à 20h"
 
 ## 12. Phased roadmap
 
-- **Phase 0 — Demo (weeks):** managed voice (A) + Twilio FR number + one skill end-to-end (Agenda + reminders) + web signup + Google OAuth. Confirm-before-action + spoken PIN. Prove the loop with real elderly testers.
+- **Phase 0 — Demo (weeks):** managed voice (A) + Twilio FR number + one skill end-to-end (Agenda + reminders) + web signup + Google OAuth. Confirm-before-action + spoken PIN. Prove the loop with real testers.
 - **Phase 1 — EU-ready (1–2 mo):** add Mail (handle Google verification/CASA), Navigation-by-SMS, Contacts, Microsoft 365. Consent ledger, DPAs, retention + erasure. Outbound-call engine (restaurant/doctor).
 - **Phase 2 — Cost & scale:** migrate runtime to self-hosted LiveKit/Pipecat in EU; self-host STT/TTS; per-user memory/RAG; speaker verification; shared-number routing.
 
