@@ -4,29 +4,37 @@
 **call a number and ask** — weather, directions, a reminder, your calendar, a quick
 text to someone. You keep the utility, you lose the doomscroll.
 
-Open-source and **self-hostable end-to-end**: a phone number wired to a
-Pipecat pipeline (Silero VAD → faster-whisper → a local/EU LLM → Piper TTS), with all
-the skills living behind one clean API. No app store, no account on the phone — the
-handset stays a dumb terminal, the intelligence is on a server you control.
+Open-source: a phone number wired to a voice pipeline, with all the skills living
+behind one clean API. No app store, no account on the phone — the handset stays a dumb
+terminal, the intelligence is on a server. Today that server is [Vapi](https://vapi.ai),
+a managed platform. **Getting off it — onto the self-hosted Pipecat pipeline in
+`runtime/` — is the project's number one open problem**, and it's
+[Discussion #9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 
 > **Bilingue EN/FR** — appelez un numéro depuis un téléphone à clapet et demandez ce
 > dont vous avez besoin (météo, itinéraire, rappel). Vous gardez l'utile, vous perdez
-> l'addiction. Auto-hébergeable, open-source, et la communauté ajoute les compétences.
+> l'addiction. Open-source, et la communauté ajoute les compétences.
 
 **Know [Sift](https://github.com/edleeman17/sift)?** Sift is a beloved dumbphone
 companion you *text* — `WEATHER`, `REMIND 18:30 …` — and it texts back. This project is
-that idea taken to **voice** (you *call* and just talk, no keywords to memorize) and made
-**self-hostable end-to-end**. We kept Sift's SMS-command model as a lighter, cheaper
-fallback (`web/src/lib/sms-commands.ts`) and put a full voice pipeline in front of it.
+that idea taken to **voice** — you *call* and just talk, no keywords to memorize. We kept
+Sift's SMS-command model in the codebase as a lighter fallback
+(`web/src/lib/sms-commands.ts`) and put a voice pipeline in front of it.
 
 ---
 
-## Status — early, working in code, seeking founding co-builders
+## Status — early, honest about what runs, seeking founding co-builders
 
-This is **not** a toy prototype. The full call-in flow works **end-to-end in code**:
-self-hosted voice pipeline, inbound + outbound calling, skills, auth, an EU database
-with encryption and a consent registry. What's *not* done yet is exactly where the fun
-open problems are — and where you come in:
+**What works:** you can call the agent and it answers, bilingual EN/FR, and it really
+does the skills below. Inbound + outbound calling, auth, an EU database with encryption
+and a consent registry are all live. That flow runs on **Vapi** (`RUNTIME=vapi`).
+
+**What doesn't:** the self-hosted Pipecat runtime in `runtime/` is **scaffolding that
+has never placed a call** — treat it as a starting point, not a working pipeline. And
+**no Twilio account is connected**, so anything that delivers by SMS (directions,
+dictated texts, the SMS command router) can't actually send.
+
+That gap *is* the invitation. The fun open problems:
 
 - 🎙️ **Bilingual EN/FR works.** Each caller has a preferred language
   (`profiles.preferred_language`); the session hands it to the runtime, which picks the
@@ -37,8 +45,13 @@ open problems are — and where you come in:
 - 🧩 **Skills are a plugin surface.** Adding a **new skill** (a thing the agent can do on
   a call) is a small, self-contained PR. This is one of the two best on-ramps; a **third
   language** is the other.
-- 📞 **A live public call-in number** needs deployment + a phone number (a little money,
-  the maintainer's accounts) — held until the repo is contributor-ready.
+- 🔌 **Getting off Vapi** — the biggest one. `runtime/` has the shape of a Pipecat
+  pipeline (Silero VAD → faster-whisper → local LLM → Piper) but has never carried a
+  real call. If you self-host voice, this is the problem:
+  [Discussion #9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
+- 📞 **The call-in number is live but unpublished** — one call to the 180s cap costs
+  real money and nothing yet rate-limits a redial. Inbound rate limiting is what stands
+  between it and the README.
 
 If you build voice AI, self-host things, or just want people to be able to leave the
 smartphone without going off-grid — **we'd love a few founding co-builders.** See
@@ -49,11 +62,12 @@ smartphone without going off-grid — **we'd love a few founding co-builders.** 
 ## How it works
 
 ```
-Dumbphone ──call──▶ Phone number (Twilio / Telnyx trunk)
-                          │  media over WebSocket
+Dumbphone ──call──▶ Phone number
+                          │  media
                           ▼
-        Self-hosted runtime (runtime/, Pipecat)
-        Silero VAD → faster-whisper (STT) → LLM → Piper (TTS)
+        Voice runtime  ──  TODAY: Vapi (managed, RUNTIME=vapi)
+                       └─  GOAL: runtime/ (Pipecat, self-hosted, not working yet)
+                           Silero VAD → faster-whisper → LLM → Piper
                           │  every tool-call is forwarded, never executed here
                           ▼
         Next.js API (web/)  ──▶  skills  ──▶  Open-Meteo · OpenRouteService
@@ -64,19 +78,21 @@ Dumbphone ──call──▶ Phone number (Twilio / Telnyx trunk)
 ```
 
 **One brain, swappable body.** All business logic — skills, prompts, PINs, consent —
-lives in `web/src/lib/` and is served over an API. The voice runtime is interchangeable:
-[Pipecat](https://github.com/pipecat-ai/pipecat) self-hosted (`runtime/`, the default) or
-[Vapi](https://vapi.ai) managed (`RUNTIME=vapi`) if you want the lowest latency without
-running infra. [LiveKit Agents](https://github.com/livekit/agents) is another self-host
-option. Adding a skill once makes it work on either runtime.
+lives in `web/src/lib/` and is served over an API. The voice runtime is meant to be
+interchangeable: [Vapi](https://vapi.ai) managed (`RUNTIME=vapi`) is what runs today;
+[Pipecat](https://github.com/pipecat-ai/pipecat) self-hosted (`runtime/`) is the
+scaffolded alternative that needs finishing;
+[LiveKit Agents](https://github.com/livekit/agents) would be another. Adding a skill
+once makes it work on either runtime — that part is real, and it's why the diagram above
+is drawn the way it is.
 
 ## What's implemented
 
 | Layer | Choice | Where |
 |---|---|---|
-| Voice runtime | **Self-hosted** Pipecat + faster-whisper + Piper + Ollama/Mistral/Anthropic. Vapi available as a managed fallback (`RUNTIME=vapi`) | `runtime/` + `web/src/lib/vapi.ts` |
-| Telephony | **Twilio** (or Telnyx) trunk — a phone number is the one thing you can't self-host | `runtime/server.py` |
-| SMS + OTP | **Twilio** (Messages + Verify) | `web/src/lib/twilio.ts` |
+| Voice runtime | **Vapi** (`RUNTIME=vapi`) — the only one that runs. Self-hosted Pipecat + faster-whisper + Piper + Ollama is scaffolded but has never placed a call ([#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9)) | `web/src/lib/vapi.ts` + `runtime/` |
+| Telephony | Vapi's number today. A **Twilio**/Telnyx trunk is what the self-hosted path needs — a phone number is the one thing you can't self-host | `runtime/server.py` |
+| SMS + OTP | **Twilio** (Messages + Verify) — coded, but **no Twilio account is connected**, so nothing actually sends yet | `web/src/lib/twilio.ts` |
 | Inbound agent | Bilingual (EN/FR) system prompt + greeting, switches language mid-call, spoken-PIN gate before sensitive actions, two-step voice confirmation | `web/src/lib/agents/inbound.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
 | Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), contacts, dictated SMS, memory, PIN | `web/src/lib/skills/` |
@@ -93,18 +109,20 @@ option. Adding a skill once makes it work on either runtime.
 1. **Add a skill** — a new thing the agent can do on a call (a fact lookup, a timer, a
    transit query…). It's one small TypeScript function plus a tool schema. Walkthrough in
    [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skill).
-2. **Add a *third* language (ES / DE / …) or mid-call voice switching** — EN and FR ship
-   already; a new language is the same four touch points, additive. Or make the TTS voice
-   follow the caller when they change language mid-call. Walkthrough in
+2. **Add a *third* language (ES / DE / …)** — EN and FR ship already; a new language is
+   the same four touch points, additive. Walkthrough in
    [CONTRIBUTING.md](CONTRIBUTING.md#add-a-language-or-voice).
 
-Both ship to a real call-in number once the live demo is up. Tight feedback loop.
+Honest caveat: you can test both against the web API, but not against a live call —
+placing calls costs money and runs on the maintainer's Vapi account for now.
 
 ## Run it locally
 
-You can run everything without buying a phone number (test the pipeline over a local
-WebSocket / with ngrok). Full setup, accounts, and the "day the number arrives" checklist
-are in the sections below and in [`runtime/README.md`](runtime/README.md).
+The web API and skills run without buying a phone number, and that's where the
+contributor on-ramps live. The voice runtime starts but has never carried a call — see
+the status section before you count on it. Full setup, accounts, and the "day the number
+arrives" checklist are in the sections below and in
+[`runtime/README.md`](runtime/README.md).
 
 ```bash
 # Web API + skills
@@ -126,17 +144,12 @@ Database: create your own Supabase project in an **EU region**, then apply the s
 directions use a free OpenRouteService key. The default LLM is fully local via Ollama — set
 `LLM_PROVIDER=mistral|anthropic` for higher quality at a few cents per call.
 
-> **Maintainer's instance.** The hosted demo runs on Supabase project
-> `gegemygvkvljvtgelfnj` (org *AI agents for dumbphones*, `eu-central-1`). This ref is the
-> source of truth for the demo — it is not a secret (it is already public in
-> `NEXT_PUBLIC_SUPABASE_URL`). Verify with `cat supabase/.temp/project-ref` before any
-> `db push`, and always `--dry-run` first: the CLI's link is ambient local state, and no
-> config file pins it.
-
 ## Design principles
 
-- **Own your stack.** Default path is 100% self-hosted and local (Whisper + Piper +
-  Ollama). Managed providers are opt-in, never required.
+- **Own your stack.** The goal is a path that is 100% self-hosted and local (Whisper +
+  Piper + Ollama), with managed providers opt-in and never required. We are not there:
+  the only working runtime today is a managed one. See
+  [#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 - **EU / privacy-first.** Data in an EU Postgres, OAuth tokens encrypted at rest, an
   append-only revocable consent registry, RLS everywhere.
 - **The phone stays dumb.** No app, no account on the handset. Caller-ID identifies you; a
