@@ -1,8 +1,8 @@
 ﻿# Voice AI Agent Platform — Architecture
 
-**Product:** A voice-first AI agent (working name TBD — distinct from the separate "Alain" Claude-Code assistant) reachable by phone from a *dumbphone*. The user calls a number, speaks a natural request, and the agent acts on their behalf (calendar, email, contacts, navigation, reminders, outbound calls) and replies by **voice + SMS**. All intelligence lives on the server; the phone is a minimalist voice terminal.
+**Product:** A voice-first AI agent reachable by phone from a *dumbphone*. The user calls a number, speaks a natural request, and the agent acts on their behalf (calendar, email, contacts, navigation, reminders, outbound calls) and replies by **voice + SMS**. All intelligence lives on the server; the phone is a minimalist voice terminal.
 
-**Assumptions (override any):** France / EU-first · GDPR-aware · French-first voice · smallest-budget bias · web/app to sign up and connect accounts (Google, Outlook, …) via OAuth · whole vision architected as one platform with pluggable "skills".
+**Assumptions:** France / EU-first · GDPR-aware · French-first voice · smallest-budget bias · web/app to sign up and connect accounts (Google, Outlook, …) via OAuth · whole vision architected as one platform with pluggable "skills".
 
 ---
 
@@ -92,7 +92,7 @@ mic audio ─▶ [STT streaming] ─▶ partial+final transcript
 **Component choices (French-quality + cheap):**
 
 - **STT:** Deepgram Nova (streaming, good FR, cheap) or OpenAI `gpt-4o-transcribe`. Self-host path for cost: **faster-whisper (large-v3)** on a small GPU/CPU — near-zero marginal cost at volume.
-- **LLM (agent brain):** two-tier — a **cheap fast model** for ordinary turns (Claude Haiku / GPT-4o-mini class) and a **stronger model** (Claude Opus/Sonnet) only for hard reasoning or the outbound-call planner. Keep it swappable behind one interface. (You're already in the Claude ecosystem — Claude for the brain is a natural default, but don't hard-wire it.)
+- **LLM (agent brain):** two-tier — a **cheap fast model** for ordinary turns (Claude Haiku / GPT-4o-mini class) and a **stronger model** (Claude Opus/Sonnet) only for hard reasoning or the outbound-call planner. Keep it swappable behind one interface. (Claude is a natural default for the brain, but don't hard-wire it.)
 - **TTS:** ElevenLabs Multilingual (best FR naturalness) or **Cartesia** (fast + cheaper). Self-host path: **Piper** (free, decent FR) to crush cost. *Speech rate is tunable per caller* (`voice_speed`) — a first-class product requirement, not a nice-to-have.
 - **Turn-taking / barge-in / endpointing:** provided by the platform (A) or LiveKit/Pipecat (B). Do not build this yourself.
 
@@ -172,7 +172,6 @@ user: "réserve chez X pour 2 à 20h"
 - **Task-specific prompt** with an explicit goal + guardrails + a "give up / escalate to human" path.
 - **DTMF + voicemail detection**, retry policy, and a **confirmation call/SMS** before anything binding.
 - **Legal (FR/EU):** disclose it's an automated/AI call where required; obtain **recording consent**; respect opt-outs. Keep a full transcript.
-- This is exactly your existing "Docteur v2 / Taxi" pattern generalized into one reusable engine.
 
 ---
 
@@ -229,7 +228,7 @@ user: "réserve chez X pour 2 à 20h"
 ## 12. Phased roadmap
 
 - **Phase 0 — Demo (weeks):** managed voice (A) + Twilio FR number + one skill end-to-end (Agenda + reminders) + web signup + Google OAuth. Confirm-before-action + spoken PIN. Prove the loop with real testers.
-- **Phase 1 — EU-ready (1–2 mo):** add Mail (handle Google verification/CASA), Navigation-by-SMS, Contacts, Microsoft 365. Consent ledger, DPAs, retention + erasure. Outbound-call engine (restaurant/doctor).
+- **Phase 1 — EU-ready (1–2 mo):** add Mail (handle Google verification/CASA), Navigation-by-SMS, Contacts, Microsoft 365. Consent ledger, DPAs, retention + erasure. Outbound-call engine (restaurant/appointment).
 - **Phase 2 — Cost & scale:** migrate runtime to self-hosted LiveKit/Pipecat in EU; self-host STT/TTS; per-user memory/RAG; speaker verification; shared-number routing.
 
 ---
