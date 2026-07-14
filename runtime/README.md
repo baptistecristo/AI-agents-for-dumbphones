@@ -72,5 +72,3 @@ est épinglé. Le changement de voix/langue en cours d'appel est un
   cabinets ne peuvent pas être navigués. Le runtime Vapi (`RUNTIME=vapi`) le fait.
 - Latence : compter 1,5–2,5 s sur CPU (whisper medium). Passer `WHISPER_MODEL=small`
   ou un GPU pour descendre vers ~1 s. Vapi fait mieux (~0,8 s) si la démo l'exige.
-- Les imports Pipecat évoluent vite : en cas d'`ImportError` au démarrage,
-  `pip install -U pipecat-ai` puis vérifier les chemins dans `bot.py`.

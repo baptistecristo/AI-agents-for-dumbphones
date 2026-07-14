@@ -4,8 +4,7 @@
             -> LLM (Ollama local / Mistral EU / Claude) -> Piper (TTS, local)
             -> websocket média -> téléphone
 
-Testé avec pipecat-ai récent (>= fin 2026). Les imports Pipecat évoluent
-vite : en cas d'ImportError, vérifier la table de correspondance du README.
+Testé avec pipecat-ai 1.5 (voir la version épinglée dans requirements.txt).
 """
 
 import sys
@@ -25,7 +24,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
 from pipecat.services.piper.tts import PiperTTSService
 from pipecat.services.whisper.stt import WhisperSTTService
 from pipecat.transcriptions.language import Language
-from pipecat.transports.network.fastapi_websocket import (
+from pipecat.transports.websocket.fastapi import (
     FastAPIWebsocketParams,
     FastAPIWebsocketTransport,
 )
@@ -140,7 +139,7 @@ async def run_call(
     worker = PipelineWorker(
         pipeline,
         name=f"call-{call_id[:8]}",
-        params=PipelineParams(enable_metrics=False, allow_interruptions=True),
+        params=PipelineParams(enable_metrics=False),
     )
     runner = WorkerRunner(handle_sigint=False)
 

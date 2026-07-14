@@ -152,5 +152,5 @@ async def health() -> dict:
         "telephony": config.TELEPHONY_PROVIDER,
         "llm": config.LLM_PROVIDER,
         "stt": f"faster-whisper/{config.WHISPER_MODEL}",
-        "tts": f"piper/{config.PIPER_VOICE}",
+        "tts": f"piper/{config.PIPER_VOICE_FR}+{config.PIPER_VOICE_EN}",
     }
