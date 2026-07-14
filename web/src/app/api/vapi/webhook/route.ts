@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { buildInboundAssistant, CallerContext } from "@/lib/agents/inbound";
 import { defaultLanguage, normalizeLanguage } from "@/lib/language";
+import { inboundRateVerdict, rateLimitMessage } from "@/lib/rate-limit";
 import { executeTool } from "@/lib/skills";
 import { closeJobWithoutReport, handleReportOutcome } from "@/lib/skills/outbound-report";
 import { CallSession } from "@/lib/skills/types";
@@ -84,6 +85,17 @@ export async function POST(req: Request) {
     case "assistant-request": {
       const callerNumber: string | null = call?.customer?.number ?? null;
       const ctx = await callerContextFor(callerNumber);
+
+      // Le numéro est public : borner le nombre d'appels, pas seulement leur
+      // durée. Un appel refusé n'est PAS journalisé, sinon un appelant abusif
+      // remplirait le plafond global avec des rejets et empêcherait les autres
+      // d'appeler. Seuls les appels réellement connectés — ceux qui coûtent —
+      // comptent.
+      const verdict = await inboundRateVerdict(callerNumber);
+      if (!verdict.allowed) {
+        return NextResponse.json({ error: rateLimitMessage(verdict.scope, ctx.language) });
+      }
+
       if (callId) {
         await supabaseAdmin().from("call_logs").upsert(
           {

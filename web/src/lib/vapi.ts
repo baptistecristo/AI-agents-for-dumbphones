@@ -67,13 +67,19 @@ export async function upsertAssistant(
 
 // Branche un numéro de téléphone Vapi sur notre webhook (assistant-request) :
 // chaque appel entrant reçoit alors un assistant personnalisé (mémoire, prénom).
-export async function attachPhoneNumber(phoneNumberId: string, fallbackAssistantId?: string): Promise<void> {
+// Un numéro qui porte un `assistantId` est servi directement par Vapi : le
+// webhook `assistant-request` n'est JAMAIS appelé. C'est ce qui rendait à la
+// fois la personnalisation par appelant et la limite de débit inopérantes —
+// `call_logs` est resté vide alors que le numéro répondait.
+// On laisse donc `assistantId` à null : à chaque appel entrant, Vapi demande
+// l'assistant à notre serveur, qui identifie l'appelant et décide s'il a le
+// droit d'appeler. Contrepartie assumée : si notre serveur ne répond pas en
+// ~7,5 s, l'appel échoue. L'assistant persistant reste la porte de secours, à
+// rebrancher à la main dans le dashboard Vapi le jour où c'est nécessaire.
+export async function attachPhoneNumber(phoneNumberId: string): Promise<void> {
   await vapiFetch(`/phone-number/${phoneNumberId}`, {
     method: "PATCH",
-    body: JSON.stringify({
-      server: webhookServer(),
-      ...(fallbackAssistantId ? { fallbackDestination: undefined, assistantId: fallbackAssistantId } : {}),
-    }),
+    body: JSON.stringify({ server: webhookServer(), assistantId: null }),
   });
 }
 

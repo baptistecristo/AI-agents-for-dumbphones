@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   const phoneNumberId = envOr("VAPI_PHONE_NUMBER_ID", "");
   let phoneAttached = false;
   if (phoneNumberId) {
-    await attachPhoneNumber(phoneNumberId, assistant.id);
+    await attachPhoneNumber(phoneNumberId);
     phoneAttached = true;
   }
 
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     assistantId: assistant.id,
     phoneAttached,
     note: phoneAttached
-      ? "Numéro branché : les appels entrants passent par /api/vapi/webhook."
+      ? "Numéro branché sur /api/vapi/webhook sans assistantId : chaque appel entrant passe par assistant-request (personnalisation + limite de débit). L'assistant ci-dessus n'est PAS branché : c'est la porte de secours à rebrancher à la main si le webhook tombe."
       : "Pas de VAPI_PHONE_NUMBER_ID : ajoutez-le quand le numéro sera acheté, puis relancez.",
     rappel: `Ajoutez VAPI_ASSISTANT_ID=${assistant.id} aux variables d'environnement pour les prochaines mises à jour.`,
   });
