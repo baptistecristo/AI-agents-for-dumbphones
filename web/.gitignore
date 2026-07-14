@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...sauf le gabarit : sans lui, un clone du repo n'a aucune liste des
+# variables à renseigner. Il ne contient que des placeholders, jamais de secret.
+!.env.example
 
 # vercel
 .vercel
