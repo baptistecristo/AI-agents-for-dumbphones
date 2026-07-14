@@ -68,7 +68,7 @@ est épinglé. Le changement de voix/langue en cours d'appel est un
 
 ## Limites connues (v1)
 
-- **DTMF sortant** (« tapez 1 ») non géré en self-host : les serveurs vocaux des
-  cabinets ne peuvent pas être navigués. Le runtime Vapi (`RUNTIME=vapi`) le fait.
+- **DTMF sortant** (« tapez 1 ») non géré en self-host : les serveurs vocaux
+  ne peuvent pas être navigués. Le runtime Vapi (`RUNTIME=vapi`) le fait.
 - Latence : compter 1,5–2,5 s sur CPU (whisper medium). Passer `WHISPER_MODEL=small`
   ou un GPU pour descendre vers ~1 s. Vapi fait mieux (~0,8 s) si la démo l'exige.
