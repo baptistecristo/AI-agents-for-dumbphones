@@ -122,7 +122,7 @@ def inbound_tools() -> ToolsSchema:
             ),
             _schema(
                 "remember",
-                "Retient une information durable (ex: médecin traitant).",
+                "Retient une information durable (ex: « mon garagiste est Garage Dupont, 01 23 45 67 89 »).",
                 {"key": {"type": "string"}, "value": {"type": "string"}},
                 ["key", "value"],
             ),

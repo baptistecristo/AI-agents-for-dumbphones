@@ -79,7 +79,7 @@ const CONSENT_LABELS: Record<string, string> = {
   calendar: "Lire et modifier l'agenda",
   contacts: "Lire les contacts",
   sms: "Envoyer des SMS (rappels, itinéraires, comptes-rendus)",
-  outbound_calls: "Passer des appels à ma place (médecin, taxi, restaurant)",
+  outbound_calls: "Passer des appels à ma place (restaurant, taxi, rendez-vous)",
   memory: "Retenir mes préférences (lieux, personnes, habitudes)",
   recording: "Enregistrer et transcrire les appels pour le suivi",
 };

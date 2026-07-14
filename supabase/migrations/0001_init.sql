@@ -86,7 +86,7 @@ create index reminders_user_idx on public.reminders (user_id);
 create table public.memories (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
-  key text not null,                  -- ex: "médecin traitant", "boulangerie"
+  key text not null,                  -- ex: "garagiste", "boulangerie"
   value text not null,
   updated_at timestamptz not null default now(),
   unique (user_id, key)
@@ -100,7 +100,7 @@ create table public.call_logs (
   user_id uuid references public.profiles (id) on delete set null,
   direction text not null,            -- inbound | outbound
   vapi_call_id text unique,
-  agent text not null default 'assistant', -- assistant | docteur | taxi | resto | generic
+  agent text not null default 'assistant', -- assistant | appointment | taxi | resto | generic
   from_number text,
   to_number text,
   pin_verified boolean not null default false,
@@ -127,12 +127,12 @@ create table public.sms_logs (
 create index sms_logs_user_idx on public.sms_logs (user_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
--- File d'attente des appels sortants (Docteur / Taxi / Résa / générique)
+-- File d'attente des appels sortants (Rendez-vous / Taxi / Résa / générique)
 -- ---------------------------------------------------------------------------
 create table public.outbound_jobs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
-  kind text not null,                 -- docteur | taxi | resto | generic
+  kind text not null,                 -- appointment | taxi | resto | generic
   goal text not null,                 -- objectif en français clair
   target_number text,                 -- numéro à appeler (si connu)
   target_name text,                   -- "Le Petit Bistrot"

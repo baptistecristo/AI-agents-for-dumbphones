@@ -243,4 +243,4 @@ user: "réserve chez X pour 2 à 20h"
 
 ---
 
-*This is the original architecture spec. For where the project is headed (open-source, young-dumbphone mission, bilingual EN/FR), see [`open-source-launch-plan.md`](open-source-launch-plan.md).*
+*This is the original architecture spec. For where the project is headed (open source, young-dumbphone mission, bilingual EN/FR), see the [README](README.md).*
