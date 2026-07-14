@@ -27,6 +27,12 @@ test('parseCommand: prose mentioning the command inline does not fire', () => {
   assert.equal(parseCommand('use /claim to take an issue'), null)
 })
 
+test('parseCommand: trailing prose on an otherwise-bare line does not fire', () => {
+  assert.equal(parseCommand('/claim this issue please'), null)
+  assert.equal(parseCommand('/claim #4'), null)
+  assert.equal(parseCommand('/unclaim it'), null)
+})
+
 test('parseCommand: a quoted or code-fenced command does not fire', () => {
   assert.equal(parseCommand('> /claim'), null)
   assert.equal(parseCommand('`/claim`'), null)
