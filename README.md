@@ -1,5 +1,7 @@
 # Call an AI from your dumbphone
 
+[![CI](https://github.com/baptistecristo/AI-agents-for-dumbphones/actions/workflows/ci.yml/badge.svg)](https://github.com/baptistecristo/AI-agents-for-dumbphones/actions/workflows/ci.yml)
+
 **Ditch the smartphone without losing the useful stuff.** Instead of an app, you
 **call a number and ask** — weather, directions, a reminder, your calendar, a quick
 text to someone. You keep the utility, you lose the doomscroll.
