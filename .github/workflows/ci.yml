@@ -55,4 +55,4 @@ jobs:
       # Le bot /claim tourne avec issues:write sur des commentaires publics.
       # Sa logique est testée ici ; le workflow lui-même ne peut pas l'être
       # avant d'être sur main.
-      - run: node --test .github/scripts/
+      - run: node --test .github/scripts/*.test.js
