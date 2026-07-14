@@ -81,8 +81,9 @@ async def run_call(
     """Fait tourner un appel complet (entrant ou mission sortante)."""
 
     # 1. Session côté Next.js : prompt système personnalisé + message d'accueil
-    session = await api_client.open_session(call_id, direction, caller_number, job_id)
+    session = await api_client.open_session(call_id, direction, caller_number, job_id, None)
     job_id = session.get("job_id") or job_id
+    session_language = session.get("language") or session.get("caller_language")
 
     transport = FastAPIWebsocketTransport(
         websocket=websocket,
@@ -94,16 +95,19 @@ async def run_call(
         ),
     )
 
+    stt_language = config.resolve_stt_language(session_language)
+    tts_voice = config.resolve_tts_voice(session_language)
+
     stt = WhisperSTTService(
         device=config.WHISPER_DEVICE,
         settings=WhisperSTTService.Settings(
             model=config.WHISPER_MODEL,
-            language=Language.FR,
+            language=stt_language,
         ),
     )
 
     tts = PiperTTSService(
-        voice_id=config.PIPER_VOICE,
+        voice_id=tts_voice,
         download_dir=Path(__file__).parent / "models",
     )
 
@@ -140,7 +144,7 @@ async def run_call(
     async def hangup() -> None:
         await worker.queue_frame(EndTaskFrame())
 
-    llm.register_function(None, tool_defs.make_tool_handler(call_id, job_id, hangup))
+    llm.register_function(None, tool_defs.make_tool_handler(call_id, job_id, hangup, session_language))
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(_transport, _client) -> None:

@@ -4,13 +4,23 @@ export type CallSession = {
   userId: string | null;
   callerNumber: string | null;
   pinVerified: boolean;
+  language?: string | null;
 };
 
-// Chaque skill renvoie un texte français que l'agent lira/paraphrasera.
+// Chaque skill renvoie un texte que l'agent lira/paraphrasera.
 export type SkillResult = string;
 
-export function frDate(iso: string | Date): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+export function isEnglishLanguage(language?: string | null): boolean {
+  return Boolean(language && language.toLowerCase().startsWith("en"));
+}
+
+export function localizedText(language: string | null | undefined, french: string, english: string): string {
+  return isEnglishLanguage(language) ? english : french;
+}
+
+export function frDate(iso: string | Date, language?: string | null): string {
+  const locale = isEnglishLanguage(language) ? "en-GB" : "fr-FR";
+  return new Intl.DateTimeFormat(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",

@@ -14,8 +14,8 @@ export const maxDuration = 60;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-async function callerContextFor(phoneE164: string | null): Promise<CallerContext & { fullName: string | null }> {
-  const empty = { userId: null, preferredName: null, homeAddress: null, memories: [], pinConfigured: false, fullName: null };
+async function callerContextFor(phoneE164: string | null, language?: string | null): Promise<CallerContext & { fullName: string | null }> {
+  const empty = { userId: null, preferredName: null, homeAddress: null, memories: [], pinConfigured: false, fullName: null, language };
   if (!phoneE164) return empty;
   const db = supabaseAdmin();
   const { data: phone } = await db
@@ -36,10 +36,11 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
     homeAddress: profile?.home_address ?? null,
     memories: memories ?? [],
     pinConfigured: Boolean(profile?.pin_hash),
+    language,
   };
 }
 
-async function sessionFor(callId: string): Promise<CallSession> {
+async function sessionFor(callId: string, language?: string | null): Promise<CallSession> {
   const { data } = await supabaseAdmin()
     .from("call_logs")
     .select("user_id, from_number, pin_verified, direction")
@@ -50,6 +51,7 @@ async function sessionFor(callId: string): Promise<CallSession> {
     userId: data?.user_id ?? null,
     callerNumber: data?.from_number ?? null,
     pinVerified: data?.pin_verified ?? false,
+    language,
   };
 }
 
@@ -68,7 +70,8 @@ export async function POST(req: Request) {
     // ------------------------------------------------------------------
     case "assistant-request": {
       const callerNumber: string | null = call?.customer?.number ?? null;
-      const ctx = await callerContextFor(callerNumber);
+      const callerLanguage = (call?.metadata?.language ?? payload?.language ?? message?.language ?? null) as string | null;
+      const ctx = await callerContextFor(callerNumber, callerLanguage);
       if (callId) {
         await supabaseAdmin().from("call_logs").upsert(
           {
@@ -92,7 +95,8 @@ export async function POST(req: Request) {
       if (!callId || toolCalls.length === 0) return NextResponse.json({ results: [] });
 
       const jobId: string | undefined = call?.metadata?.outbound_job_id;
-      const session = await sessionFor(callId);
+      const callerLanguage = (call?.metadata?.language ?? payload?.language ?? message?.language ?? null) as string | null;
+      const session = await sessionFor(callId, callerLanguage);
 
       const results = await Promise.all(
         toolCalls.map(async (tc) => {

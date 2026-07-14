@@ -14,9 +14,13 @@ def env(name: str, default: str | None = None) -> str:
     return value
 
 
+def env_optional(name: str, default: str | None = None) -> str | None:
+    return os.getenv(name, default)
+
+
 # API Next.js (skills, prompts, sessions) — la seule source de logique métier
 NEXT_API_URL = env("NEXT_API_URL", "http://localhost:3000")
-RUNTIME_API_SECRET = env("RUNTIME_API_SECRET")
+RUNTIME_API_SECRET = env_optional("RUNTIME_API_SECRET", "") or ""
 
 # Hôte public de CE serveur (pour les websockets média) : "example.com" sans schéma
 PUBLIC_HOST = env("PUBLIC_HOST", "localhost:8000")
@@ -33,7 +37,8 @@ WHISPER_MODEL = env("WHISPER_MODEL", "medium")
 WHISPER_DEVICE = env("WHISPER_DEVICE", "auto")  # cpu | cuda | auto
 
 # TTS local (Piper) : voix française, téléchargée automatiquement au 1er appel
-PIPER_VOICE = env("PIPER_VOICE", "fr_FR-siwis-medium")
+DEFAULT_PIPER_VOICE = env("PIPER_VOICE", "fr_FR-siwis-medium")
+ENGLISH_PIPER_VOICE = env("ENGLISH_PIPER_VOICE", "en_US-lessac-medium")
 
 # Cerveau : ollama (100 % local) | mistral (API EU) | anthropic (qualité max)
 LLM_PROVIDER = env("LLM_PROVIDER", "ollama")
@@ -43,3 +48,24 @@ MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
 MISTRAL_MODEL = env("MISTRAL_MODEL", "mistral-small-latest")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = env("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+
+
+def resolve_stt_language(language: str | None) -> str:
+    if not language:
+        return "auto"
+    normalized = language.lower()
+    if normalized.startswith("en"):
+        return "en"
+    if normalized.startswith("fr"):
+        return "fr"
+    return "auto"
+
+
+def resolve_tts_voice(language: str | None) -> str:
+    if not language:
+        return DEFAULT_PIPER_VOICE
+    normalized = language.lower()
+    if normalized.startswith("en"):
+        return ENGLISH_PIPER_VOICE
+    return DEFAULT_PIPER_VOICE
+

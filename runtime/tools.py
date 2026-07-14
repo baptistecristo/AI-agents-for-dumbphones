@@ -159,6 +159,7 @@ def make_tool_handler(
     call_id: str,
     job_id: str | None,
     hangup: Callable[[], Awaitable[None]],
+    language: str | None = None,
 ) -> Callable[[FunctionCallParams], Awaitable[None]]:
     """Handler attrape-tout : forwarde chaque appel d'outil vers l'API Next."""
 
@@ -168,7 +169,13 @@ def make_tool_handler(
             await hangup()
             return
         try:
-            result = await api_client.execute_tool(call_id, params.function_name, params.arguments or {}, job_id)
+            result = await api_client.execute_tool(
+                call_id,
+                params.function_name,
+                params.arguments or {},
+                job_id,
+                language,
+            )
         except Exception as err:  # noqa: BLE001 — l'agent doit rester en ligne
             result = f"Désolé, ce service ne répond pas ({type(err).__name__})."
         await params.result_callback(result)

@@ -2,7 +2,7 @@
 
 import { google } from "googleapis";
 import { googleFor } from "../google";
-import { CallSession, SkillResult, frDate, parisDayBounds } from "./types";
+import { CallSession, localizedText, SkillResult, frDate, parisDayBounds } from "./types";
 
 async function calendarFor(session: CallSession) {
   if (!session.userId) return null;
@@ -11,12 +11,15 @@ async function calendarFor(session: CallSession) {
   return google.calendar({ version: "v3", auth });
 }
 
-const NOT_CONNECTED =
-  "Le compte Google n'est pas connecté. La personne (ou sa famille) doit le connecter sur le site.";
-
 export async function listEvents(session: CallSession, args: { day: string }): Promise<SkillResult> {
   const cal = await calendarFor(session);
-  if (!cal) return NOT_CONNECTED;
+  if (!cal) {
+    return localizedText(
+      session.language,
+      "Le compte Google n'est pas connecté. La personne (ou sa famille) doit le connecter sur le site.",
+      "The Google account is not connected. The person (or a family member) must connect it on the website.",
+    );
+  }
   const { start, end, label } = parisDayBounds(args.day);
   const res = await cal.events.list({
     calendarId: "primary",
@@ -27,12 +30,16 @@ export async function listEvents(session: CallSession, args: { day: string }): P
     maxResults: 10,
   });
   const items = res.data.items ?? [];
-  if (items.length === 0) return `Aucun rendez-vous le ${label}.`;
+  if (items.length === 0) {
+    return localizedText(session.language, `Aucun rendez-vous le ${label}.`, `No appointments on ${label}.`);
+  }
   const lines = items.map((e) => {
-    const when = e.start?.dateTime ? frDate(e.start.dateTime) : "toute la journée";
-    return `- ${e.summary ?? "Sans titre"} : ${when}${e.location ? `, à ${e.location}` : ""}`;
+    const when = e.start?.dateTime ? frDate(e.start.dateTime, session.language) : localizedText(session.language, "toute la journée", "all day");
+    const title = e.summary ?? localizedText(session.language, "Sans titre", "Untitled");
+    const location = e.location ? localizedText(session.language, `, à ${e.location}`, `, at ${e.location}`) : "";
+    return `- ${title} : ${when}${location}`;
   });
-  return `Rendez-vous du ${label} :\n${lines.join("\n")}`;
+  return localizedText(session.language, `Rendez-vous du ${label} :\n${lines.join("\n")}`, `Appointments for ${label} :\n${lines.join("\n")}`);
 }
 
 export async function createEvent(
@@ -40,10 +47,20 @@ export async function createEvent(
   args: { title: string; start: string; duration_minutes?: number; confirmed: boolean },
 ): Promise<SkillResult> {
   const cal = await calendarFor(session);
-  if (!cal) return NOT_CONNECTED;
+  if (!cal) {
+    return localizedText(
+      session.language,
+      "Le compte Google n'est pas connecté. La personne (ou sa famille) doit le connecter sur le site.",
+      "The Google account is not connected. The person (or a family member) must connect it on the website.",
+    );
+  }
   const durationMin = args.duration_minutes ?? 60;
   if (!args.confirmed) {
-    return `PROPOSITION (à lire à voix haute puis demander confirmation) : créer le rendez-vous « ${args.title} » le ${frDate(args.start)}, durée ${durationMin} minutes.`;
+    return localizedText(
+      session.language,
+      `PROPOSITION (à lire à voix haute puis demander confirmation) : créer le rendez-vous « ${args.title} » le ${frDate(args.start, session.language)}, durée ${durationMin} minutes.`,
+      `PROPOSAL (to read aloud and then ask for confirmation): create the appointment “${args.title}” on ${frDate(args.start, session.language)}, duration ${durationMin} minutes.`,
+    );
   }
   const startDate = new Date(args.start);
   const endDate = new Date(startDate.getTime() + durationMin * 60_000);
@@ -55,7 +72,7 @@ export async function createEvent(
       end: { dateTime: endDate.toISOString(), timeZone: "Europe/Paris" },
     },
   });
-  return `C'est fait : « ${args.title} » est noté le ${frDate(args.start)}.`;
+  return localizedText(session.language, `C'est fait : « ${args.title} » est noté le ${frDate(args.start, session.language)}.`, `Done: “${args.title}” is scheduled for ${frDate(args.start, session.language)}.`);
 }
 
 export async function moveEvent(
@@ -63,7 +80,13 @@ export async function moveEvent(
   args: { event_query: string; new_start: string; confirmed: boolean },
 ): Promise<SkillResult> {
   const cal = await calendarFor(session);
-  if (!cal) return NOT_CONNECTED;
+  if (!cal) {
+    return localizedText(
+      session.language,
+      "Le compte Google n'est pas connecté. La personne (ou sa famille) doit le connecter sur le site.",
+      "The Google account is not connected. The person (or a family member) must connect it on the website.",
+    );
+  }
   // Cherche l'évènement dans les 30 prochains jours
   const now = new Date();
   const res = await cal.events.list({
@@ -76,10 +99,20 @@ export async function moveEvent(
     maxResults: 3,
   });
   const ev = (res.data.items ?? [])[0];
-  if (!ev?.id) return `Je ne trouve pas de rendez-vous correspondant à « ${args.event_query} » dans le mois qui vient.`;
-  const oldWhen = ev.start?.dateTime ? frDate(ev.start.dateTime) : "?";
+  if (!ev?.id) {
+    return localizedText(
+      session.language,
+      `Je ne trouve pas de rendez-vous correspondant à « ${args.event_query} » dans le mois qui vient.`,
+      `I could not find an appointment matching “${args.event_query}” in the coming month.`,
+    );
+  }
+  const oldWhen = ev.start?.dateTime ? frDate(ev.start.dateTime, session.language) : "?";
   if (!args.confirmed) {
-    return `PROPOSITION : déplacer « ${ev.summary} » (actuellement le ${oldWhen}) au ${frDate(args.new_start)}. Demander confirmation.`;
+    return localizedText(
+      session.language,
+      `PROPOSITION : déplacer « ${ev.summary} » (actuellement le ${oldWhen}) au ${frDate(args.new_start, session.language)}. Demander confirmation.`,
+      `PROPOSAL: move “${ev.summary}” (currently ${oldWhen}) to ${frDate(args.new_start, session.language)}. Ask for confirmation.`,
+    );
   }
   const oldStart = ev.start?.dateTime ? new Date(ev.start.dateTime) : new Date(args.new_start);
   const oldEnd = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(oldStart.getTime() + 3600_000);
@@ -93,5 +126,5 @@ export async function moveEvent(
       end: { dateTime: new Date(newStart.getTime() + durMs).toISOString(), timeZone: "Europe/Paris" },
     },
   });
-  return `C'est fait : « ${ev.summary} » est déplacé au ${frDate(args.new_start)}.`;
+  return localizedText(session.language, `C'est fait : « ${ev.summary} » est déplacé au ${frDate(args.new_start, session.language)}.`, `Done: “${ev.summary}” has been moved to ${frDate(args.new_start, session.language)}.`);
 }

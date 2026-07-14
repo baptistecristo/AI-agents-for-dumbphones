@@ -21,6 +21,7 @@ async def open_session(
     direction: str,
     caller_number: str | None = None,
     job_id: str | None = None,
+    language: str | None = None,
 ) -> dict[str, Any]:
     """Ouvre la session d'appel et récupère prompt système + message d'accueil."""
     async with httpx.AsyncClient(timeout=15) as client:
@@ -32,6 +33,7 @@ async def open_session(
                 "direction": direction,
                 "caller_number": caller_number,
                 "job_id": job_id,
+                "language": language,
             },
         )
         res.raise_for_status()
@@ -43,13 +45,14 @@ async def execute_tool(
     name: str,
     arguments: dict[str, Any],
     job_id: str | None = None,
+    language: str | None = None,
 ) -> str:
     """Exécute un outil côté Next.js et renvoie le texte résultat."""
     async with httpx.AsyncClient(timeout=60) as client:
         res = await client.post(
             f"{config.NEXT_API_URL}/api/tools/execute",
             headers=_HEADERS,
-            json={"call_id": call_id, "name": name, "arguments": arguments, "job_id": job_id},
+            json={"call_id": call_id, "name": name, "arguments": arguments, "job_id": job_id, "language": language},
         )
         res.raise_for_status()
         return res.json()["result"]

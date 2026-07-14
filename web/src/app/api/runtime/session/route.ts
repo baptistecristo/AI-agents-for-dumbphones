@@ -21,6 +21,7 @@ export async function POST(req: Request) {
     direction: "inbound" | "outbound";
     caller_number?: string;
     job_id?: string;
+    language?: string;
   };
   const db = supabaseAdmin();
 
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
     homeAddress: null as string | null,
     memories: [] as { key: string; value: string }[],
     pinConfigured: false,
+    language: null as string | null,
   };
   if (caller) {
     const { data: phone } = await db
@@ -86,6 +88,7 @@ export async function POST(req: Request) {
         homeAddress: profile?.home_address ?? null,
         memories: memories ?? [],
         pinConfigured: Boolean(profile?.pin_hash),
+        language: body.language ?? null,
       };
     }
   }
@@ -106,7 +109,12 @@ export async function POST(req: Request) {
     call_id: body.provider_call_id,
     system_prompt: inboundSystemPrompt(ctx),
     first_message: ctx.preferredName
-      ? `Bonjour ${ctx.preferredName} ! Ici ${name}. Que puis-je faire pour vous ?`
-      : `Bonjour ! Ici ${name}, votre assistant. Que puis-je faire pour vous ?`,
+      ? (ctx.language && ctx.language.toLowerCase().startsWith("en")
+          ? `Hello ${ctx.preferredName}! Here is ${name}. How can I help you?`
+          : `Bonjour ${ctx.preferredName} ! Ici ${name}. Que puis-je faire pour vous ?`)
+      : ctx.language && ctx.language.toLowerCase().startsWith("en")
+        ? `Hello! Here is ${name}, your assistant. How can I help you?`
+        : `Bonjour ! Ici ${name}, votre assistant. Que puis-je faire pour vous ?`,
+    language: ctx.language,
   });
 }

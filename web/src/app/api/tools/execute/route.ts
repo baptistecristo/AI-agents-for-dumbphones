@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     name: string;
     arguments: Record<string, unknown>;
     job_id?: string;
+    language?: string;
   };
 
   if (body.name === "report_outcome" && body.job_id) {
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
     userId: data?.user_id ?? null,
     callerNumber: data?.from_number ?? null,
     pinVerified: data?.pin_verified ?? false,
+    language: body.language ?? null,
   });
   return NextResponse.json({ result });
 }
