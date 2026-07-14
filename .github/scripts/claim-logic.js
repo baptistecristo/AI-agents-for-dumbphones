@@ -52,6 +52,48 @@ function assignLanded (responseAssignees, login) {
     responseAssignees.some((a) => a.login === login)
 }
 
+const MS_PER_DAY = 86400000
+
+function quietDays (lastActivityIso, nowIso) {
+  const from = Date.parse(lastActivityIso)
+  const to = Date.parse(nowIso)
+  if (Number.isNaN(from) || Number.isNaN(to)) {
+    throw new TypeError(`unparseable timestamp: ${lastActivityIso} .. ${nowIso}`)
+  }
+  return Math.floor((to - from) / MS_PER_DAY)
+}
+
+// Without the push-access skip the bot unassigns Baptiste from his own
+// issues on day 8. claim-exempt is the hatch for long-running work (#8).
+function sweepSkipReason ({ hasPushAccess, labels }) {
+  if (hasPushAccess) return 'collaborator'
+  if ((labels || []).some((l) => l.name === 'claim-exempt')) return 'claim-exempt'
+  return null
+}
+
+function decideSweep ({ assignedAt, assigneeComments, hasOpenLinkedPr, nudgedAt, now }) {
+  if (hasOpenLinkedPr) return { action: 'none', reason: 'open-pr', days: 0 }
+
+  const lastActivity = (assigneeComments || []).reduce(
+    (latest, c) => (Date.parse(c) > Date.parse(latest) ? c : latest),
+    assignedAt
+  )
+  const days = quietDays(lastActivity, now)
+
+  if (days >= RELEASE_AFTER_DAYS) return { action: 'release', days, lastActivity }
+
+  if (days >= NUDGE_AFTER_DAYS) {
+    // A nudge older than the last activity is stale: the assignee has spoken
+    // since, so they have earned a fresh nudge before any release.
+    if (nudgedAt && Date.parse(nudgedAt) >= Date.parse(lastActivity)) {
+      return { action: 'none', reason: 'already-nudged', days }
+    }
+    return { action: 'nudge', days, lastActivity }
+  }
+
+  return { action: 'none', reason: 'fresh', days, lastActivity }
+}
+
 module.exports = {
   MAX_OPEN_CLAIMS,
   NUDGE_AFTER_DAYS,
@@ -61,5 +103,8 @@ module.exports = {
   issuesOnly,
   decideClaim,
   decideUnclaim,
-  assignLanded
+  assignLanded,
+  quietDays,
+  sweepSkipReason,
+  decideSweep
 }

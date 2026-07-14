@@ -57,7 +57,10 @@ const {
   issuesOnly,
   decideClaim,
   decideUnclaim,
-  assignLanded
+  assignLanded,
+  quietDays,
+  sweepSkipReason,
+  decideSweep
 } = require('./claim-logic.js')
 
 test('issuesOnly: drops pull requests from an issues listing', () => {
@@ -152,4 +155,117 @@ test('assignLanded: true only when the login is actually in the response', () =>
   assert.equal(assignLanded([{ login: 'someone-else' }], 'faizmullaa'), false)
   assert.equal(assignLanded([], 'faizmullaa'), false)
   assert.equal(assignLanded(undefined, 'faizmullaa'), false)
+})
+
+const T0 = '2026-07-01T00:00:00Z'
+
+test('quietDays: counts whole elapsed days', () => {
+  assert.equal(quietDays(T0, '2026-07-01T00:00:00Z'), 0)
+  assert.equal(quietDays(T0, '2026-07-01T23:59:00Z'), 0)
+  assert.equal(quietDays(T0, '2026-07-06T00:00:00Z'), 5)
+  assert.equal(quietDays(T0, '2026-07-08T12:00:00Z'), 7)
+})
+
+test('quietDays: an unparseable timestamp throws rather than returning NaN', () => {
+  assert.throws(() => quietDays('not-a-date', T0), TypeError)
+})
+
+test('sweepSkipReason: collaborators are never swept', () => {
+  assert.equal(sweepSkipReason({ hasPushAccess: true, labels: [] }), 'collaborator')
+})
+
+test('sweepSkipReason: claim-exempt is never swept', () => {
+  assert.equal(
+    sweepSkipReason({ hasPushAccess: false, labels: [{ name: 'claim-exempt' }] }),
+    'claim-exempt'
+  )
+})
+
+test('sweepSkipReason: an ordinary outside claim is sweepable', () => {
+  assert.equal(
+    sweepSkipReason({ hasPushAccess: false, labels: [{ name: 'good first issue' }] }),
+    null
+  )
+})
+
+test('decideSweep: a fresh claim is left alone', () => {
+  const out = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: null, now: '2026-07-04T00:00:00Z'
+  })
+  assert.equal(out.action, 'none')
+  assert.equal(out.reason, 'fresh')
+  assert.equal(out.days, 3)
+})
+
+test('decideSweep: 5 quiet days earns exactly one nudge', () => {
+  const out = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: null, now: '2026-07-06T00:00:00Z'
+  })
+  assert.equal(out.action, 'nudge')
+  assert.equal(out.days, 5)
+})
+
+test('decideSweep: an existing nudge is not repeated', () => {
+  const out = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: '2026-07-06T00:00:00Z', now: '2026-07-06T12:00:00Z'
+  })
+  assert.equal(out.action, 'none')
+  assert.equal(out.reason, 'already-nudged')
+})
+
+test('decideSweep: 7 quiet days releases', () => {
+  const out = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: '2026-07-06T00:00:00Z', now: '2026-07-08T00:00:00Z'
+  })
+  assert.equal(out.action, 'release')
+  assert.equal(out.days, 7)
+})
+
+test('decideSweep: an open linked PR exempts the claim entirely', () => {
+  const out = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: true,
+    nudgedAt: null, now: '2026-08-01T00:00:00Z'
+  })
+  assert.equal(out.action, 'none')
+  assert.equal(out.reason, 'open-pr')
+})
+
+test('decideSweep: a comment from the assignee restarts the clock', () => {
+  const out = decideSweep({
+    assignedAt: T0,
+    assigneeComments: ['2026-07-05T00:00:00Z'],
+    hasOpenLinkedPr: false,
+    nudgedAt: null,
+    now: '2026-07-08T00:00:00Z'
+  })
+  assert.equal(out.action, 'none')
+  assert.equal(out.days, 3)
+  assert.equal(out.lastActivity, '2026-07-05T00:00:00Z')
+})
+
+test('decideSweep: a comment after a nudge re-arms the nudge', () => {
+  const out = decideSweep({
+    assignedAt: T0,
+    assigneeComments: ['2026-07-07T00:00:00Z'],
+    hasOpenLinkedPr: false,
+    nudgedAt: '2026-07-06T00:00:00Z',
+    now: '2026-07-12T00:00:00Z'
+  })
+  assert.equal(out.action, 'nudge')
+  assert.equal(out.days, 5)
+})
+
+test('decideSweep: the newest assignee comment wins, whatever the order', () => {
+  const out = decideSweep({
+    assignedAt: T0,
+    assigneeComments: ['2026-07-05T00:00:00Z', '2026-07-02T00:00:00Z'],
+    hasOpenLinkedPr: false,
+    nudgedAt: null,
+    now: '2026-07-08T00:00:00Z'
+  })
+  assert.equal(out.days, 3)
 })
