@@ -60,4 +60,8 @@ start-here.md
 recruit-collaborators.md
 co-builder-outreach.md
 
+# Internal design specs: they name the maintainer's other projects and their
+# infrastructure. Kept locally, out of the public repo.
+docs/superpowers/
+
 .vercel
