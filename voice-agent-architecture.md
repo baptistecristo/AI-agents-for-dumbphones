@@ -152,7 +152,7 @@ Caller ID is **spoofable**, so:
 
 ---
 
-## 7. Outbound calling subsystem ("Docteur" / "Taxi" / book a restaurant)
+## 7. Outbound calling subsystem ("Appointment" / "Taxi" / book a restaurant)
 
 A separate worker so a 4-minute outbound call never blocks the inbound line.
 

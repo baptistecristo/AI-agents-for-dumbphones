@@ -23,7 +23,7 @@ async function vapiFetch(path: string, init?: RequestInit): Promise<unknown> {
   return res.json();
 }
 
-// Lance un appel sortant (moteur Docteur/Taxi/Résa).
+// Lance un appel sortant (moteur Rendez-vous/Taxi/Résa).
 // assistant est passé "inline" (transient) : pas besoin de pré-créer côté Vapi.
 export async function startOutboundCall(opts: {
   toNumber: string;

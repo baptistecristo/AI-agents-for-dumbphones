@@ -130,9 +130,9 @@ export function agentTools() {
       {
         kind: {
           type: "string",
-          enum: ["docteur", "taxi", "resto", "generic"],
+          enum: ["appointment", "taxi", "resto", "generic"],
           description:
-            "Mission preset. 'docteur' = any appointment booking (doctor, hairdresser, garage… — legacy value name), 'taxi' = taxi booking, 'resto' = restaurant booking, 'generic' = anything else.",
+            "Mission preset. 'appointment' = any appointment booking (doctor, hairdresser, garage…), 'taxi' = taxi booking, 'resto' = restaurant booking, 'generic' = anything else.",
         },
         goal: { type: "string", description: "Precise goal, e.g. 'book a haircut this week, mornings preferred'" },
         target_name: { type: "string", description: "Name of the place/person to call" },

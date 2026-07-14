@@ -106,10 +106,10 @@ def inbound_tools() -> ToolsSchema:
             ),
             _schema(
                 "place_call",
-                "PROPOSE un appel passé à la place de l'utilisateur (docteur, taxi, resto). "
+                "PROPOSE un appel passé à la place de l'utilisateur (rendez-vous, taxi, resto). "
                 "Récapitulatif puis confirmed=true. Sensible : PIN requis. Résultat par SMS.",
                 {
-                    "kind": {"type": "string", "enum": ["docteur", "taxi", "resto", "generic"]},
+                    "kind": {"type": "string", "enum": ["appointment", "taxi", "resto", "generic"]},
                     "goal": {"type": "string"},
                     "target_name": {"type": "string"},
                     "target_number": {"type": "string"},
@@ -137,7 +137,7 @@ def inbound_tools() -> ToolsSchema:
 
 
 def outbound_tools() -> ToolsSchema:
-    """Outils des missions sortantes (docteur / taxi / resto)."""
+    """Outils des missions sortantes (rendez-vous / taxi / resto)."""
     return ToolsSchema(
         standard_tools=[
             _schema(

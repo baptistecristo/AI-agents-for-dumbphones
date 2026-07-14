@@ -63,7 +63,7 @@ async def telnyx_inbound(request: Request) -> Response:
 # ---------------------------------------------------------------- sortant
 @app.post("/outbound")
 async def outbound(request: Request) -> JSONResponse:
-    """Compose un appel de mission (docteur/taxi/resto) via l'API Twilio."""
+    """Compose un appel de mission (rendez-vous/taxi/resto) via l'API Twilio."""
     if not _authorized(request):
         return JSONResponse({"error": "non autorisé"}, status_code=401)
     body = await request.json()

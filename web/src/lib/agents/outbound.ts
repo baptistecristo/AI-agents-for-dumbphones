@@ -1,8 +1,5 @@
 // Moteur d'appels sortants généralisé (§7 du doc d'archi).
 // Un seul moteur, des "presets" par mission : Rendez-vous, Taxi, Restaurant, générique.
-// NB : la valeur de kind « docteur » est conservée telle quelle sur le fil et en
-// base (compatibilité avec les jobs existants), mais elle couvre désormais toute
-// prise de rendez-vous (médecin, coiffeur, garage…).
 // L'agent appelle un humain (secrétariat, central taxi…), navigue les serveurs
 // vocaux (DTMF), gère le répondeur, poursuit un objectif borné, puis rend
 // compte via l'outil report_outcome -> SMS à l'utilisateur.
@@ -12,7 +9,7 @@ import { Language } from "../language";
 
 export type OutboundJob = {
   id: string;
-  kind: "docteur" | "taxi" | "resto" | "generic";
+  kind: "appointment" | "taxi" | "resto" | "generic";
   goal: string;
   target_name: string | null;
   target_number: string;
@@ -23,7 +20,7 @@ export type OutboundJob = {
 };
 
 const KIND_GUIDANCE: Record<OutboundJob["kind"], string> = {
-  docteur: `# Mission type : prise de rendez-vous
+  appointment: `# Mission type : prise de rendez-vous
 - Tu appelles un établissement qui prend des rendez-vous (cabinet médical, coiffeur, garage…) pour prendre, déplacer ou confirmer un rendez-vous.
 - Serveur vocal : écoute les options et utilise l'outil dtmf pour taper le bon chiffre (souvent « secrétariat » ou « rendez-vous »).
 - Avec l'interlocuteur : donne le nom du client, la raison EN UN MOT (consultation, coupe, révision…), et les disponibilités. Ne révèle AUCUN détail personnel au-delà du strict nécessaire à la prise de rendez-vous.

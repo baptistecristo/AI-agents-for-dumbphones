@@ -1,7 +1,5 @@
 // Skill Appels sortants — crée un job dans la file ; le cron /api/cron/outbound
 // déclenche l'appel via le moteur généralisé (agents/outbound.ts).
-// NB : la valeur « docteur » est conservée sur le fil (compat DB) mais couvre
-// toute prise de rendez-vous (médecin, coiffeur, garage…).
 
 import { supabaseAdmin } from "../supabase/admin";
 import { resolveContactNumber } from "./contacts";
@@ -9,7 +7,7 @@ import { recall } from "./memory";
 import { CallSession, SkillResult, t } from "./types";
 
 const KIND_LABEL: Record<string, { fr: string; en: string }> = {
-  docteur: { fr: "appeler pour prendre le rendez-vous", en: "call to book the appointment" },
+  appointment: { fr: "appeler pour prendre le rendez-vous", en: "call to book the appointment" },
   taxi: { fr: "réserver un taxi", en: "book a taxi" },
   resto: { fr: "réserver le restaurant", en: "book the restaurant" },
   generic: { fr: "passer l'appel", en: "place the call" },
@@ -18,7 +16,7 @@ const KIND_LABEL: Record<string, { fr: string; en: string }> = {
 export async function placeCall(
   session: CallSession,
   args: {
-    kind: "docteur" | "taxi" | "resto" | "generic";
+    kind: "appointment" | "taxi" | "resto" | "generic";
     goal: string;
     target_name?: string;
     target_number?: string;
