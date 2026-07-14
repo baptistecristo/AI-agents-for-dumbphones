@@ -1,6 +1,7 @@
 // Skill Appels sortants — crée un job dans la file ; le cron /api/cron/outbound
 // déclenche l'appel via le moteur généralisé (agents/outbound.ts).
 
+import { isE164 } from "../phone";
 import { supabaseAdmin } from "../supabase/admin";
 import { resolveContactNumber } from "./contacts";
 import { recall } from "./memory";
@@ -50,6 +51,12 @@ export async function placeCall(
     return t(session, {
       fr: `Je n'ai pas le numéro de ${args.target_name ?? "ce destinataire"}. Demander le numéro à l'utilisateur (ou l'enregistrer en mémoire pour la prochaine fois).`,
       en: `I don't have the number for ${args.target_name ?? "this recipient"}. Ask the user for the number (or save it to memory for next time).`,
+    });
+  }
+  if (!isE164(target)) {
+    return t(session, {
+      fr: "Ce numéro n'est pas au bon format (indicatif international). Je préfère ne pas appeler.",
+      en: "That number isn't in the right format (international dialing code). I'd rather not call.",
     });
   }
 

@@ -1,5 +1,6 @@
 // Skill Messages — SMS dicté, avec relecture (confirm) + PIN (action sensible).
 
+import { isE164 } from "../phone";
 import { sendSms } from "../twilio";
 import { resolveContactNumber } from "./contacts";
 import { CallSession, SkillResult, t } from "./types";
@@ -35,6 +36,11 @@ export async function sendDictatedSms(
     return t(session, {
       fr: "Il me faut un destinataire : un nom de contact ou un numéro.",
       en: "I need a recipient: a contact name or a number.",
+    });
+  if (!isE164(to))
+    return t(session, {
+      fr: "Ce numéro n'est pas au bon format (indicatif international). Je préfère ne pas envoyer.",
+      en: "That number isn't in the right format (international dialing code). I'd rather not send.",
     });
 
   if (!args.confirmed) {
