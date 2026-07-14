@@ -1,4 +1,4 @@
-﻿-- Plateforme d'agent vocal — schéma initial (Postgres / Supabase, région EU)
+-- Plateforme d'agent vocal — schéma initial (Postgres / Supabase, région EU)
 -- Toutes les données personnelles restent dans cette base (résidence EU).
 
 create extension if not exists pgcrypto;

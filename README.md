@@ -120,10 +120,18 @@ cp .env.example .env           # NEXT_API_URL, RUNTIME_API_SECRET, provider keys
 uvicorn server:app --port 8000
 ```
 
-Database: run the files in `supabase/migrations/` (in order) in your Supabase SQL editor
-(choose an **EU region**). Weather (Open-Meteo) needs no key; directions use a free OpenRouteService
-key. The default LLM is fully local via Ollama — set `LLM_PROVIDER=mistral|anthropic` for
-higher quality at a few cents per call.
+Database: create your own Supabase project in an **EU region**, then apply the schema with
+`supabase link --project-ref <your-ref>` and `supabase db push` (or paste the files in
+`supabase/migrations/` in order into the SQL editor). Weather (Open-Meteo) needs no key;
+directions use a free OpenRouteService key. The default LLM is fully local via Ollama — set
+`LLM_PROVIDER=mistral|anthropic` for higher quality at a few cents per call.
+
+> **Maintainer's instance.** The hosted demo runs on Supabase project
+> `gegemygvkvljvtgelfnj` (org *AI agents for dumbphones*, `eu-central-1`). This ref is the
+> source of truth for the demo — it is not a secret (it is already public in
+> `NEXT_PUBLIC_SUPABASE_URL`). Verify with `cat supabase/.temp/project-ref` before any
+> `db push`, and always `--dry-run` first: the CLI's link is ambient local state, and no
+> config file pins it.
 
 ## Design principles
 
