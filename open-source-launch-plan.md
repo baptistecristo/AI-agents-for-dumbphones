@@ -5,7 +5,7 @@ _Working session recap, 2026-07-13. This file supersedes the elderly-focused fra
 > **2026-07-14 build session:** Tracks 1, 2, 3 and 5 landed — persona pivoted (EN+FR),
 > bilingual pipeline live in code (`preferred_language` column → per-language Whisper +
 > Piper voices → localized skills), outbound missions de-medicalized, CONTRIBUTING
-> updated and 7 good-first-issue drafts in `.github/GOOD_FIRST_ISSUES.md`. The remaining
+> updated and the good-first-issues live on the GitHub issue tracker. The remaining
 > blocker is **Track 4 (live call-in number)** — it needs the maintainer's accounts
 > (Vercel/Supabase/host/Twilio) and a little money.
 
@@ -86,7 +86,7 @@ The code already routes language per-call, so this is additive:
 
 ### Track 5 — Repo contributor-readiness _(solo)_
 - [x] `CONTRIBUTING.md`
-- [x] 5–8 "good first issue" tickets — 7 drafts in `.github/GOOD_FIRST_ISSUES.md` (skills, third language, mid-call voice switch, bilingual SMS, dashboard toggle, demo assets)
+- [x] 5–8 "good first issue" tickets — live on the GitHub issue tracker (skills, i18n, third language)
 - [ ] Demo GIF / audio + the call-in number in the README _(blocked on Track 4)_
 
 ### Track 6 — Launch _(with the user, later)_

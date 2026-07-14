@@ -7,8 +7,8 @@ the community add the skills and languages that make that real.
 This project is **early and looking for founding co-builders.** The two best first
 contributions are **adding a skill** and **adding a third language** (EN and FR ship
 already) — both are small, self-contained, and ship to a live call-in number.
-Walkthroughs below. More ready-to-claim ideas in
-[`.github/GOOD_FIRST_ISSUES.md`](.github/GOOD_FIRST_ISSUES.md).
+Walkthroughs below. More ready-to-claim ideas in the
+[good-first-issue list](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 - Be a builder talking to builders. No hype, no growth-speak.
 - Small PRs welcome. "This is wrong because X" is a welcome PR too.
