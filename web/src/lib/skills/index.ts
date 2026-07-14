@@ -4,11 +4,12 @@
 
 import { supabaseAdmin } from "../supabase/admin";
 import { createEvent, listEvents, moveEvent } from "./agenda";
+import { requestCode, verifyCode } from "./auth";
 import { findContact } from "./contacts";
 import { getDirections } from "./directions";
+import { requiresVerification } from "./gate";
 import { recall, remember } from "./memory";
 import { placeCall } from "./outbound";
-import { checkPin } from "./pin";
 import { didIAlready, listReminders, markDone, setReminder } from "./reminders";
 import { sendDictatedSms } from "./sms";
 import { CallSession, t } from "./types";
@@ -23,6 +24,14 @@ async function homeAddressOf(userId: string | null): Promise<string | null> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function executeTool(name: string, args: any, session: CallSession): Promise<string> {
   try {
+    // Gate unique : les outils qui lisent des données stockées ou envoient/dépensent
+    // exigent le code SMS. Le caller-ID seul ne débloque rien de sensible.
+    if (requiresVerification(name) && !session.verified) {
+      return t(session, {
+        fr: "REFUS : demande d'abord le code (request_code), puis vérifie-le (verify_code).",
+        en: "REFUSED: ask for the code first (request_code), then verify it (verify_code).",
+      });
+    }
     switch (name) {
       case "list_events":
         return await listEvents(session, args);
@@ -52,8 +61,10 @@ export async function executeTool(name: string, args: any, session: CallSession)
         return await remember(session, args);
       case "recall":
         return await recall(session, args);
-      case "verify_pin":
-        return await checkPin(session, args);
+      case "request_code":
+        return await requestCode(session);
+      case "verify_code":
+        return await verifyCode(session, args);
       default:
         return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.` });
     }

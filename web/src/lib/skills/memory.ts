@@ -9,10 +9,27 @@ export async function remember(session: CallSession, args: { key: string; value:
       fr: "Appelant non identifié : je ne peux rien retenir.",
       en: "Unidentified caller: I can't remember anything.",
     });
+  const key = args.key.toLowerCase().trim();
+  // Prendre une note est libre (sans code), mais un appel non vérifié ne doit
+  // jamais écraser une note existante : sinon un caller-ID spoofé pourrait
+  // corrompre les données. Remplacer une note existante exige le code.
+  if (!session.verified) {
+    const { data: existing } = await supabaseAdmin()
+      .from("memories")
+      .select("key")
+      .eq("user_id", session.userId)
+      .eq("key", key)
+      .maybeSingle();
+    if (existing)
+      return t(session, {
+        fr: `J'ai déjà une note « ${key} ». Pour la remplacer, il me faudra ton code.`,
+        en: `I already have a "${key}" note. To replace it, I'll need your code.`,
+      });
+  }
   const { error } = await supabaseAdmin().from("memories").upsert(
     {
       user_id: session.userId,
-      key: args.key.toLowerCase().trim(),
+      key,
       value: args.value,
       updated_at: new Date().toISOString(),
     },
