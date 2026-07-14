@@ -7,7 +7,10 @@
 // RAPPEL <heure> <texte> [demain] · RAPPELS · FAIT <texte> · ROUTE <destination>
 //
 // Volontairement absents par SMS : envoi de SMS à des tiers et appels sortants
-// (actions sensibles : elles exigent le PIN parlé, donc la voix).
+// (actions protégées : elles exigent le code jetable en appel, que le canal SMS
+// ne sait pas gérer). Les commandes SMS de lecture (AGENDA, RAPPELS) restent sur
+// l'identité de l'expéditeur — validée par la signature Twilio — sans code : le
+// gate `verify_code` ne couvre que le canal vocal (voir la note de périmètre).
 
 import { listEvents } from "./skills/agenda";
 import { getDirections } from "./skills/directions";

@@ -95,7 +95,8 @@ def inbound_tools() -> ToolsSchema:
             _schema("find_contact", "Cherche un contact dans le carnet Google.", {"name": {"type": "string"}}, ["name"]),
             _schema(
                 "send_sms",
-                "PROPOSE un SMS dicté (relecture puis confirmed=true). Sensible : PIN requis.",
+                "PROPOSE un SMS dicté (relecture puis confirmed=true). Protégé : code requis "
+                "(request_code puis verify_code).",
                 {
                     "to_name": {"type": "string"},
                     "to_number": {"type": "string"},
@@ -107,7 +108,8 @@ def inbound_tools() -> ToolsSchema:
             _schema(
                 "place_call",
                 "PROPOSE un appel passé à la place de l'utilisateur (rendez-vous, taxi, resto). "
-                "Récapitulatif puis confirmed=true. Sensible : PIN requis. Résultat par SMS.",
+                "Récapitulatif puis confirmed=true. Protégé : code requis (request_code puis "
+                "verify_code). Résultat par SMS.",
                 {
                     "kind": {"type": "string", "enum": ["appointment", "taxi", "resto", "generic"]},
                     "goal": {"type": "string"},
@@ -126,10 +128,19 @@ def inbound_tools() -> ToolsSchema:
             ),
             _schema("recall", "Recherche dans la mémoire de l'utilisateur.", {"query": {"type": "string"}}, ["query"]),
             _schema(
-                "verify_pin",
-                "Vérifie le PIN parlé (obligatoire avant action sensible). Ne jamais répéter le PIN.",
-                {"pin": {"type": "string"}},
-                ["pin"],
+                "request_code",
+                "Envoie un code à 4 chiffres par SMS au numéro enregistré. À appeler la première fois "
+                "que l'utilisateur demande quelque chose de protégé (lire agenda/contacts/rappels/notes, "
+                "modifier l'agenda, envoyer un SMS, passer un appel).",
+                {},
+                [],
+            ),
+            _schema(
+                "verify_code",
+                "Vérifie le code que l'utilisateur dit ou tape au clavier. Débloque les actions protégées "
+                "pour le reste de l'appel. Ne jamais répéter le code à voix haute.",
+                {"code": {"type": "string"}},
+                ["code"],
             ),
             END_CALL,
         ]
