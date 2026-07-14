@@ -8,13 +8,14 @@
 
 import { NextResponse } from "next/server";
 import { buildInboundAssistant } from "@/lib/agents/inbound";
+import { safeEqual } from "@/lib/crypto";
 import { env, envOr } from "@/lib/env";
 import { defaultLanguage } from "@/lib/language";
 import { attachPhoneNumber, upsertAssistant } from "@/lib/vapi";
 
 export async function POST(req: Request) {
   const secret = env("CRON_SECRET");
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!safeEqual(req.headers.get("authorization") ?? "", `Bearer ${secret}`)) {
     return NextResponse.json({ error: "non autorisé" }, { status: 401 });
   }
 

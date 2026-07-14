@@ -16,6 +16,12 @@ export async function GET() {
 
   const state = randomBytes(16).toString("hex");
   const cookieStore = await cookies();
-  cookieStore.set("google_oauth_state", state, { httpOnly: true, maxAge: 600, path: "/" });
+  cookieStore.set("google_oauth_state", state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax", // renvoyé au retour de redirection Google (cross-site GET)
+    maxAge: 600,
+    path: "/",
+  });
   return NextResponse.redirect(googleAuthUrl(state));
 }
