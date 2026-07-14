@@ -6,7 +6,7 @@ export type CallSession = {
   callId: string; // id d'appel Vapi
   userId: string | null;
   callerNumber: string | null;
-  pinVerified: boolean;
+  verified: boolean; // code SMS (Twilio Verify) validé sur cet appel
   language: Language; // langue de l'appel (profil, sinon DEFAULT_LANGUAGE)
 };
 

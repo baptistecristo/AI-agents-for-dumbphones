@@ -64,7 +64,7 @@ async function sessionFor(callId: string): Promise<CallSession> {
     callId,
     userId: data?.user_id ?? null,
     callerNumber: data?.from_number ?? null,
-    pinVerified: data?.pin_verified ?? false,
+    verified: data?.pin_verified ?? false,
     language: normalizeLanguage(data?.language),
   };
 }

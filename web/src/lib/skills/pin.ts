@@ -24,7 +24,7 @@ export async function checkPin(session: CallSession, args: { pin: string }): Pro
   }
   // Marque la session d'appel comme vérifiée (persiste entre les tool-calls)
   await supabaseAdmin().from("call_logs").update({ pin_verified: true }).eq("vapi_call_id", session.callId);
-  session.pinVerified = true;
+  session.verified = true;
   return t(session, {
     fr: "Code correct. Les actions sensibles sont débloquées pour cet appel.",
     en: "Correct code. Sensitive actions are unlocked for this call.",

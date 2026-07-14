@@ -29,7 +29,7 @@ export async function placeCall(
       fr: "Appelant non identifié : appel impossible.",
       en: "Unidentified caller: can't place a call.",
     });
-  if (!session.pinVerified) {
+  if (!session.verified) {
     return t(session, {
       fr: "REFUS : le code PIN n'a pas été vérifié. Demander le code à 4 chiffres et appeler verify_pin d'abord.",
       en: "REFUSED: the PIN has not been verified. Ask for the 4-digit code and call verify_pin first.",

@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     callId: body.call_id,
     userId: data?.user_id ?? null,
     callerNumber: data?.from_number ?? null,
-    pinVerified: data?.pin_verified ?? false,
+    verified: data?.pin_verified ?? false,
     language: normalizeLanguage(data?.language), // absent -> 'fr'
   });
   return NextResponse.json({ result });
