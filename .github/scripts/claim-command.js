@@ -73,6 +73,14 @@ module.exports = async function run ({ github, context, core }) {
     return
   }
 
+  // Everything above returns. If decideClaim ever grows a refusal this does not
+  // know about, falling through would assign the issue — a refusal silently
+  // becoming a grant. Say nothing and make the run red instead.
+  if (out.action !== 'assign') {
+    core.setFailed(`unhandled decideClaim result: ${JSON.stringify(out)}`)
+    return
+  }
+
   // Two ways this fails and both end the same: the assignee is not on the issue.
   // A 201 does not mean it landed ("Assignees are silently ignored otherwise"),
   // and a throw means it certainly did not. Never tell someone they hold an

@@ -1,6 +1,8 @@
 'use strict'
 
-const { issuesOnly, sweepSkipReason, decideSweep, NUDGE_MARKER } = require('./claim-logic.js')
+const {
+  issuesOnly, sweepSkipReason, decideSweep, nudgeSentAt, assignLanded
+} = require('./claim-logic.js')
 const { messages } = require('./claim-messages.js')
 
 async function hasPushAccess (github, owner, repo, username) {
@@ -68,11 +70,7 @@ module.exports = async function run ({ github, context, core }) {
       .filter((c) => c.user.login === assignee.login && c.user.type !== 'Bot')
       .map((c) => c.created_at)
 
-    const nudgedAt = comments
-      .filter((c) => c.body && c.body.includes(NUDGE_MARKER))
-      .map((c) => c.created_at)
-      .sort()
-      .pop() || null
+    const nudgedAt = nudgeSentAt(comments)
 
     const out = decideSweep({ assignedAt, assigneeComments, hasOpenLinkedPr, nudgedAt, now })
     core.info(`#${issue.number} (${assignee.login}): ${out.action} after ${out.days}d quiet`)
@@ -88,9 +86,15 @@ module.exports = async function run ({ github, context, core }) {
         owner, repo, issue_number: issue.number, body: messages.nudge(assignee.login)
       })
     } else if (out.action === 'release') {
-      await github.rest.issues.removeAssignees({
+      const { data: left } = await github.rest.issues.removeAssignees({
         owner, repo, issue_number: issue.number, assignees: [assignee.login]
       })
+      // Same rule as the /unclaim path: "Released" is a claim about the world, so
+      // do not make it unless GitHub agrees the assignee is actually gone.
+      if (assignLanded(left.assignees, assignee.login)) {
+        core.setFailed(`release of ${assignee.login} from #${issue.number} did not land`)
+        continue
+      }
       await github.rest.issues.createComment({
         owner, repo, issue_number: issue.number,
         body: messages.released(issue.number, assignee.login)

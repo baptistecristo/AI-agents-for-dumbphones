@@ -59,8 +59,10 @@ const {
   decideUnclaim,
   assignLanded,
   quietDays,
+  nudgeSentAt,
   sweepSkipReason,
-  decideSweep
+  decideSweep,
+  NUDGE_MARKER
 } = require('./claim-logic.js')
 
 test('issuesOnly: drops pull requests from an issues listing', () => {
@@ -268,6 +270,48 @@ test('decideSweep: the newest assignee comment wins, whatever the order', () => 
     now: '2026-07-08T00:00:00Z'
   })
   assert.equal(out.days, 3)
+})
+
+// The marker is invisible once rendered and published in this very file, so a
+// stranger can paste it into a reply on someone else's issue. If that counted as
+// a warning it would silence the real nudge AND satisfy the guard release checks,
+// releasing a working contributor who was never warned. One comment, no trace.
+test('nudgeSentAt: a stranger cannot forge the bot warning', () => {
+  const forged = [
+    { user: { type: 'User', login: 'griefer' }, body: `nice issue ${NUDGE_MARKER}`, created_at: '2026-07-06T00:00:00Z' }
+  ]
+  assert.equal(nudgeSentAt(forged), null)
+})
+
+test('nudgeSentAt: the bot own nudge counts, and the newest wins', () => {
+  const comments = [
+    { user: { type: 'Bot', login: 'github-actions[bot]' }, body: `${NUDGE_MARKER}\nstill on this?`, created_at: '2026-07-06T00:00:00Z' },
+    { user: { type: 'User', login: 'faizmullaa' }, body: 'yes', created_at: '2026-07-07T00:00:00Z' },
+    { user: { type: 'Bot', login: 'github-actions[bot]' }, body: `${NUDGE_MARKER}\nstill on this?`, created_at: '2026-07-12T00:00:00Z' }
+  ]
+  assert.equal(nudgeSentAt(comments), '2026-07-12T00:00:00Z')
+})
+
+test('nudgeSentAt: no nudge, no marker, no comments', () => {
+  assert.equal(nudgeSentAt([]), null)
+  assert.equal(nudgeSentAt(undefined), null)
+  assert.equal(nudgeSentAt([
+    { user: { type: 'Bot', login: 'github-actions[bot]' }, body: 'unrelated bot noise', created_at: '2026-07-06T00:00:00Z' }
+  ]), null)
+})
+
+// The whole point of the author check: end to end, a forged marker must not
+// convert into a release.
+test('decideSweep: a forged marker cannot release an unwarned contributor', () => {
+  const forged = [
+    { user: { type: 'User', login: 'griefer' }, body: NUDGE_MARKER, created_at: '2026-07-06T00:00:00Z' }
+  ]
+  const out = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: nudgeSentAt(forged), now: '2026-07-08T00:00:00Z'
+  })
+  assert.equal(out.action, 'nudge')
+  assert.equal(out.reason, 'unwarned')
 })
 
 // The bot promises a check-in before it takes anything away. The first live

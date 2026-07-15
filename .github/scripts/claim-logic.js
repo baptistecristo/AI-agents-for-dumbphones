@@ -67,12 +67,26 @@ function quietDays (lastActivityIso, nowIso) {
   return Math.floor((parseTime(nowIso) - parseTime(lastActivityIso)) / MS_PER_DAY)
 }
 
-// Without the push-access skip the bot unassigns Baptiste from his own
-// issues on day 8. claim-exempt is the hatch for long-running work (#8).
+// Without the push-access skip the bot unassigns @baptistecristo from his own
+// issues on day 8. claim-exempt is the hatch for long-running work.
 function sweepSkipReason ({ hasPushAccess, labels }) {
   if (hasPushAccess) return 'collaborator'
   if ((labels || []).some((l) => l.name === 'claim-exempt')) return 'claim-exempt'
   return null
+}
+
+// Only the bot's own comment counts as the bot's warning. The marker is an HTML
+// comment — invisible once rendered — and a literal in a public file, so anyone
+// can paste it into a reply. Without the author check that forged marker reads as
+// "already warned", which both silences the real nudge and satisfies the guard
+// that release checks: a stranger could get someone released with one invisible
+// comment and no warning ever sent.
+function nudgeSentAt (comments) {
+  return (comments || [])
+    .filter((c) => c.user && c.user.type === 'Bot' && c.body && c.body.includes(NUDGE_MARKER))
+    .map((c) => c.created_at)
+    .sort()
+    .pop() || null
 }
 
 function decideSweep ({ assignedAt, assigneeComments, hasOpenLinkedPr, nudgedAt, now }) {
@@ -119,6 +133,7 @@ module.exports = {
   decideUnclaim,
   assignLanded,
   quietDays,
+  nudgeSentAt,
   sweepSkipReason,
   decideSweep
 }
