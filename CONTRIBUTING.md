@@ -132,8 +132,10 @@ same four touch points, purely additive:
 
 **2. TTS voice** — `runtime/config.py` reads one env var per language:
 `PIPER_VOICE_FR` and `PIPER_VOICE_EN` (a standard `en_US` medium voice by default).
-Add `PIPER_VOICE_ES` (or `_DE`, …) — pick a [Piper voice](https://github.com/rhasspy/piper),
-they auto-download on first use — and add it to the per-language selection where
+Add `PIPER_VOICE_ES` (or `_DE`, …) — pick a
+[Piper voice](https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/VOICES.md) and
+[listen to the samples](https://rhasspy.github.io/piper-samples/), they auto-download on
+first use — and add it to the per-language selection where
 `PiperTTSService(voice_id=...)` is built in `bot.py`.
 
 **3. Prompts + greeting** — `web/src/lib/agents/inbound.ts` holds the system prompt and
