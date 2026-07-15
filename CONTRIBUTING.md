@@ -137,7 +137,14 @@ define: "free",   // or "code" if it reads or changes the caller's own data
 
 `"code"` means the caller must pass a one-time SMS code first, the way the calendar,
 contacts, recalled notes, `send_sms` and `place_call` do. `"free"` means anyone who dials
-can use it: weather, directions, reminders, note-taking, and `define` above.
+can use it: weather, directions, setting and listing reminders, note-taking, and `define`
+above.
+
+Weigh what your tool destroys, not only what it shows. `mark_done` is `"code"` while the
+other reminder tools stay `"free"`, because it switches a reminder off: the cron never
+sends it, and the caller doesn't notice a reminder that never arrives. Reading the same
+row costs nothing. If your tool changes state someone relies on, give it the code even
+when what it exposes looks dull.
 
 **A tool you don't classify does not run.** `TOOL_POLICY` is exhaustive, the dispatcher
 refuses anything missing from it, and `gate.test.ts` compares it against `agentTools()` in

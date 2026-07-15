@@ -8,16 +8,24 @@
 // rien à voir en relecture. Un oubli doit casser bruyamment le skill de son
 // auteur, jamais ouvrir en douce les données de quelqu'un d'autre.
 //
-// "code" = ce dont la fuite fait mal si le caller-ID est usurpé : l'agenda
-// (lire, créer, déplacer), les contacts, les notes relues, et tout ce qui engage
-// le compte vers l'extérieur (un SMS envoyé, un appel passé en son nom).
+// "code" = ce dont la fuite OU la destruction fait mal si le caller-ID est
+// usurpé : l'agenda (lire, créer, déplacer), les contacts, les notes relues,
+// tout ce qui engage le compte vers l'extérieur (un SMS envoyé, un appel passé
+// en son nom), et mark_done (voir plus bas).
 //
-// "free" = météo, heure, itinéraire, prise de note, et les rappels (poser,
-// lister, marquer fait, « est-ce que j'ai déjà… ? »). Les rappels RESTENT des
-// données personnelles : c'est un arbitrage assumé, pas un oubli. Exiger un code
-// pour « est-ce que j'ai déjà pris mes cachets ? » coûte plus cher que le risque
-// couvert, précisément au moment où la fonction sert. Les outils d'auth
+// "free" = météo, heure, itinéraire, prise de note, et les rappels qu'on lit ou
+// qu'on ajoute (poser, lister, « est-ce que j'ai déjà… ? »). Les rappels RESTENT
+// des données personnelles : c'est un arbitrage assumé, pas un oubli. Exiger un
+// code pour « est-ce que j'ai déjà pris mes cachets ? » coûte plus cher que le
+// risque couvert, précisément au moment où la fonction sert. Les outils d'auth
 // eux-mêmes sont libres, sinon rien ne pourrait jamais se débloquer.
+//
+// Cet arbitrage tient parce que ces trois-là lisent ou ajoutent. Il ne s'étend
+// pas à mark_done, qui ÉTEINT : le rappel passe à "done", donc le cron ne
+// l'enverra jamais. Libre, il offrait à qui usurpe le caller-ID de supprimer en
+// silence le rappel de 8 h, et un rappel qui n'arrive pas ne se remarque pas.
+// Ici le risque n'est pas la fuite mais la suppression, et elle coûte plus cher
+// que la friction du code.
 //
 // Attention : « get_directions est free » ne veut PAS dire « l'adresse du
 // domicile est libre ». Ce fichier ne classe que des NOMS d'outils ; il ne voit
@@ -37,12 +45,13 @@ export const TOOL_POLICY = {
   // Engage le compte vers l'extérieur
   send_sms: "code",
   place_call: "code",
+  // Éteint un rappel que le cron devait envoyer : destructif, et silencieux.
+  mark_done: "code",
 
-  // Rappels
+  // Rappels : lecture et ajout
   set_reminder: "free",
   list_reminders: "free",
   did_i_already: "free",
-  mark_done: "free",
   // Questions générales
   get_weather: "free",
   get_current_time: "free",

@@ -26,8 +26,15 @@ describe("requiresVerification", () => {
       expect(requiresVerification(n)).toBe(true);
   });
 
-  it("leaves reminders free: requiring a code to answer did_i_already costs more than it protects", () => {
-    for (const n of ["list_reminders", "did_i_already", "mark_done"]) expect(requiresVerification(n)).toBe(false);
+  it("leaves reading reminders free: a code to answer did_i_already costs more than it protects", () => {
+    for (const n of ["list_reminders", "did_i_already"]) expect(requiresVerification(n)).toBe(false);
+  });
+
+  it("protects mark_done: it is the one reminder tool that destroys rather than reads", () => {
+    // Éteindre un rappel « pending » empêche le cron de l'envoyer, et un rappel
+    // qui n'arrive pas ne se remarque pas. La lecture reste libre au-dessus :
+    // c'est la frontière lecture / écriture destructive, pas rappels / reste.
+    expect(requiresVerification("mark_done")).toBe(true);
   });
 
   it("leaves light writes, generic queries, and the auth tools free", () => {

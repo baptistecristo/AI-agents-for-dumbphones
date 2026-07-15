@@ -49,9 +49,10 @@ will never come.
 That second gap costs more than the SMS skills. A one-time code **texted to the caller**
 unlocks every sensitive action, and the gate fails closed, so with no Twilio the code never
 arrives and everything behind it stays locked: calendar, contacts, reading back reminders
-and notes, dictated texts, outbound calls. A caller today reaches only the ungated set:
-weather, local time, directions, setting a reminder, taking a note. Connecting a Twilio
-account unlocks the rest, and it's a small first contribution.
+and notes, marking a reminder done, dictated texts, outbound calls. A caller today reaches
+only the ungated set: weather, local time, directions, setting and listing reminders,
+taking a note. Connecting a Twilio account unlocks the rest, and it's a small first
+contribution.
 
 Those gaps *are* the invitation. The fun open problems:
 
@@ -176,7 +177,11 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
   contacts, saved notes, and anything that sends a text or places a call need a
   **one-time code, texted to your registered number during the call**, spoken back or
   keyed in on the keypad and never stored. Everything else answers straight away:
-  weather, directions, reminders, note-taking. Your **home address needs the code too**.
+  weather, directions, setting and listing reminders, note-taking. Your **home address
+  needs the code too**. So does marking a reminder **done**: that switches the reminder
+  off, the cron stops sending it, and you don't notice a reminder that never arrives.
+  Reading one stays free, because a code to answer "did I already take my pills?" costs
+  more than it protects, at exactly the moment you need the answer.
   The weather only ever gets your city, and a route "from home" asks where you're
   starting from until you've given the code. Anything that sends or commits also gets a
   two-step voice confirmation.
