@@ -15,19 +15,14 @@
 import { listEvents } from "./skills/agenda";
 import { getDirections } from "./skills/directions";
 import { didIAlready, listReminders, markDone, setReminder } from "./skills/reminders";
-import { CallSession } from "./skills/types";
+import { CallSession, t } from "./skills/types";
 import { getWeather } from "./skills/weather";
 import { supabaseAdmin } from "./supabase/admin";
 
-const HELP = `Commandes SMS :
-METEO [ville] [demain]
-AGENDA [demain]
-RAPPEL 18h30 prendre médicament [demain]
-RAPPELS (liste)
-FAIT <quoi> (marquer fait)
-DEJA <quoi> (est-ce fait ?)
-ROUTE <destination>
-Ou appelez-moi, tout simplement 📞`;
+const getHelp = (session: CallSession) => t(session, {
+  fr: `Commandes SMS :\nMETEO [ville] [demain]\nAGENDA [demain]\nRAPPEL 18h30 prendre médicament [demain]\nRAPPELS (liste)\nFAIT <quoi> (marquer fait)\nDEJA <quoi> (est-ce fait ?)\nROUTE <destination>\nOu appelez-moi, tout simplement 📞`,
+  en: `SMS Commands:\nWEATHER [city] [tomorrow]\nAGENDA [tomorrow]\nREMIND 18:30 take medication [tomorrow]\nREMINDERS (list)\nDONE <what> (mark done)\nALREADY <what> (is it done?)\nROUTE <destination>\nOr simply call me 📞`
+});
 
 // Construit une date Europe/Paris pour aujourd'hui/demain à HH:MM
 function parisDateAt(hour: number, minute: number, dayOffset: number): Date {
@@ -47,10 +42,15 @@ function parisDateAt(hour: number, minute: number, dayOffset: number): Date {
 }
 
 function parseTime(word: string): { hour: number; minute: number } | null {
-  const m = word.match(/^(\d{1,2})(?:[h:](\d{2})?)?$/i);
+  const m = word.match(/^(\d{1,2})(?:[h:](\d{2})?)?(am|pm)?$/i);
   if (!m) return null;
-  const hour = parseInt(m[1], 10);
+  let hour = parseInt(m[1], 10);
   const minute = m[2] ? parseInt(m[2], 10) : 0;
+  const ampm = m[3]?.toLowerCase();
+  
+  if (ampm === "pm" && hour < 12) hour += 12;
+  if (ampm === "am" && hour === 12) hour = 0;
+  
   if (hour > 23 || minute > 59) return null;
   return { hour, minute };
 }
@@ -62,83 +62,98 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
   const args = rest.join(" ").trim();
 
   if (!session.userId) {
-    return "Bonjour ! Ce numéro est celui d'un assistant vocal personnel. Inscription (avec l'aide d'un proche) sur le site.";
+    return t(session, {
+      fr: "Bonjour ! Ce numéro est celui d'un assistant vocal personnel. Inscription (avec l'aide d'un proche) sur le site.",
+      en: "Hello! This number belongs to a personal voice assistant. Registration (with the help of a relative) is on the website."
+    });
   }
 
-  switch (keyword.toUpperCase().replace(/[ÉÈÊ]/g, "E")) {
-    case "AIDE":
-    case "HELP":
-    case "?":
-      return HELP;
+  const k = keyword.toUpperCase().replace(/[ÉÈÊ]/g, "E");
 
-    case "METEO": {
-      const tomorrow = /\bDEMAIN\b/i.test(args);
-      const city = args.replace(/\bdemain\b/gi, "").trim() || undefined;
-      return await getWeather(session, { city, day: tomorrow ? "tomorrow" : "today" }, await homeCity(session));
+  if (["AIDE", "HELP", "?"].includes(k)) {
+    return getHelp(session);
+  }
+
+  if (["METEO", "WEATHER"].includes(k)) {
+    const isTomorrow = /\b(DEMAIN|TOMORROW)\b/i.test(args);
+    const city = args.replace(/\b(demain|tomorrow)\b/gi, "").trim() || undefined;
+    return await getWeather(session, { city, day: isTomorrow ? "tomorrow" : "today" }, await homeCity(session));
+  }
+
+  if (["AGENDA", "SCHEDULE"].includes(k)) {
+    const isTomorrow = /\b(DEMAIN|TOMORROW)\b/i.test(args);
+    return await listEvents(session, { day: isTomorrow ? "tomorrow" : "today" });
+  }
+
+  if (["RAPPEL", "REMIND", "REMINDER"].includes(k)) {
+    const tomorrow = /\b(demain|tomorrow)\b/i.test(args);
+    const words = args.replace(/\b(demain|tomorrow)\b/gi, "").trim().split(/\s+/);
+    let time = parseTime(words[0]);
+    let reminderText = words.slice(1).join(" ");
+    if (!time && words.length > 1) {
+      time = parseTime(words[words.length - 1]);
+      reminderText = words.slice(0, -1).join(" ");
     }
-
-    case "AGENDA": {
-      const day = /\bDEMAIN\b/i.test(args) ? "tomorrow" : "today";
-      return await listEvents(session, { day });
+    if (!time || !reminderText) {
+      return t(session, {
+        fr: "Format : RAPPEL 18h30 prendre médicament (ajoutez « demain » si besoin)",
+        en: "Format: REMIND 18:30 take medication (add 'tomorrow' if needed)"
+      });
     }
+    const due = parisDateAt(time.hour, time.minute, tomorrow ? 1 : 0);
+    return await setReminder(session, { text: reminderText, due_at: due.toISOString() });
+  }
 
-    case "RAPPEL": {
-      const tomorrow = /\bdemain\b/i.test(args);
-      const words = args.replace(/\bdemain\b/gi, "").trim().split(/\s+/);
-      // L'heure peut être le premier ou le dernier mot : "RAPPEL 18h30 médicament" / "RAPPEL médicament 18h30"
-      let time = parseTime(words[0]);
-      let reminderText = words.slice(1).join(" ");
-      if (!time && words.length > 1) {
-        time = parseTime(words[words.length - 1]);
-        reminderText = words.slice(0, -1).join(" ");
-      }
-      if (!time || !reminderText) {
-        return "Format : RAPPEL 18h30 prendre médicament (ajoutez « demain » si besoin)";
-      }
-      const due = parisDateAt(time.hour, time.minute, tomorrow ? 1 : 0);
-      return await setReminder(session, { text: reminderText, due_at: due.toISOString() });
-    }
+  if (["RAPPELS", "REMINDERS"].includes(k)) {
+    return await listReminders(session);
+  }
 
-    case "RAPPELS":
-      return await listReminders(session);
+  if (["FAIT", "DONE"].includes(k)) {
+    if (!args) return t(session, { fr: "Format : FAIT prendre médicament", en: "Format: DONE take medication" });
+    return await markDone(session, { what: args });
+  }
 
-    case "FAIT":
-      if (!args) return "Format : FAIT prendre médicament";
-      return await markDone(session, { what: args });
+  if (["DEJA", "ALREADY"].includes(k)) {
+    if (!args) return t(session, { fr: "Format : DEJA pris médicament", en: "Format: ALREADY took medication" });
+    return await didIAlready(session, { what: args });
+  }
 
-    case "DEJA":
-      if (!args) return "Format : DEJA pris médicament";
-      return await didIAlready(session, { what: args });
+  if (["ROUTE", "ITINERAIRE", "DIRECTIONS"].includes(k)) {
+    if (!args) return t(session, { fr: "Format : ROUTE 12 rue de la Paix, Paris", en: "Format: ROUTE 12 rue de la Paix, Paris" });
+    return await getDirections(session, { destination: args }, await homeAddress(session));
+  }
 
-    case "ROUTE":
-    case "ITINERAIRE":
-      if (!args) return "Format : ROUTE 12 rue de la Paix, Paris";
-      return await getDirections(session, { destination: args }, await homeAddress(session));
-
-    case "STOP":
-      // Opt-out : trace en consentements (obligation FR/GDPR)
+  if (k === "STOP") {
       await supabaseAdmin().from("consents").insert({
         user_id: session.userId,
         source: "sms",
         granted: false,
         scope_note: "STOP reçu par SMS",
       });
-      return "C'est noté, plus aucun SMS non sollicité. Répondez START pour réactiver.";
+      return t(session, { 
+        fr: "C'est noté, plus aucun SMS non sollicité. Répondez START pour réactiver.",
+        en: "Noted, no more unsolicited SMS. Reply START to reactivate."
+      });
+  }
 
-    case "START":
+  if (k === "START") {
       await supabaseAdmin().from("consents").insert({
         user_id: session.userId,
         source: "sms",
         granted: true,
         scope_note: "START reçu par SMS",
       });
-      return "Les SMS sont réactivés ✅";
-
-    default:
-      // Question météo/agenda en langage naturel simple ? On oriente gentiment.
-      if (/m[ée]t[ée]o/i.test(upper)) return await getWeather(session, {}, await homeCity(session));
-      return `Je n'ai pas compris « ${keyword} ». Envoyez AIDE pour la liste des commandes, ou appelez-moi 📞`;
+      return t(session, { fr: "Les SMS sont réactivés ✅", en: "SMS are reactivated ✅" });
   }
+
+  if (/m[ée]t[ée]o/i.test(upper) || /weather/i.test(upper)) {
+    return await getWeather(session, {}, await homeCity(session));
+  }
+
+  return t(session, {
+    fr: `Je n'ai pas compris « ${keyword} ». Envoyez AIDE pour la liste des commandes, ou appelez-moi 📞`,
+    en: `I didn't understand "${keyword}". Send HELP for the list of commands, or call me 📞`
+  });
 }
 
 async function homeAddress(session: CallSession): Promise<string | null> {
