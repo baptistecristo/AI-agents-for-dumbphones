@@ -12,6 +12,7 @@ import { recall, remember } from "./memory";
 import { placeCall } from "./outbound";
 import { didIAlready, listReminders, markDone, setReminder } from "./reminders";
 import { sendDictatedSms } from "./sms";
+import { getCurrentTime } from "./time";
 import { CallSession, t } from "./types";
 import { getWeather } from "./weather";
 
@@ -55,6 +56,8 @@ export async function executeTool(name: string, args: any, session: CallSession)
         // L'adresse du domicile ne sert d'origine/destination qu'une fois vérifié
         // (un itinéraire depuis/vers « la maison » révélerait l'adresse).
         return await getDirections(session, args, session.verified ? await homeAddressOf(session.userId) : null);
+      case "get_current_time":
+        return await getCurrentTime(session, args);
       case "find_contact":
         return await findContact(session, args);
       case "send_sms":
