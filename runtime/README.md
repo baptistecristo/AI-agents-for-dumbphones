@@ -5,7 +5,7 @@ sauf l'incompressible — l'opérateur téléphonique (Twilio ou Telnyx en trunk
 
 ```
 téléphone ⇄ opérateur (Twilio/Telnyx) ⇄ WS média ⇄ ce serveur :
-  VAD Silero (local) → faster-whisper FR/EN/ES (local) → LLM → Piper FR/EN/ES (local)
+  VAD Silero (local) → faster-whisper FR/EN/ES (local) → LLM → Piper FR/EN/ES (serveur local)
                                              │
                                              └── outils → API Next.js (/api/tools/execute)
 ```
@@ -13,6 +13,10 @@ téléphone ⇄ opérateur (Twilio/Telnyx) ⇄ WS média ⇄ ce serveur :
 **Aucune logique métier ici** : prompts, skills, auth d'appel, consentements viennent
 de l'API Next.js. Ce serveur ne fait que l'audio temps réel. Le code jetable part par
 SMS depuis l'API, jamais d'ici : ce runtime ne décide pas ce qui est protégé.
+
+Piper est le seul morceau qui tourne à côté, dans son propre serveur : le runtime
+lui parle en HTTP et n'installe pas `piper-tts` (GPL-3.0-or-later). Voir
+`piper_http.py` et l'issue #26.
 
 ## Installation (serveur EU, ex. Hetzner CX32 ~10 €/mois)
 
@@ -29,8 +33,45 @@ ollama pull qwen2.5:7b          # bon tool-calling en français
 uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
-Premier lancement : faster-whisper (~1,5 Go) et la voix Piper se téléchargent seuls.
+Premier lancement : faster-whisper (~1,5 Go) se télécharge seul.
 En dev : `ngrok http 8000` puis mettre l'hôte ngrok dans `PUBLIC_HOST`.
+
+## Le serveur Piper (TTS)
+
+À lancer à côté du runtime, dans son propre environnement — c'est ce qui garde
+`piper-tts` (GPL-3.0-or-later) hors des dépendances de ce dossier :
+
+```bash
+python3 -m venv .venv-piper && source .venv-piper/bin/activate
+pip install "piper-tts[http]"
+
+# Les TROIS voix doivent être sur le disque : le serveur n'en précharge qu'une,
+# mais il sert les autres à la demande depuis son --data-dir.
+python -m piper.download_voices fr_FR-siwis-medium en_US-lessac-medium es_ES-davefx-medium
+
+python -m piper.http_server -m fr_FR-siwis-medium   # écoute sur :5000
+```
+
+Un seul serveur suffit pour les trois langues : le runtime envoie la voix voulue
+à chaque requête, et Piper la charge depuis son `--data-dir` (par défaut le
+répertoire courant — d'où le `download_voices` ci-dessus, lancé au même endroit).
+
+⚠️ **Une voix absente ne provoque pas d'erreur.** Piper journalise un WARNING,
+retombe sur la voix de `-m` et répond 200 : un appel en anglais sortirait dans la
+voix française, et rien d'autre ne le signalerait. Le runtime interroge donc
+`GET /voices` au démarrage et refuse de se lancer si une voix configurée manque.
+Piper simplement injoignable ne bloque pas le démarrage (il finit peut-être de
+démarrer) : c'est alors l'appel qui échouera, avec un message nommant l'URL.
+
+`PIPER_BASE_URL` est la **racine** du serveur (`http://localhost:5000`), pas une
+route : les versions publiées de Piper (1.3 à 1.4.2) servent la synthèse sur
+`POST /`. La route `/synthesize` que documentent Piper et Pipecat n'existe que
+sur `master`, non publié — la viser donne un 404.
+
+⚠️ L'image `linuxserver/piper` ne convient pas : elle emballe l'ancien Piper de
+Rhasspy et parle le protocole Wyoming sur le port 10200, pas cette API HTTP.
+`OHF-Voice/piper1-gpl` fournit un `Dockerfile` (`docker build -t piper-tts .`,
+puis `docker run -p 5000:5000 piper-tts server -m fr_FR-siwis-medium`).
 
 ## Branchement opérateur
 

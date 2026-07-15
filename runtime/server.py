@@ -14,6 +14,7 @@ import base64
 import hashlib
 import hmac
 import json
+from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, Request, WebSocket
@@ -22,8 +23,31 @@ from loguru import logger
 
 import bot
 import config
+import piper_http
 
-app = FastAPI(title="runtime-vocal")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Vérifie les voix Piper au démarrage, avant le premier appel."""
+    voices = sorted({config.PIPER_VOICE_FR, config.PIPER_VOICE_EN, config.PIPER_VOICE_ES})
+    try:
+        await piper_http.check_voices_available(config.PIPER_BASE_URL, voices)
+        logger.info(f"Serveur Piper OK, voix servies : {', '.join(voices)}")
+    except piper_http.PiperVoiceMissing:
+        # Voix manquante : le serveur répondrait 200 dans la mauvaise voix. Rien
+        # ne le signalerait ensuite, donc on refuse de démarrer.
+        raise
+    except Exception as err:  # noqa: BLE001
+        # Piper injoignable : il démarre peut-être encore. Ne pas bloquer le
+        # runtime pour autant — un appel produira une erreur explicite.
+        logger.warning(
+            f"Serveur Piper injoignable sur {config.PIPER_BASE_URL} ({err}). "
+            "Voix non vérifiées. Voir runtime/README.md."
+        )
+    yield
+
+
+app = FastAPI(title="runtime-vocal", lifespan=lifespan)
 
 
 def _authorized(request: Request) -> bool:

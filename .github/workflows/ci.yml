@@ -40,9 +40,23 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
         working-directory: runtime
+      # Le runtime ne doit pas embarquer piper-tts (GPL-3.0-or-later) : il parle
+      # au serveur Piper en HTTP. Réintroduire l'extra `piper` — directement ou
+      # via une dépendance — le ferait rentrer sans bruit ; d'où ce garde-fou.
+      # Voir runtime/piper_http.py et l'issue #26.
+      - name: piper-tts (GPL-3.0) reste hors de l'arbre de dépendances
+        run: |
+          if pip show piper-tts > /dev/null 2>&1; then
+            echo "::error::piper-tts est installé. L'extra pipecat-ai[piper] est-il revenu dans requirements.txt ?"
+            pip show piper-tts
+            exit 1
+          fi
+        working-directory: runtime
       # Le vrai garde-fou. Les tests ne touchent que config.py ; c'est bot.py qui
       # avait importé pendant des mois un chemin Pipecat inexistant, parce que
       # personne ne l'avait jamais lancé. Cette ligne l'aurait vu le premier jour.
+      # Depuis piper_http.py, cet import prouve aussi que le runtime charge sans
+      # le paquet piper : Pipecat l'importe au niveau du module, pas nous.
       - run: python -c "import bot, server"
         working-directory: runtime
       - run: python -m unittest discover -s tests

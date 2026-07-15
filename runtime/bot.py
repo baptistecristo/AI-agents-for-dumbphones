@@ -1,14 +1,16 @@
 """Pipeline vocal auto-hébergé (option B du doc d'archi, §2-3) :
 
   téléphone -> websocket média -> VAD Silero -> faster-whisper (STT, local)
-            -> LLM (Ollama local / Mistral EU / Claude) -> Piper (TTS, local)
+            -> LLM (Ollama local / Mistral EU / Claude) -> Piper (TTS, serveur local)
             -> websocket média -> téléphone
+
+Piper tourne dans son propre serveur HTTP (voir piper_http.py et le README) ;
+tout le reste est en processus.
 
 Testé avec pipecat-ai 1.5 (voir la version épinglée dans requirements.txt).
 """
 
 import sys
-from pathlib import Path
 
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
@@ -20,7 +22,6 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
-from pipecat.services.piper.tts import PiperTTSService
 from pipecat.services.whisper.stt import WhisperSTTService
 from pipecat.transcriptions.language import Language
 from pipecat.transports.websocket.fastapi import (
@@ -32,6 +33,7 @@ from pipecat.workers.runner import WorkerRunner
 import api_client
 import config
 import tools as tool_defs
+from piper_http import PiperHttpTTSService
 
 logger.remove()
 logger.add(sys.stderr, level="INFO")
@@ -107,9 +109,11 @@ async def run_call(
     )
 
     # Voix Piper monolingue : elle reste fixe pendant tout l'appel (voir README).
-    tts = PiperTTSService(
-        voice_id=config.piper_voice_for(language),
-        download_dir=Path(__file__).parent / "models",
+    # La synthèse tourne dans un serveur Piper séparé (config.PIPER_BASE_URL) :
+    # le runtime n'embarque pas `piper-tts`. Voir piper_http.py.
+    tts = PiperHttpTTSService(
+        base_url=config.PIPER_BASE_URL,
+        settings=PiperHttpTTSService.Settings(voice=config.piper_voice_for(language)),
     )
 
     llm = _build_llm()
