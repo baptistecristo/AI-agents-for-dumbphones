@@ -39,16 +39,20 @@ export async function updatePersonalization(formData: FormData): Promise<void> {
   // La langue retombe sur 'fr' si ce n'est pas exactement 'en' (colonne not
   // null), et le débit est borné à la plage ElevenLabs — sans ça, un POST
   // bricolé (« voice_speed=9 ») rendrait tous les appels suivants impossibles.
+  // Un champ ABSENT, lui, ne veut pas dire « remets le défaut » : une server
+  // action est une URL publique, et ce qui arrive ici n'est pas forcément le
+  // formulaire du tableau de bord. Un POST qui omet preferred_language
+  // repasserait sinon un anglophone en français sans que personne n'ait touché
+  // au réglage. On n'écrit que ce qui a été soumis.
   const rawLanguage = formData.get("preferred_language");
-  const language = normalizeLanguage(typeof rawLanguage === "string" ? rawLanguage : null);
-  const voiceSpeed = clampVoiceSpeed(formData.get("voice_speed"));
+  const rawVoiceSpeed = formData.get("voice_speed");
   await supabaseAdmin()
     .from("profiles")
     .update({
       preferred_name: preferredName || null,
       home_address: homeAddress || null,
-      preferred_language: language,
-      voice_speed: voiceSpeed,
+      ...(rawLanguage === null ? {} : { preferred_language: normalizeLanguage(String(rawLanguage)) }),
+      ...(rawVoiceSpeed === null ? {} : { voice_speed: clampVoiceSpeed(rawVoiceSpeed) }),
       updated_at: new Date().toISOString(),
     })
     .eq("id", user.id);
