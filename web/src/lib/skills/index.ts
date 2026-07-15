@@ -30,10 +30,21 @@ async function homeAddressOf(userId: string | null): Promise<string | null> {
 // fichier que derrière le gate.
 export function cityFromAddress(address: string | null): string | null {
   if (!address) return null;
-  // Format FR courant : la ville suit le code postal, avec ou sans virgule.
-  const afterPostcode = address.match(/\b\d{5}\b[\s,]*(.+)$/);
-  const city = afterPostcode?.[1] ?? address.split(",").pop();
-  return city?.trim() || null;
+  // Format FR courant : la ville suit le code postal, avec ou sans virgule. On
+  // vise le DERNIER code postal (`^.*` est gourmand) : un numéro de rue à cinq
+  // chiffres — « 12345 route des Vignes, 33000 Bordeaux », banal à la campagne
+  // et standard aux États-Unis — passerait sinon pour le code postal, et la rue
+  // pour la ville.
+  const afterPostcode = address.match(/^.*\b\d{5}\b[\s,]*(.+)$/);
+  const candidate = afterPostcode?.[1] ?? (address.includes(",") ? address.split(",").pop() : address);
+  const city = candidate?.trim();
+  // Fail-closed. Un nom de ville ne contient pas de chiffre : tout ce qui en
+  // garde n'a PAS été réduit à une ville (« 12 rue des Lilas Lyon », saisi sans
+  // code postal ni virgule — le champ est du texte libre, rien ne l'en empêche).
+  // Renvoyer null fait demander la ville à l'appelant ; renvoyer la ligne
+  // enverrait sa rue au géocodeur, ce que ce fichier promet de ne jamais faire.
+  if (!city || /\d/.test(city)) return null;
+  return city;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,10 +68,14 @@ export async function executeTool(name: string, args: any, session: CallSession)
       // modèle vers request_code le ferait tourner en rond sur une promesse
       // impossible, et l'appelant attendrait un SMS fantôme. La capacité est
       // simplement absente de cette instance : autant le dire.
+      // On ne nomme que ce qui manque : « verify » et « send » se configurent
+      // séparément (cf. twilio.ts), donc une instance peut très bien envoyer des
+      // SMS sans service Verify. Annoncer « aucun fournisseur SMS » se ferait
+      // démentir dans le même appel, par les étapes d'itinéraire qui arrivent.
       if (!smsProviderConfigured("verify")) {
         return t(session, {
-          fr: `INDISPONIBLE : « ${name} » touche à des données personnelles, ce qui exige un code par SMS, et aucun fournisseur SMS n'est branché sur cette instance. Le code ne peut pas être envoyé. N'appelle NI request_code NI verify_code, et ne demande pas de code à la personne. Dis-lui honnêtement que cette fonction est hors service tant qu'aucun fournisseur SMS n'est configuré, et propose ce qui marche : météo, itinéraire, rappels, notes.`,
-          en: `UNAVAILABLE: "${name}" touches personal data, which requires an SMS code, and no SMS provider is connected on this instance. The code cannot be sent. Do NOT call request_code or verify_code, and do not ask the person for a code. Tell them honestly that this feature is out of service until an SMS provider is configured, and offer what does work: weather, directions, reminders, notes.`,
+          fr: `INDISPONIBLE : « ${name} » touche à des données personnelles, ce qui exige un code par SMS, et l'envoi de codes n'est pas configuré sur cette instance. Le code ne peut pas être envoyé. N'appelle NI request_code NI verify_code, et ne demande pas de code à la personne. Dis-lui honnêtement que cette fonction est hors service tant que l'envoi de codes n'est pas configuré, et propose ce qui marche : météo, itinéraire, rappels, notes.`,
+          en: `UNAVAILABLE: "${name}" touches personal data, which requires an SMS code, and one-time code sending is not configured on this instance. The code cannot be sent. Do NOT call request_code or verify_code, and do not ask the person for a code. Tell them honestly that this feature is out of service until one-time code sending is configured, and offer what does work: weather, directions, reminders, notes.`,
         });
       }
       return t(session, {

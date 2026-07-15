@@ -21,4 +21,19 @@ describe("cityFromAddress", () => {
     expect(cityFromAddress(null)).toBeNull();
     expect(cityFromAddress("   ")).toBeNull();
   });
+
+  it("ne prend pas un numéro de rue à cinq chiffres pour un code postal", () => {
+    // Banal à la campagne, standard aux États-Unis — et le dépôt est bilingue.
+    // Le premier \d{5} rencontré donnait « route des Vignes, 33000 Bordeaux ».
+    expect(cityFromAddress("12345 route des Vignes, 33000 Bordeaux")).toBe("Bordeaux");
+    expect(cityFromAddress("12345 Main Street, 75001 Paris")).toBe("Paris");
+  });
+
+  it("préfère ne rien donner à donner la rue : sans code postal ni virgule, on demande", () => {
+    // Le champ est du texte libre : rien n'impose la virgule ni le code postal.
+    // Renvoyer la ligne enverrait la rue au géocodeur — exactement ce que le
+    // gate ne peut pas rattraper, puisque get_directions y est libre.
+    expect(cityFromAddress("12 rue des Lilas Lyon")).toBeNull();
+    expect(cityFromAddress("12 rue des Lilas")).toBeNull();
+  });
 });
