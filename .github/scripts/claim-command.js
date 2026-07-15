@@ -36,9 +36,17 @@ module.exports = async function run ({ github, context, core }) {
       await say(messages.notHolder(commenter, issue.number))
       return
     }
-    await github.rest.issues.removeAssignees({
+    const { data: left } = await github.rest.issues.removeAssignees({
       owner, repo, issue_number: issue.number, assignees: [commenter]
     })
+    // The mirror of the claim read-back below: "Released" is a claim about the
+    // world, so confirm it. There is no approved copy for a failed release, and
+    // inventing public text is not ours to do, so fail the run loudly and say
+    // nothing rather than say something false.
+    if (assignLanded(left.assignees, commenter)) {
+      core.setFailed(`unassign of ${commenter} from #${issue.number} did not land`)
+      return
+    }
     await say(messages.unclaimed(issue.number))
     return
   }
@@ -65,14 +73,21 @@ module.exports = async function run ({ github, context, core }) {
     return
   }
 
-  const { data: after } = await github.rest.issues.addAssignees({
-    owner, repo, issue_number: issue.number, assignees: [commenter]
-  })
+  // Two ways this fails and both end the same: the assignee is not on the issue.
+  // A 201 does not mean it landed ("Assignees are silently ignored otherwise"),
+  // and a throw means it certainly did not. Never tell someone they hold an
+  // issue they do not.
+  let after = null
+  try {
+    ({ data: after } = await github.rest.issues.addAssignees({
+      owner, repo, issue_number: issue.number, assignees: [commenter]
+    }))
+  } catch (err) {
+    core.warning(`addAssignees threw for ${commenter} on #${issue.number}: ${err.message}`)
+  }
 
-  // A 201 does not mean it landed. Never tell someone they hold an issue
-  // they do not.
-  if (!assignLanded(after.assignees, commenter)) {
-    core.warning(`assign of ${commenter} to #${issue.number} was silently dropped`)
+  if (!after || !assignLanded(after.assignees, commenter)) {
+    core.warning(`assign of ${commenter} to #${issue.number} did not land`)
     await say(messages.assignFailed(commenter))
     return
   }
