@@ -178,5 +178,16 @@ export function agentTools() {
       { pin: { type: "string", description: "The dictated 4-digit code" } },
       ["pin"],
     ),
+    serverTool(
+  "get_current_time",
+  "Give the current local time in a city.",
+    {
+    city: {
+      type: "string",
+      description: "City whose current local time is requested",
+    },
+  },
+  ["city"],
+    ),
   ];
 }

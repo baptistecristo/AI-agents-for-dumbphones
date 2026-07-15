@@ -130,6 +130,17 @@ def inbound_tools() -> ToolsSchema:
                 "Vérifie le PIN parlé (obligatoire avant action sensible). Ne jamais répéter le PIN.",
                 {"pin": {"type": "string"}},
                 ["pin"],
+),
+            _schema(
+                "get_current_time",
+                "Donne l'heure locale actuelle dans une ville.",
+                {
+                    "city": {
+                        "type": "string",
+                        "description": "Ville dont l'heure locale est demandée",
+                    }
+                },
+                ["city"],
             ),
             END_CALL,
         ]
