@@ -84,14 +84,24 @@ function decideSweep ({ assignedAt, assigneeComments, hasOpenLinkedPr, nudgedAt,
   )
   const days = quietDays(lastActivity, now)
 
-  if (days >= RELEASE_AFTER_DAYS) return { action: 'release', days, lastActivity }
+  // A nudge older than the last activity is stale: the assignee has spoken
+  // since, so they have earned a fresh nudge before any release.
+  const warned = Boolean(nudgedAt) && parseTime(nudgedAt) >= parseTime(lastActivity)
+
+  if (days >= RELEASE_AFTER_DAYS) {
+    // The nudge is a promise — "Otherwise I'll release it in 2 days" — so it has
+    // to be kept before the release, not just before the deadline. A claim that
+    // was already stale the first time the sweep ran has been warned exactly
+    // never, and releasing it here would be the bot breaking its own word.
+    if (!warned) return { action: 'nudge', days, lastActivity, reason: 'unwarned' }
+    if (quietDays(nudgedAt, now) < RELEASE_AFTER_DAYS - NUDGE_AFTER_DAYS) {
+      return { action: 'none', reason: 'grace', days, lastActivity }
+    }
+    return { action: 'release', days, lastActivity }
+  }
 
   if (days >= NUDGE_AFTER_DAYS) {
-    // A nudge older than the last activity is stale: the assignee has spoken
-    // since, so they have earned a fresh nudge before any release.
-    if (nudgedAt && Date.parse(nudgedAt) >= Date.parse(lastActivity)) {
-      return { action: 'none', reason: 'already-nudged', days }
-    }
+    if (warned) return { action: 'none', reason: 'already-nudged', days }
     return { action: 'nudge', days, lastActivity }
   }
 

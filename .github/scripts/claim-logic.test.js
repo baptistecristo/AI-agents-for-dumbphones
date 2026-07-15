@@ -270,6 +270,42 @@ test('decideSweep: the newest assignee comment wins, whatever the order', () => 
   assert.equal(out.days, 3)
 })
 
+// The bot promises a check-in before it takes anything away. The first live
+// sweep meets claims that went stale while it did not exist yet: those have been
+// warned exactly never, and releasing them on sight would break that promise on
+// day one, to real people, in public.
+test('decideSweep: a claim already stale on the first sweep is warned, not released', () => {
+  const out = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: null, now: '2026-07-11T00:00:00Z'
+  })
+  assert.equal(out.action, 'nudge')
+  assert.equal(out.reason, 'unwarned')
+  assert.equal(out.days, 10)
+})
+
+test('decideSweep: the 2 days the nudge promises are actually given', () => {
+  const nudgedNow = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: '2026-07-11T00:00:00Z', now: '2026-07-11T00:00:00Z'
+  })
+  assert.equal(nudgedNow.action, 'none')
+  assert.equal(nudgedNow.reason, 'grace')
+
+  const oneDayLater = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: '2026-07-11T00:00:00Z', now: '2026-07-12T00:00:00Z'
+  })
+  assert.equal(oneDayLater.action, 'none')
+  assert.equal(oneDayLater.reason, 'grace')
+
+  const twoDaysLater = decideSweep({
+    assignedAt: T0, assigneeComments: [], hasOpenLinkedPr: false,
+    nudgedAt: '2026-07-11T00:00:00Z', now: '2026-07-13T00:00:00Z'
+  })
+  assert.equal(twoDaysLater.action, 'release')
+})
+
 // The comment that would have saved this claim is the unreadable one. Compared
 // with `>`, its NaN loses, lastActivity falls back to the assignment date, and
 // the bot releases someone who spoke yesterday. It must fail loudly instead.
