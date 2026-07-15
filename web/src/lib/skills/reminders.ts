@@ -2,6 +2,7 @@
 // Inclut le rappel vocal « est-ce que j'ai déjà… ? » (did_i_already).
 
 import { supabaseAdmin } from "../supabase/admin";
+import { smsProviderConfigured } from "../twilio";
 import { CallSession, SkillResult, formatDate, t } from "./types";
 
 const noUser = (session: CallSession) =>
@@ -27,9 +28,20 @@ export async function setReminder(
       fr: "Désolé, je n'ai pas réussi à enregistrer ce rappel.",
       en: "Sorry, I couldn't save that reminder.",
     });
+  // Le rappel est bien enregistré ; c'est sa LIVRAISON qui dépend du cron, donc
+  // d'un fournisseur SMS. Sans fournisseur, « il arrivera par SMS » est une
+  // promesse que rien ne tiendra — et un rappel est précisément ce qu'on ne
+  // vérifie pas soi-même. On dit ce qui existe : la trace, relisible par
+  // list_reminders.
+  const delivery = smsProviderConfigured("send")
+    ? { fr: " Il arrivera par SMS.", en: " It will arrive by SMS." }
+    : {
+        fr: " Mais aucun fournisseur SMS n'est branché ici : ce rappel ne partira PAS par SMS. Dis-le honnêtement — il est gardé, et relisible si on te le redemande.",
+        en: " But no SMS provider is connected here: this reminder will NOT be texted. Say so honestly — it is kept, and can be read back if asked.",
+      };
   return t(session, {
-    fr: `Rappel enregistré : « ${args.text} », ${formatDate(args.due_at, session.language)}${recurrence ? `, répété (${recurrence})` : ""}. Il arrivera par SMS.`,
-    en: `Reminder saved: "${args.text}", ${formatDate(args.due_at, session.language)}${recurrence ? `, repeating (${recurrence})` : ""}. It will arrive by SMS.`,
+    fr: `Rappel enregistré : « ${args.text} », ${formatDate(args.due_at, session.language)}${recurrence ? `, répété (${recurrence})` : ""}.${delivery.fr}`,
+    en: `Reminder saved: "${args.text}", ${formatDate(args.due_at, session.language)}${recurrence ? `, repeating (${recurrence})` : ""}.${delivery.en}`,
   });
 }
 
