@@ -55,25 +55,36 @@ is allowed to use it. Say you want a `define` skill — "what does *ephemeral* m
 
 **1. Write the logic** — `web/src/lib/skills/define.ts`. A skill is an async function that
 takes the call `session` + the model's `args` and returns a **short string the agent will
-read aloud**. Return data, not instructions.
+read aloud**. Return data, not instructions. Every caller-facing string goes through
+`t(session, { fr, en })`: one skill serves both FR and EN calls.
 
 ```ts
-import { CallSession, SkillResult } from "./types";
+import { CallSession, SkillResult, t } from "./types";
 
-export async function define(
-  _session: CallSession,
-  args: { word?: string },
-): Promise<SkillResult> {
-  if (!args.word) return "Which word should I define?";
-  const res = await fetch(
-    `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(args.word)}`,
-  );
-  if (!res.ok) return `I couldn't find a definition for "${args.word}".`;
+export async function define(session: CallSession, args: { word?: string }): Promise<SkillResult> {
+  if (!args.word)
+    return t(session, { fr: "Quel mot dois-je définir ?", en: "Which word should I define?" });
+
+  const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(args.word)}`);
+  if (!res.ok)
+    return t(session, {
+      fr: `Je ne trouve pas de définition pour « ${args.word} ».`,
+      en: `I couldn't find a definition for "${args.word}".`,
+    });
+
   const data = (await res.json()) as { meanings?: { definitions?: { definition?: string }[] }[] }[];
   const first = data[0]?.meanings?.[0]?.definitions?.[0]?.definition;
-  return first ? `${args.word}: ${first}` : `No definition found for "${args.word}".`;
+  if (!first)
+    return t(session, {
+      fr: `Aucune définition pour « ${args.word} ».`,
+      en: `No definition found for "${args.word}".`,
+    });
+  return t(session, { fr: `${args.word} : ${first}`, en: `${args.word}: ${first}` });
 }
 ```
+
+`executeTool` already wraps every skill in a try/catch and apologizes to the caller in their
+language, so a dead `fetch` is handled. Don't write your own catch-all.
 
 **2. Register it in the dispatcher** — `web/src/lib/skills/index.ts`. Add a `case` to the
 `executeTool` switch:
@@ -91,8 +102,8 @@ case "define":
 ```python
 _schema(
     "define",
-    "Give the dictionary definition of an English word.",
-    {"word": {"type": "string", "description": "The word to define"}},
+    "Donne la définition d'un mot anglais.",
+    {"word": {"type": "string", "description": "Le mot à définir"}},
     ["word"],
 ),
 ```
@@ -111,6 +122,11 @@ serverTool(
 
 Execution is delegated to `/api/tools/execute`, so both runtimes now have the skill. Keep
 the tool name identical across every spot.
+
+Those two schema files are mirrors: same name, same parameters, same required list. Only
+the prose differs. The LLM reads these descriptions and the caller never hears them, so
+`tools.py` writes them in French today and `tools.ts` in English. Follow the entries around
+yours.
 
 **5. Classify it in the gate** — `web/src/lib/skills/gate.ts`. Every tool gets one of two
 policies, and there is no third option:
@@ -140,9 +156,23 @@ it, and it will not warn you.
 Anything irreversible (sending an SMS, placing a call) also gets the `confirmed`-then-act
 pattern. See `send_sms` / `place_call`.
 
-> **Good first skills:** unit / currency conversion, current time in a city, a transit
-> departure lookup, "read me the top headline," a countdown timer. Prefer free, keyless
-> APIs where possible (like Open-Meteo).
+**Check it without a call.** With the number down, reach `/api/tools/execute` directly. An
+unknown `call_id` gives you an unverified session in the default language:
+
+```bash
+curl -s localhost:3000/api/tools/execute \
+  -H "Authorization: Bearer $RUNTIME_API_SECRET" -H "Content-Type: application/json" \
+  -d '{"call_id":"local-test","name":"define","arguments":{"word":"ephemeral"}}'
+```
+
+That doubles as a check on step 5: a `"code"` tool refuses on an unverified session instead
+of running, and an unclassified one comes back as `Unknown tool`. Locally, with no SMS
+provider configured, that refusal reads UNAVAILABLE rather than REFUSED. Then `npm test`
+and `npm run lint` in `web/`.
+
+> **Good first skills:** unit / currency conversion, a transit departure lookup, "read me
+> the top headline," a countdown timer. Prefer free, keyless APIs where possible (like
+> Open-Meteo). To read a real one first, `skills/time.ts` is the shortest in the tree.
 
 ---
 
