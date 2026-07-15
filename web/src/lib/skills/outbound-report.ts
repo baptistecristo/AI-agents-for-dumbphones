@@ -4,7 +4,7 @@
 
 import { Language, normalizeLanguage } from "../language";
 import { supabaseAdmin } from "../supabase/admin";
-import { sendSms } from "../twilio";
+import { sendSms, smsProviderConfigured, warnSmsProviderMissing } from "../twilio";
 
 async function languageOf(userId: string | null): Promise<Language> {
   if (!userId) return "fr";
@@ -37,6 +37,13 @@ export async function handleReportOutcome(
       updated_at: new Date().toISOString(),
     })
     .eq("id", jobId);
+  // Le statut du job est déjà écrit : sans fournisseur SMS on perd le SMS, pas
+  // le compte-rendu. On le dit à l'agent plutôt que de lever au milieu de sa
+  // clôture d'appel.
+  if (job.callback_number && !smsProviderConfigured("send")) {
+    warnSmsProviderMissing(`compte-rendu du job ${jobId}`);
+    return "Compte-rendu enregistré. Aucun fournisseur SMS n'est branché : le client ne recevra PAS de SMS. Tu peux raccrocher.";
+  }
   if (job.callback_number) {
     const lang = await languageOf(job.user_id);
     const voicemail = lang === "en" ? "📞 Voicemail —" : "📞 Répondeur —";
@@ -67,6 +74,11 @@ export async function closeJobWithoutReport(jobId: string): Promise<void> {
     .update({ status: exhausted ? "failed" : "pending", updated_at: new Date().toISOString() })
     .eq("id", jobId);
   if (exhausted && job.callback_number) {
+    // Personne à prévenir en direct ici : les logs sont le seul canal.
+    if (!smsProviderConfigured("send")) {
+      warnSmsProviderMissing(`SMS d'abandon du job ${jobId}`);
+      return;
+    }
     const lang = await languageOf(job.user_id);
     await sendSms({
       to: job.callback_number,

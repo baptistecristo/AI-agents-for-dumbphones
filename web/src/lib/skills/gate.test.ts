@@ -2,20 +2,13 @@ import { describe, expect, it } from "vitest";
 import { requiresVerification } from "./gate";
 
 describe("requiresVerification", () => {
-  it("protects reads of stored personal data and send/spend actions", () => {
-    for (const n of [
-      "list_events",
-      "create_event",
-      "move_event",
-      "list_reminders",
-      "did_i_already",
-      "mark_done",
-      "find_contact",
-      "recall",
-      "send_sms",
-      "place_call",
-    ])
+  it("protects the calendar, contacts, recalled notes, and send/spend actions", () => {
+    for (const n of ["list_events", "create_event", "move_event", "find_contact", "recall", "send_sms", "place_call"])
       expect(requiresVerification(n)).toBe(true);
+  });
+
+  it("leaves reminders free: requiring a code to answer did_i_already costs more than it protects", () => {
+    for (const n of ["list_reminders", "did_i_already", "mark_done"]) expect(requiresVerification(n)).toBe(false);
   });
 
   it("leaves light writes, generic queries, and the auth tools free", () => {

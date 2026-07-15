@@ -3,7 +3,7 @@
 // Fournisseur : OpenRouteService (gratuit jusqu'à 2000 req/j, EU-friendly).
 
 import { envOr } from "../env";
-import { sendSms } from "../twilio";
+import { sendSms, smsProviderConfigured, warnSmsProviderMissing } from "../twilio";
 import { CallSession, SkillResult, t } from "./types";
 
 type OrsFeature = {
@@ -78,7 +78,11 @@ export async function getDirections(
     .map((s, i) => `${i + 1}. ${s.instruction} (${s.distance > 950 ? `${(s.distance / 1000).toFixed(1)} km` : `${Math.round(s.distance)} m`})`);
 
   // SMS en morceaux lisibles (max ~450 caractères par SMS, max 3 SMS)
-  if (session.callerNumber) {
+  const providerReady = smsProviderConfigured("send");
+  let smsSent = false;
+  if (session.callerNumber && !providerReady) {
+    warnSmsProviderMissing(`étapes d'itinéraire pendant l'appel ${session.callId}`);
+  } else if (session.callerNumber) {
     const header = t(session, {
       fr: `Itinéraire vers ${args.destination} (${km} km, ~${minutes} min) :\n`,
       en: `Route to ${args.destination} (${km} km, ~${minutes} min):\n`,
@@ -101,11 +105,26 @@ export async function getDirections(
         kind: "route_steps",
       });
     }
+    smsSent = true;
   }
+
+  // La phrase de fin dit ce qui s'est réellement passé : promettre un SMS qui
+  // n'est jamais parti laisse la personne guetter son téléphone pour rien.
+  const tail = smsSent
+    ? { fr: "Les étapes complètes viennent d'être envoyées par SMS.", en: "The full steps were just sent to you by SMS." }
+    : providerReady
+      ? {
+          fr: "Je n'ai pas de numéro où envoyer les étapes. Propose de lire la suite à voix haute.",
+          en: "I have no number to text the steps to. Offer to read the rest out loud.",
+        }
+      : {
+          fr: "Je ne peux pas envoyer les étapes par SMS : aucun fournisseur SMS n'est branché ici. Propose de lire la suite à voix haute.",
+          en: "I can't text the steps: no SMS provider is connected here. Offer to read the rest out loud.",
+        };
 
   const firstSteps = steps.slice(0, 2).join(t(session, { fr: " Puis : ", en: " Then: " }));
   return t(session, {
-    fr: `Trajet de ${km} kilomètres, environ ${minutes} minutes ${args.mode === "driving" ? "en voiture" : "à pied"}. Pour commencer : ${firstSteps}. Les étapes complètes viennent d'être envoyées par SMS.`,
-    en: `A ${km}-kilometre trip, about ${minutes} minutes ${args.mode === "driving" ? "by car" : "on foot"}. To start: ${firstSteps}. The full steps were just sent to you by SMS.`,
+    fr: `Trajet de ${km} kilomètres, environ ${minutes} minutes ${args.mode === "driving" ? "en voiture" : "à pied"}. Pour commencer : ${firstSteps}. ${tail.fr}`,
+    en: `A ${km}-kilometre trip, about ${minutes} minutes ${args.mode === "driving" ? "by car" : "on foot"}. To start: ${firstSteps}. ${tail.en}`,
   });
 }

@@ -44,10 +44,18 @@ export async function getWeather(
     )
   ).json()) as { results?: { latitude: number; longitude: number; name: string }[] };
   const place = geo.results?.[0];
+  // On ne répète que ce que la personne a dit elle-même. Le repli vient du
+  // profil : si l'extraction de la ville a mal découpé l'adresse, le renvoyer
+  // ici prononcerait la rue à voix haute — sans code, à qui que ce soit qui
+  // appelle depuis un numéro usurpé.
   if (!place)
     return t(session, {
-      fr: `Je ne trouve pas la ville « ${city} ».`,
-      en: `I can't find the city "${city}".`,
+      fr: args.city
+        ? `Je ne trouve pas la ville « ${args.city} ».`
+        : "Je ne reconnais pas la ville enregistrée dans le profil. Demande pour quelle ville, sans deviner.",
+      en: args.city
+        ? `I can't find the city "${args.city}".`
+        : "I don't recognise the city saved in the profile. Ask which city, without guessing.",
     });
 
   const fc = (await (

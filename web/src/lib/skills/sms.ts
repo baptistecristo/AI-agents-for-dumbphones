@@ -1,7 +1,7 @@
-// Skill Messages — SMS dicté, avec relecture (confirm) + PIN (action sensible).
+// Skill Messages — SMS dicté, avec relecture (confirm) + code SMS (action sensible).
 
 import { isE164 } from "../phone";
-import { sendSms } from "../twilio";
+import { sendSms, smsProviderConfigured, warnSmsProviderMissing } from "../twilio";
 import { resolveContactNumber } from "./contacts";
 import { CallSession, SkillResult, t } from "./types";
 
@@ -14,6 +14,15 @@ export async function sendDictatedSms(
       fr: "Appelant non identifié : envoi impossible.",
       en: "Unidentified caller: can't send.",
     });
+  // Vérifié AVANT la relecture : faire relire un message qui ne partira jamais
+  // est la pire des issues pour la personne au bout du fil.
+  if (!smsProviderConfigured("send")) {
+    warnSmsProviderMissing(`SMS dicté pendant l'appel ${session.callId}`);
+    return t(session, {
+      fr: "INDISPONIBLE : aucun fournisseur SMS n'est branché sur cette instance, aucun message ne peut partir. Ne relis pas le message, ne propose pas de réessayer : dis honnêtement que l'envoi de SMS est hors service ici.",
+      en: "UNAVAILABLE: no SMS provider is connected on this instance, no message can go out. Don't read the message back, don't offer to retry: say honestly that sending SMS is out of service here.",
+    });
+  }
   if (!session.verified) {
     return t(session, {
       fr: "REFUS : le code n'a pas été vérifié. Appelle request_code puis verify_code d'abord.",

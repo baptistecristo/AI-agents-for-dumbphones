@@ -1,9 +1,15 @@
 // Skill Auth — code jetable (Twilio Verify) envoyé au NUMÉRO ENREGISTRÉ de la
 // personne, jamais au caller-ID (spoofable). Débloque les fonctions protégées
-// pour la durée de l'appel. Fail-closed : si Twilio n'est pas configuré, l'envoi
-// échoue proprement et les fonctions protégées restent verrouillées.
+// pour la durée de l'appel. Fail-closed : sans fournisseur SMS branché, aucun
+// code ne part et les fonctions protégées restent verrouillées — mais on le DIT,
+// au lieu de laisser croire à une panne passagère.
 
-import { checkPhoneVerification, startPhoneVerification } from "../twilio";
+import {
+  checkPhoneVerification,
+  smsProviderConfigured,
+  startPhoneVerification,
+  warnSmsProviderMissing,
+} from "../twilio";
 import { supabaseAdmin } from "../supabase/admin";
 import { CallSession, SkillResult, t } from "./types";
 
@@ -23,6 +29,15 @@ async function registeredNumber(userId: string): Promise<string | null> {
 
 export async function requestCode(session: CallSession): Promise<SkillResult> {
   if (!session.userId) return t(session, { fr: "Appelant non identifié.", en: "Unidentified caller." });
+  // Rien de branché : état permanent, pas un incident. On le distingue du catch
+  // plus bas, sinon l'agent propose de réessayer un envoi qui n'aura jamais lieu.
+  if (!smsProviderConfigured("verify")) {
+    warnSmsProviderMissing(`code demandé pendant l'appel ${session.callId}`);
+    return t(session, {
+      fr: "INDISPONIBLE : aucun fournisseur SMS n'est branché sur cette instance, le code ne peut pas être envoyé. Ce n'est pas une panne passagère : ne propose pas de réessayer. Dis-le honnêtement, les données personnelles restent verrouillées tant qu'aucun fournisseur SMS n'est configuré.",
+      en: "UNAVAILABLE: no SMS provider is connected on this instance, so the code cannot be sent. This is not a temporary glitch: do not offer to retry. Say so honestly, personal data stays locked until an SMS provider is configured.",
+    });
+  }
   const e164 = await registeredNumber(session.userId);
   if (!e164)
     return t(session, {
@@ -32,10 +47,13 @@ export async function requestCode(session: CallSession): Promise<SkillResult> {
   try {
     // Twilio Verify borne lui-même le nombre d'envois et la durée de validité.
     await startPhoneVerification(e164);
-  } catch {
+  } catch (err) {
+    // Vraie panne d'envoi : le fournisseur est bien branché mais n'a pas pris
+    // le SMS. Réessayer a du sens, contrairement au cas ci-dessus.
+    console.error("Envoi du code", err);
     return t(session, {
-      fr: "L'envoi du code est indisponible pour le moment.",
-      en: "Sending the code is unavailable right now.",
+      fr: "L'envoi du code a échoué. Propose de réessayer dans un instant.",
+      en: "Sending the code failed. Offer to try again in a moment.",
     });
   }
   return t(session, {
