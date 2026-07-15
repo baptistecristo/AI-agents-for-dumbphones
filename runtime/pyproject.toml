@@ -1,0 +1,28 @@
+# Configuration ruff du runtime vocal.
+#
+# Lint uniquement : `ruff format` n'est pas imposé en CI (voir ci.yml). Le code
+# existant n'est pas formaté par ruff, et l'imposer maintenant produirait un
+# diff massif sans gain réel.
+
+[tool.ruff]
+# Le README installe le runtime avec python3.11, la CI tourne en 3.12 : on vise
+# le plus bas des deux. Sinon UP proposerait de la syntaxe 3.12 qui casserait
+# l'installation décrite dans le README.
+target-version = "py311"
+
+# Le code tient déjà sous 110 partout : seuls les schémas d'outils de tools.py
+# dépassaient, et ils sont plus lisibles denses que repliés sur quatre lignes.
+line-length = 110
+
+[tool.ruff.lint]
+# Jeu de règles volontairement restreint : ce dépôt accueille des premières
+# contributions, un mur d'erreurs au premier PR serait décourageant.
+#   E, F — erreurs de base (pycodestyle / pyflakes)
+#   I    — tri des imports
+#   UP   — modernisation de la syntaxe (pyupgrade)
+#   B    — pièges courants (flake8-bugbear)
+#   BLE  — `except Exception` nu. Déjà annoté `# noqa: BLE001` aux trois
+#          endroits où il est volontaire (l'agent doit rester en ligne même si
+#          un outil casse) : la règle ne coûte donc rien aujourd'hui et garde
+#          ces trois exceptions explicites plutôt que silencieuses.
+select = ["E", "F", "I", "UP", "B", "BLE"]

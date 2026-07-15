@@ -33,13 +33,18 @@ def inbound_tools() -> ToolsSchema:
             _schema(
                 "list_events",
                 "Liste les rendez-vous de l'agenda de l'utilisateur pour un jour donné.",
-                {"day": {"type": "string", "description": "Jour au format AAAA-MM-JJ, ou 'today'/'tomorrow'"}},
+                {
+                    "day": {
+                        "type": "string",
+                        "description": "Jour au format AAAA-MM-JJ, ou 'today'/'tomorrow'",
+                    }
+                },
                 ["day"],
             ),
             _schema(
                 "create_event",
-                "PROPOSE un nouveau rendez-vous. confirmed=false renvoie une proposition à lire à voix haute ; "
-                "confirmed=true seulement après un 'oui' explicite.",
+                "PROPOSE un nouveau rendez-vous. confirmed=false renvoie une proposition à lire "
+                "à voix haute ; confirmed=true seulement après un 'oui' explicite.",
                 {
                     "title": {"type": "string"},
                     "start": {"type": "string", "description": "Début ISO 8601"},
@@ -92,7 +97,12 @@ def inbound_tools() -> ToolsSchema:
                 },
                 ["destination"],
             ),
-            _schema("find_contact", "Cherche un contact dans le carnet Google.", {"name": {"type": "string"}}, ["name"]),
+            _schema(
+                "find_contact",
+                "Cherche un contact dans le carnet Google.",
+                {"name": {"type": "string"}},
+                ["name"],
+            ),
             _schema(
                 "send_sms",
                 "PROPOSE un SMS dicté (relecture puis confirmed=true). Protégé : code requis "
@@ -126,7 +136,12 @@ def inbound_tools() -> ToolsSchema:
                 {"key": {"type": "string"}, "value": {"type": "string"}},
                 ["key", "value"],
             ),
-            _schema("recall", "Recherche dans la mémoire de l'utilisateur.", {"query": {"type": "string"}}, ["query"]),
+            _schema(
+                "recall",
+                "Recherche dans la mémoire de l'utilisateur.",
+                {"query": {"type": "string"}},
+                ["query"],
+            ),
             _schema(
                 "request_code",
                 "Envoie un code à 4 chiffres par SMS au numéro enregistré. À appeler la première fois "
@@ -190,7 +205,9 @@ def make_tool_handler(
             await hangup()
             return
         try:
-            result = await api_client.execute_tool(call_id, params.function_name, params.arguments or {}, job_id)
+            result = await api_client.execute_tool(
+                call_id, params.function_name, params.arguments or {}, job_id
+            )
         except Exception as err:  # noqa: BLE001 — l'agent doit rester en ligne
             result = f"Désolé, ce service ne répond pas ({type(err).__name__})."
         await params.result_callback(result)
