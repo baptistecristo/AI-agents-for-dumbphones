@@ -1,5 +1,12 @@
 ﻿# Voice AI Agent Platform — Architecture
 
+> **This is the original design document, kept for the reasoning behind the shape of the
+> system — not a description of what runs.** For that, read
+> [What's implemented](README.md#whats-implemented) in the README, which is the source of
+> truth. Three things below have since been decided differently: the **spoken PIN** was
+> replaced by a **one-time code texted to the caller's registered number** (`skills/auth.ts`);
+> the product is **bilingual EN/FR**, not French-first; and **email/Outlook are not built**.
+
 **Product:** A voice-first AI agent reachable by phone from a *dumbphone*. The user calls a number, speaks a natural request, and the agent acts on their behalf (calendar, email, contacts, navigation, reminders, outbound calls) and replies by **voice + SMS**. All intelligence lives on the server; the phone is a minimalist voice terminal.
 
 **Assumptions:** France / EU-first · GDPR-aware · French-first voice · smallest-budget bias · web/app to sign up and connect accounts (Google, Outlook, …) via OAuth · whole vision architected as one platform with pluggable "skills".

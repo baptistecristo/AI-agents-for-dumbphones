@@ -31,7 +31,7 @@ Sift's SMS-command model in the codebase as a lighter fallback
 **What works:** the agent has answered a real phone call and done the skills below,
 bilingual EN/FR — that happened, on a rented number. Inbound + outbound calling, auth,
 an EU database with encryption and a consent registry are built and deployed. CI builds
-the web app and imports the runtime on every push.
+the web app, runs its tests, and imports the runtime on every push.
 
 **What's dead right now:** the demo number. It answered — then the maintainer ran out
 of **Vapi** credits. At the measured ~$0.14/minute, one person cannot keep a public
@@ -43,14 +43,22 @@ project's own demo is dead because of the exact dependency the project wants to 
 **no Twilio account is connected**, so anything that delivers by SMS (directions,
 dictated texts, the SMS command router) can't send.
 
+That second gap costs more than the SMS skills. A one-time code **texted to the caller**
+unlocks every sensitive action, and the gate fails closed, so with no Twilio the code never
+arrives and everything behind it stays locked: calendar, contacts, reading back reminders
+and notes, dictated texts, outbound calls. A caller today reaches only the ungated set:
+weather, local time, directions, setting a reminder, taking a note. Connecting a Twilio
+account unlocks the rest, and it's a small first contribution.
+
 Those gaps *are* the invitation. The fun open problems:
 
 - 🎙️ **Bilingual EN/FR works.** Each caller has a preferred language
-  (`profiles.preferred_language`); the session hands it to the runtime, which picks the
-  Whisper language and a per-language Piper voice (`PIPER_VOICE_FR` / `PIPER_VOICE_EN`),
-  and skills answer in the caller's language. The agent even switches language mid-call
-  if you do — though Piper voices are monolingual, so the *voice* stays the session's
-  until someone builds mid-call voice switching (a great issue, see below).
+  (`profiles.preferred_language`), the session hands it to the runtime, and skills answer
+  in the caller's language. That is the part that answered a real call, on Vapi. Both
+  runtimes pin speech-to-text to the session's language at call setup (Deepgram on Vapi,
+  Whisper self-hosted), so a caller who *switches* language mid-call gets a model still
+  listening for the other one: the prompt tells the agent to follow, but the transcript
+  degrades. Fixing that is an open issue.
 - 🧩 **Skills are a plugin surface.** Adding a **new skill** (a thing the agent can do on
   a call) is a small, self-contained PR. This is one of the two best on-ramps; a **third
   language** is the other.
@@ -103,13 +111,13 @@ is drawn the way it is.
 | Voice runtime | **Vapi** (`RUNTIME=vapi`) — the only one that has ever carried a call, and it's out of credit. Self-hosted Pipecat + faster-whisper + Piper + Ollama is scaffolded but has never placed one ([#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9)) | `web/src/lib/vapi.ts` + `runtime/` |
 | Telephony | Vapi's number today. A **Twilio**/Telnyx trunk is what the self-hosted path needs — a phone number is the one thing you can't self-host | `runtime/server.py` |
 | SMS + OTP | **Twilio** (Messages + Verify) — coded, but **no Twilio account is connected**, so nothing actually sends yet | `web/src/lib/twilio.ts` |
-| Inbound agent | Bilingual (EN/FR) system prompt + greeting, switches language mid-call, spoken-PIN gate before sensitive actions, two-step voice confirmation | `web/src/lib/agents/inbound.ts` |
+| Inbound agent | Bilingual (EN/FR) system prompt + greeting, one-time-SMS-code gate before sensitive actions, two-step voice confirmation. On Vapi the voice/STT/LLM are **ElevenLabs + Deepgram + Anthropic** — managed, and none of them EU | `web/src/lib/agents/inbound.ts` |
 | Public-number guard | 180s per call, plus rate limiting: 5 calls per caller per hour, 20/day, 60/day across everyone. Over the limit, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
-| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, PIN | `web/src/lib/skills/` |
+| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, call auth (`request_code` / `verify_code`) | `web/src/lib/skills/` |
 | SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `DONE`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift) | `web/src/lib/sms-commands.ts` |
 | Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
-| Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent → PIN), dashboard | `web/src/app/` |
+| Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent), dashboard | `web/src/app/` |
 
 ## Two ways to help in an afternoon
 
@@ -161,8 +169,9 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
 - **EU / privacy-first.** Data in an EU Postgres, OAuth tokens encrypted at rest, an
   append-only revocable consent registry, RLS everywhere.
 - **The phone stays dumb.** No app, no account on the handset. Caller-ID identifies you; a
-  **spoken PIN** gates sensitive actions (caller-ID can be spoofed); sensitive actions get a
-  two-step voice confirmation.
+  **one-time code texted to your registered number** gates sensitive actions (caller-ID can
+  be spoofed), spoken back or keyed in on the keypad and never stored; sensitive actions
+  get a two-step voice confirmation.
 - **External content is data, never instructions.** Tool outputs are returned to the model
   as data, never merged into the instruction channel.
 

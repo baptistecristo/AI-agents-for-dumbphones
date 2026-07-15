@@ -1,6 +1,6 @@
 """Client HTTP vers l'API Next.js — sessions, outils, fin d'appel.
 
-Le runtime ne contient AUCUNE logique métier : prompts, skills, PIN et
+Le runtime ne contient AUCUNE logique métier : prompts, skills, auth d'appel et
 consentements vivent côté Next.js ; ce module ne fait que transporter.
 """
 
