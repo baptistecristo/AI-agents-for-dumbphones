@@ -25,6 +25,7 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
     userId: null,
     preferredName: null,
     language: defaultLanguage(), // appelant inconnu -> env DEFAULT_LANGUAGE
+    voiceSpeed: null, // appelant inconnu -> aucun réglage à appliquer
   };
   if (!phoneE164) return empty;
   const db = supabaseAdmin();
@@ -37,13 +38,16 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
   if (!phone) return empty;
   const { data: profile } = await db
     .from("profiles")
-    .select("full_name, preferred_name, preferred_language")
+    .select("full_name, preferred_name, preferred_language, voice_speed")
     .eq("id", phone.user_id)
     .single();
   return {
     userId: phone.user_id,
     preferredName: profile?.preferred_name || profile?.full_name || null,
     language: normalizeLanguage(profile?.preferred_language),
+    // Le débit réglé par la personne : c'est ici, et seulement ici, qu'on sait
+    // qui appelle. buildInboundAssistant borne la valeur avant l'envoi.
+    voiceSpeed: profile?.voice_speed ?? null,
   };
 }
 

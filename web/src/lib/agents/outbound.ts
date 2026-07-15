@@ -81,6 +81,10 @@ export function buildOutboundAssistant(job: OutboundJob) {
       provider: "11labs",
       voiceId: envOr("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB"),
       model: "eleven_multilingual_v2",
+      // Débit fixe, volontairement : NE PAS y brancher profiles.voice_speed.
+      // Ici la voix est entendue par un restaurant ou un secrétariat, jamais
+      // par le client — son réglage de débit est un confort d'écoute personnel,
+      // il n'a rien à faire dans cet appel.
       speed: 1.0,
     },
     transcriber: { provider: "deepgram", model: "nova-2", language: job.user_language },
