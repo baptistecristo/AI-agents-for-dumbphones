@@ -48,8 +48,8 @@ uvicorn server:app --port 8000
 ## Add a skill
 
 A *skill* is one thing the agent can do on a call (look something up, set something,
-send something). Adding one is **four small edits**. Say you want a `define` skill —
-"what does *ephemeral* mean?":
+send something). Adding one is **five small edits**: four to make it run, one to say who
+is allowed to use it. Say you want a `define` skill — "what does *ephemeral* mean?":
 
 **1. Write the logic** — `web/src/lib/skills/define.ts`. A skill is an async function that
 takes the call `session` + the model's `args` and returns a **short string the agent will
@@ -107,23 +107,33 @@ serverTool(
 ),
 ```
 
-That's it. Execution is delegated to `/api/tools/execute`, so both runtimes now have the
-skill. Keep the tool name identical across all four spots.
+Execution is delegated to `/api/tools/execute`, so both runtimes now have the skill. Keep
+the tool name identical across every spot.
 
-**If your skill touches personal data, add it to the gate yourself.**
-`web/src/lib/skills/gate.ts` holds the single list of tool names that require the
-caller's one-time SMS code: the calendar, contacts, recalled notes, sending a text,
-placing a call. That list is an inclusion list, so **it fails open**. A tool missing from
-it will answer anyone who can spoof the caller ID, and nothing tells you: no type error,
-no failing test, no review comment. The `define` skill above needs no code. A skill that
-reads back someone's stored data does, and you are the only person in the loop who knows
-which one yours is.
+**5. Classify it in the gate** — `web/src/lib/skills/gate.ts`. Every tool gets one of two
+policies, and there is no third option:
 
-The gate matches on the tool name, so it cannot protect an *argument*. `get_directions`
-is the other half of the pattern: the tool is free to call, but its default starting
-point is the caller's home address, so the dispatcher only passes that once the caller
-has given the code. If stored data reaches your skill as an input rather than being the
-thing your skill returns, guard it in `index.ts` where the argument is assembled.
+```ts
+define: "free",   // or "code" if it reads or changes the caller's own data
+```
+
+`"code"` means the caller must pass a one-time SMS code first, the way the calendar,
+contacts, recalled notes, `send_sms` and `place_call` do. `"free"` means anyone who dials
+can use it: weather, directions, reminders, note-taking, and `define` above.
+
+**A tool you don't classify does not run.** `TOOL_POLICY` is exhaustive, the dispatcher
+refuses anything missing from it, and `gate.test.ts` compares it against `agentTools()` in
+both directions, so forgetting this step fails your build with the tool name printed. That
+is on purpose. The old gate listed only the protected tools, which meant a forgotten skill
+went live ungated and silent, and the person who paid for the mistake was never the person
+who made it. Now the failure lands on you, at your first test run.
+
+The gate matches on the tool *name*, so it cannot protect an *argument*. `get_directions`
+is the other half of the pattern: the tool is `"free"`, but its default starting point is
+the caller's home address, so the dispatcher only passes that once the caller has given
+the code. If stored data reaches your skill as an input rather than being what your skill
+returns, guard it in `index.ts` where the argument is assembled. `TOOL_POLICY` cannot see
+it, and it will not warn you.
 
 Anything irreversible (sending an SMS, placing a call) also gets the `confirmed`-then-act
 pattern. See `send_sms` / `place_call`.

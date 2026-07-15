@@ -8,7 +8,7 @@ import { createEvent, listEvents, moveEvent } from "./agenda";
 import { requestCode, verifyCode } from "./auth";
 import { findContact } from "./contacts";
 import { getDirections } from "./directions";
-import { requiresVerification } from "./gate";
+import { isClassified, requiresVerification } from "./gate";
 import { recall, remember } from "./memory";
 import { placeCall } from "./outbound";
 import { didIAlready, listReminders, markDone, setReminder } from "./reminders";
@@ -39,6 +39,17 @@ export function cityFromAddress(address: string | null): string | null {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function executeTool(name: string, args: any, session: CallSession): Promise<string> {
   try {
+    // Rien ne s'exécute avant d'avoir été classé dans gate.ts. Un skill dont
+    // l'auteur a oublié le gate est mort-né et il s'en aperçoit à son premier
+    // appel : c'est le seul sens dans lequel cet oubli est acceptable. L'inverse
+    // (il marche, et il est ouvert à tout le monde) ne se voit jamais.
+    if (!isClassified(name)) {
+      console.error(
+        `Outil ${name} absent de TOOL_POLICY (gate.ts) : exécution refusée. ` +
+          `Classe-le "code" ou "free" — un outil non classé ne tourne pas.`,
+      );
+      return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.` });
+    }
     // Gate unique : les outils qui lisent des données stockées ou envoient/dépensent
     // exigent le code SMS. Le caller-ID seul ne débloque rien de sensible.
     if (requiresVerification(name) && !session.verified) {
