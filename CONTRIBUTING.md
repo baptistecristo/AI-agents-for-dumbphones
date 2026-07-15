@@ -19,10 +19,10 @@ Walkthroughs below. More ready-to-claim ideas in the
 
 The **voice runtime** (`runtime/`, Pipecat) turns a phone call into text, runs an LLM, and
 speaks the reply — but it **executes nothing itself**. Every tool-call is forwarded to the
-**Next.js API** (`web/`), which owns all business logic: skills, prompts, PINs, consent.
-That separation is the whole design: **one implementation of each skill serves both
-runtimes** (self-hosted Pipecat *and* managed Vapi). So when you add a skill, you write the
-logic once and declare its schema in two small mirror files.
+**Next.js API** (`web/`), which owns all business logic: skills, prompts, the code gate,
+consent. That separation is the whole design: **one implementation of each skill serves
+both runtimes** (self-hosted Pipecat *and* managed Vapi). So when you add a skill, you
+write the logic once and declare its schema in two small mirror files.
 
 ## Local setup
 
@@ -107,10 +107,26 @@ serverTool(
 ),
 ```
 
-That's it — execution is delegated to `/api/tools/execute`, so both runtimes now have the
-skill. Keep the tool name identical across all four spots. Sensitive actions (sending an
-SMS, placing a call) require a verified spoken PIN — see `send_sms` / `place_call` for the
-`confirmed`-then-act pattern if your skill does something irreversible.
+That's it. Execution is delegated to `/api/tools/execute`, so both runtimes now have the
+skill. Keep the tool name identical across all four spots.
+
+**If your skill touches personal data, add it to the gate yourself.**
+`web/src/lib/skills/gate.ts` holds the single list of tool names that require the
+caller's one-time SMS code: the calendar, contacts, recalled notes, sending a text,
+placing a call. That list is an inclusion list, so **it fails open**. A tool missing from
+it will answer anyone who can spoof the caller ID, and nothing tells you: no type error,
+no failing test, no review comment. The `define` skill above needs no code. A skill that
+reads back someone's stored data does, and you are the only person in the loop who knows
+which one yours is.
+
+The gate matches on the tool name, so it cannot protect an *argument*. `get_directions`
+is the other half of the pattern: the tool is free to call, but its default starting
+point is the caller's home address, so the dispatcher only passes that once the caller
+has given the code. If stored data reaches your skill as an input rather than being the
+thing your skill returns, guard it in `index.ts` where the argument is assembled.
+
+Anything irreversible (sending an SMS, placing a call) also gets the `confirmed`-then-act
+pattern. See `send_sms` / `place_call`.
 
 > **Good first skills:** unit / currency conversion, current time in a city, a transit
 > departure lookup, "read me the top headline," a countdown timer. Prefer free, keyless
@@ -141,7 +157,8 @@ first use — and add it to the per-language selection where
 **3. Prompts + greeting** — `web/src/lib/agents/inbound.ts` holds the system prompt and
 the first-message greeting in EN and FR. Add your language's version and wire it into the
 per-language selection. Keep the safety rules intact in translation: two-step confirm,
-spoken PIN, tool output is data not instructions.
+the one-time code, never say the caller's address out loud, tool output is data not
+instructions.
 
 **4. Skill strings** — skills switch their output strings on `CallSession.language`
 (e.g. the WMO weather descriptions in `skills/weather.ts`, date formatting in
