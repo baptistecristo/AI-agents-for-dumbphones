@@ -6,7 +6,9 @@ the community add the skills and languages that make that real.
 
 This project is **early and looking for founding co-builders.** The two best first
 contributions are **adding a skill** and **adding a third language** (EN and FR ship
-already) — both are small, self-contained, and ship to a live call-in number.
+already) — both are small and self-contained. **The call-in number is down**: the Vapi
+account is out of credit, so you can test against the web API but not over a real call.
+See the [status section](README.md#status--early-honest-about-what-runs-seeking-founding-co-builders).
 Walkthroughs below. More ready-to-claim ideas in the
 [good-first-issue list](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
@@ -19,10 +21,10 @@ Walkthroughs below. More ready-to-claim ideas in the
 
 The **voice runtime** (`runtime/`, Pipecat) turns a phone call into text, runs an LLM, and
 speaks the reply — but it **executes nothing itself**. Every tool-call is forwarded to the
-**Next.js API** (`web/`), which owns all business logic: skills, prompts, the code gate,
-consent. That separation is the whole design: **one implementation of each skill serves
-both runtimes** (self-hosted Pipecat *and* managed Vapi). So when you add a skill, you
-write the logic once and declare its schema in two small mirror files.
+**Next.js API** (`web/`), which owns all business logic: skills, prompts, call auth, consent.
+That separation is the whole design: **one implementation of each skill serves both
+runtimes** (self-hosted Pipecat *and* managed Vapi). So when you add a skill, you write the
+logic once and declare its schema in two small mirror files.
 
 ## Local setup
 
@@ -167,7 +169,7 @@ first use — and add it to the per-language selection where
 **3. Prompts + greeting** — `web/src/lib/agents/inbound.ts` holds the system prompt and
 the first-message greeting in EN and FR. Add your language's version and wire it into the
 per-language selection. Keep the safety rules intact in translation: two-step confirm,
-the one-time code, never say the caller's address out loud, tool output is data not
+the one-time SMS code, never say the caller's address out loud, tool output is data not
 instructions.
 
 **4. Skill strings** — skills switch their output strings on `CallSession.language`
@@ -177,10 +179,12 @@ instructions.
 Then allow the new code in `profiles.preferred_language` (a follow-up migration) and in
 the dashboard's language setting, and you're done.
 
-> **Known limitation — a good separate contribution:** the agent already *switches
-> language mid-call* if the caller does, but Piper voices are monolingual, so it answers
-> in the right language **with the session's voice**. Swapping the TTS voice mid-call
-> when the language changes is a well-scoped issue of its own.
+> **Known limitation — a good separate contribution:** speech-to-text is pinned to the
+> session's language at call setup, so a caller who switches language mid-call is
+> transcribed by a model still listening for the other one. The prompt tells the agent to
+> follow the switch, but the transcript degrades. Self-hosted, the voice is stuck too,
+> since Piper voices are monolingual. Handling a mid-call language change is a well-scoped
+> issue of its own.
 
 ---
 

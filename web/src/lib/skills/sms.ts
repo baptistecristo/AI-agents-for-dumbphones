@@ -1,4 +1,4 @@
-// Skill Messages — SMS dicté, avec relecture (confirm) + code SMS (action sensible).
+// Skill Messages — SMS dicté, avec relecture (confirm) + code jetable (action sensible).
 
 import { isE164 } from "../phone";
 import { sendSms, smsProviderConfigured, warnSmsProviderMissing } from "../twilio";
