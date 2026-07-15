@@ -122,7 +122,7 @@ def inbound_tools() -> ToolsSchema:
             ),
             _schema(
                 "remember",
-                "Retient une information durable (ex: « mon garagiste est Garage Dupont, 01 23 45 67 89 »).",
+                "Retient une information durable (ex: médecin traitant).",
                 {"key": {"type": "string"}, "value": {"type": "string"}},
                 ["key", "value"],
             ),
@@ -141,6 +141,17 @@ def inbound_tools() -> ToolsSchema:
                 "pour le reste de l'appel. Ne jamais répéter le code à voix haute.",
                 {"code": {"type": "string"}},
                 ["code"],
+            ),
+            _schema(
+                "get_current_time",
+                "Donne l'heure locale actuelle dans une ville.",
+                {
+                    "city": {
+                        "type": "string",
+                        "description": "Ville dont l'heure locale est demandée",
+                    }
+                },
+                ["city"],
             ),
             END_CALL,
         ]

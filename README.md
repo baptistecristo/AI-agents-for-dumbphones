@@ -106,7 +106,7 @@ is drawn the way it is.
 | Inbound agent | Bilingual (EN/FR) system prompt + greeting, switches language mid-call, spoken-PIN gate before sensitive actions, two-step voice confirmation | `web/src/lib/agents/inbound.ts` |
 | Public-number guard | 180s per call, plus rate limiting: 5 calls per caller per hour, 20/day, 60/day across everyone. Over the limit, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
-| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), contacts, dictated SMS, memory, PIN | `web/src/lib/skills/` |
+| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, PIN | `web/src/lib/skills/` |
 | SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `DONE`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift) | `web/src/lib/sms-commands.ts` |
 | Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
 | Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent → PIN), dashboard | `web/src/app/` |
@@ -171,7 +171,7 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
 - **[Sift](https://github.com/edleeman17/sift)** (MIT) — a dumbphone companion; its
   two-way SMS command model inspired `sms-commands.ts`.
 - **[Pipecat](https://github.com/pipecat-ai/pipecat)** / **[LiveKit Agents](https://github.com/livekit/agents)** — the self-hosted voice runtime.
-- **Open-Meteo** (free weather), **OpenRouteService** (EU directions).
+- **Open-Meteo** (free weather + geocoding), **OpenRouteService** (EU directions), **WorldTimeAPI** (free local time).
 
 ## License
 

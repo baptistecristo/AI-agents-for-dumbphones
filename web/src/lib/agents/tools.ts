@@ -89,6 +89,12 @@ export function agentTools() {
         day: { type: "string", enum: ["today", "tomorrow"], description: "Day" },
       },
     ),
+    serverTool(
+      "get_current_time",
+      "Give the current local time in a city.",
+      { city: { type: "string", description: "City whose current local time is requested" } },
+      ["city"],
+    ),
 
     // --- Navigation par SMS ---
     serverTool(
