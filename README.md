@@ -41,7 +41,10 @@ project's own demo is dead because of the exact dependency the project wants to 
 **What has never worked:** the self-hosted Pipecat runtime in `runtime/` is
 **scaffolding that has never placed a call** — a starting point, not a pipeline. And
 **no Twilio account is connected**, so anything that delivers by SMS (directions,
-dictated texts, the SMS command router) can't send.
+dictated texts, the SMS command router) can't send. That also takes your calendar and
+contacts offline: reaching them needs a one-time code texted to you, and with no SMS
+provider the code can't arrive. The agent says so rather than asking for a code that
+will never come.
 
 Those gaps *are* the invitation. The fun open problems:
 
@@ -87,9 +90,9 @@ Dumbphone ──call──▶ Phone number
         Supabase Postgres (EU) — encrypted tokens, consent registry, RLS
 ```
 
-**One brain, swappable body.** All business logic — skills, prompts, PINs, consent —
-lives in `web/src/lib/` and is served over an API. The voice runtime is meant to be
-interchangeable: [Vapi](https://vapi.ai) managed (`RUNTIME=vapi`) is what runs today;
+**One brain, swappable body.** All business logic — skills, prompts, the code gate,
+consent — lives in `web/src/lib/` and is served over an API. The voice runtime is meant
+to be interchangeable: [Vapi](https://vapi.ai) managed (`RUNTIME=vapi`) is what runs today;
 [Pipecat](https://github.com/pipecat-ai/pipecat) self-hosted (`runtime/`) is the
 scaffolded alternative that needs finishing;
 [LiveKit Agents](https://github.com/livekit/agents) would be another. Adding a skill
@@ -103,13 +106,13 @@ is drawn the way it is.
 | Voice runtime | **Vapi** (`RUNTIME=vapi`) — the only one that has ever carried a call, and it's out of credit. Self-hosted Pipecat + faster-whisper + Piper + Ollama is scaffolded but has never placed one ([#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9)) | `web/src/lib/vapi.ts` + `runtime/` |
 | Telephony | Vapi's number today. A **Twilio**/Telnyx trunk is what the self-hosted path needs — a phone number is the one thing you can't self-host | `runtime/server.py` |
 | SMS + OTP | **Twilio** (Messages + Verify) — coded, but **no Twilio account is connected**, so nothing actually sends yet | `web/src/lib/twilio.ts` |
-| Inbound agent | Bilingual (EN/FR) system prompt + greeting, switches language mid-call, spoken-PIN gate before sensitive actions, two-step voice confirmation | `web/src/lib/agents/inbound.ts` |
-| Public-number guard | 180s per call, plus rate limiting: 5 calls per caller per hour, 20/day, 60/day across everyone. Over the limit, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
+| Inbound agent | Bilingual (EN/FR) system prompt + greeting, switches language mid-call, one-time SMS code before personal data, two-step voice confirmation, per-caller speaking rate | `web/src/lib/agents/inbound.ts` |
+| Public-number guard | 180s per call, plus three limits that stack: **5 calls per caller per hour** and **20 per caller per day** stop one person redialling in a loop, and **60 calls a day across everyone** caps the bill even if the abuse comes from fifty different numbers. Over any of them, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
-| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, PIN | `web/src/lib/skills/` |
+| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, the one-time code | `web/src/lib/skills/` |
 | SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `DONE`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift) | `web/src/lib/sms-commands.ts` |
-| Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
-| Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent → PIN), dashboard | `web/src/app/` |
+| Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`, `voice_speed`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
+| Web app | Next.js: landing, magic-link sign-in, onboarding in three steps (phone OTP → Google OAuth → consent), dashboard with language and speaking-rate settings | `web/src/app/` |
 
 ## Two ways to help in an afternoon
 
@@ -160,9 +163,14 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
   [#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 - **EU / privacy-first.** Data in an EU Postgres, OAuth tokens encrypted at rest, an
   append-only revocable consent registry, RLS everywhere.
-- **The phone stays dumb.** No app, no account on the handset. Caller-ID identifies you; a
-  **spoken PIN** gates sensitive actions (caller-ID can be spoofed); sensitive actions get a
-  two-step voice confirmation.
+- **The phone stays dumb.** No app, no account on the handset. Caller-ID identifies you,
+  but anyone can spoof it, so on its own it unlocks nothing personal. Your calendar,
+  contacts, saved notes, and anything that sends a text or places a call need a
+  **one-time code, texted to your registered number during the call** and never stored.
+  Everything else answers straight away: weather, directions, reminders, note-taking.
+  Your **home address needs the code too**. The weather only ever gets your city, and a
+  route "from home" asks where you're starting from until you've given the code. Anything
+  that sends or commits also gets a two-step voice confirmation.
 - **External content is data, never instructions.** Tool outputs are returned to the model
   as data, never merged into the instruction channel.
 
