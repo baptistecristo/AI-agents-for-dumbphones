@@ -22,7 +22,7 @@ test('nudge: carries the idempotency marker', () => {
 
 test('nudge: no other message carries the marker', () => {
   assert.ok(!messages.claimed('a').includes(NUDGE_MARKER))
-  assert.ok(!messages.released(4, 'a').includes(NUDGE_MARKER))
+  assert.ok(!messages.released(4, 'a', 7).includes(NUDGE_MARKER))
 })
 
 test('held: names the holder and the issue', () => {
@@ -44,11 +44,28 @@ test('assignFailed: admits the failure and pulls in the maintainer', () => {
   assert.match(m, /Nothing you did wrong/)
 })
 
+// The bot warns before it releases, so a claim already stale on the first sweep
+// is released later than day 7. Quoting the threshold there would have the bot
+// stating a number its own tests prove wrong.
+test('released: reports the real quiet days, not the threshold', () => {
+  assert.match(messages.released(8, 'faizmullaa', 12), /after 12 quiet days/)
+  assert.doesNotMatch(messages.released(8, 'faizmullaa', 12), /after 7 quiet days/)
+})
+
+test('exempt: refuses without inventing a holder', () => {
+  const m = messages.exempt('griefer', 8)
+  assert.match(m, /@griefer/)
+  assert.match(m, /#8/)
+  assert.match(m, /spoken for/)
+  // An exempt issue usually has nobody assigned. Naming one would be a lie.
+  assert.doesNotMatch(m, /is with @/)
+})
+
 test('every message is non-empty', () => {
   assert.ok(messages.alreadyYours('a').length > 0)
   assert.ok(messages.unclaimed(4).length > 0)
   assert.ok(messages.notHolder('a', 4).length > 0)
-  assert.ok(messages.released(4, 'a').length > 0)
+  assert.ok(messages.released(4, 'a', 7).length > 0)
 })
 
 // Each of these is addressed TO a person. Emptying the body or dropping the
@@ -66,14 +83,14 @@ test('every message that addresses someone names them', () => {
   assert.match(messages.capReached('faizmullaa', [2, 3]), /@faizmullaa/)
   assert.match(messages.assignFailed('faizmullaa'), /@faizmullaa/)
   assert.match(messages.notHolder('faizmullaa', 4), /@faizmullaa/)
-  assert.match(messages.released(4, 'faizmullaa'), /@faizmullaa/)
+  assert.match(messages.released(4, 'faizmullaa', 7), /@faizmullaa/)
 })
 
 test('every message about an issue names the number', () => {
   assert.match(messages.held('a', 8, 'b'), /#8/)
   assert.match(messages.unclaimed(4), /#4/)
   assert.match(messages.notHolder('a', 4), /#4/)
-  assert.match(messages.released(4, 'a'), /#4/)
+  assert.match(messages.released(4, 'a', 7), /#4/)
 })
 
 // The nudge promises release "in 2 days". Nothing derives that from the
@@ -85,5 +102,5 @@ test('nudge copy still matches the thresholds it quotes', () => {
   assert.match(messages.nudge('a'), /in 2 days/)
   assert.match(messages.claimed('a'), new RegExp(`Quiet for ${NUDGE_AFTER_DAYS} days`))
   assert.match(messages.claimed('a'), new RegExp(`Quiet for ${RELEASE_AFTER_DAYS}`))
-  assert.match(messages.released(4, 'a'), new RegExp(`after ${RELEASE_AFTER_DAYS} quiet days`))
+  assert.match(messages.released(4, 'a', RELEASE_AFTER_DAYS), new RegExp(`after ${RELEASE_AFTER_DAYS} quiet days`))
 })

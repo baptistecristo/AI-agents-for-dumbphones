@@ -97,7 +97,7 @@ module.exports = async function run ({ github, context, core }) {
       }
       await github.rest.issues.createComment({
         owner, repo, issue_number: issue.number,
-        body: messages.released(issue.number, assignee.login)
+        body: messages.released(issue.number, assignee.login, out.days)
       })
     }
   }

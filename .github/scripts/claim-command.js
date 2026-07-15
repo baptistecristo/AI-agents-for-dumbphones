@@ -57,11 +57,19 @@ module.exports = async function run ({ github, context, core }) {
   const openClaims = issuesOnly(assigned)
 
   const out = decideClaim({
-    assignees: fresh.assignees, commenter, openClaims, issueNumber: issue.number
+    assignees: fresh.assignees,
+    commenter,
+    openClaims,
+    issueNumber: issue.number,
+    labels: fresh.labels
   })
 
   if (out.action === 'noop') {
     await say(messages.alreadyYours(commenter))
+    return
+  }
+  if (out.action === 'refuse' && out.reason === 'exempt') {
+    await say(messages.exempt(commenter, issue.number))
     return
   }
   if (out.action === 'refuse' && out.reason === 'held') {

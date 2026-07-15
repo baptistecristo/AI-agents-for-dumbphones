@@ -4,6 +4,7 @@ const MAX_OPEN_CLAIMS = 2
 const NUDGE_AFTER_DAYS = 5
 const RELEASE_AFTER_DAYS = 7
 const NUDGE_MARKER = '<!-- claim-bot:nudge -->'
+const EXEMPT_LABEL = 'claim-exempt'
 
 // The command must be alone on its own line. Without this, "I'll /claim this
 // next week" would assign the issue.
@@ -23,7 +24,16 @@ function issuesOnly (items) {
   return (items || []).filter((i) => !i.pull_request)
 }
 
-function decideClaim ({ assignees, commenter, openClaims, issueNumber }) {
+function hasExemptLabel (labels) {
+  return (labels || []).some((l) => l.name === EXEMPT_LABEL)
+}
+
+function decideClaim ({ assignees, commenter, openClaims, issueNumber, labels }) {
+  // The label means hands off, not merely "do not release". Stopping only the
+  // sweep would have left #8 claimable by a stranger the day this shipped, which
+  // is the exact thing the label exists to prevent.
+  if (hasExemptLabel(labels)) return { action: 'refuse', reason: 'exempt' }
+
   const current = assignees || []
   if (current.some((a) => a.login === commenter)) {
     return { action: 'noop', reason: 'already-yours' }
@@ -71,7 +81,7 @@ function quietDays (lastActivityIso, nowIso) {
 // issues on day 8. claim-exempt is the hatch for long-running work.
 function sweepSkipReason ({ hasPushAccess, labels }) {
   if (hasPushAccess) return 'collaborator'
-  if ((labels || []).some((l) => l.name === 'claim-exempt')) return 'claim-exempt'
+  if (hasExemptLabel(labels)) return EXEMPT_LABEL
   return null
 }
 

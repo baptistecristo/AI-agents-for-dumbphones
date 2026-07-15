@@ -16,6 +16,12 @@ const messages = {
 
   alreadyYours: (user) => `You already have this one, @${user}.`,
 
+  // Deliberately does not name a holder: an exempt issue often has no assignee,
+  // and inventing one would be the bot stating something it does not know.
+  exempt: (user, issueNumber) =>
+    `@${user}, #${issueNumber} is already spoken for. Other open ones here:\n` +
+    GOOD_FIRST_ISSUES,
+
   held: (user, issueNumber, holder) =>
     `@${user}, #${issueNumber} is with @${holder} right now. Other open ones here:\n` +
     GOOD_FIRST_ISSUES,
@@ -39,8 +45,12 @@ const messages = {
     `@${user}, still on this? A comment or a draft PR keeps it yours. If it's gone cold, ` +
     "`/unclaim` hands it to someone else. Otherwise I'll release it in 2 days.",
 
-  released: (issueNumber, user) =>
-    `Released #${issueNumber} after 7 quiet days. @${user} if you're still on it, ` +
+  // The number is the real count, not the threshold. The bot warns before it
+  // releases, so a claim that was already stale when the sweep first ran gets
+  // its warning then and is released later than day 7. Quoting "7" there would
+  // be the bot stating a fact it can see is wrong.
+  released: (issueNumber, user, days) =>
+    `Released #${issueNumber} after ${days} quiet days. @${user} if you're still on it, ` +
     '`/claim` takes it back.'
 }
 

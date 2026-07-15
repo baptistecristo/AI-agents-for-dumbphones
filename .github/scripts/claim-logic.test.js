@@ -134,6 +134,32 @@ test('decideClaim: the issue being claimed never counts toward its own cap', () 
   assert.deepEqual(out, { action: 'assign' })
 })
 
+// #8 is why this exists. It is open and unassigned, so without this a stranger
+// could /claim it the day the bot shipped and be handed a contributor's
+// in-progress work. A label that only stopped the sweep would not have helped.
+test('decideClaim: claim-exempt blocks the claim, not just the sweep', () => {
+  const out = decideClaim({
+    assignees: [],
+    commenter: 'griefer',
+    openClaims: [],
+    issueNumber: 8,
+    labels: [{ name: 'claim-exempt' }, { name: 'help wanted' }]
+  })
+  assert.equal(out.action, 'refuse')
+  assert.equal(out.reason, 'exempt')
+})
+
+test('decideClaim: an ordinary label does not block a claim', () => {
+  const out = decideClaim({
+    assignees: [],
+    commenter: 'faizmullaa',
+    openClaims: [],
+    issueNumber: 4,
+    labels: [{ name: 'good first issue' }]
+  })
+  assert.equal(out.action, 'assign')
+})
+
 test('decideUnclaim: the holder can release', () => {
   const out = decideUnclaim({ assignees: [{ login: 'faizmullaa' }], commenter: 'faizmullaa' })
   assert.deepEqual(out, { action: 'unassign' })
