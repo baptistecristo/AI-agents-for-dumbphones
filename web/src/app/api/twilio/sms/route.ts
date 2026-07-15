@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import twilio from "twilio";
 import { APP_URL, envOr } from "@/lib/env";
+import { normalizeLanguage } from "@/lib/language";
 import { handleSmsCommand } from "@/lib/sms-commands";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -34,6 +35,17 @@ export async function POST(req: Request) {
     .eq("e164", from)
     .not("verified_at", "is", null)
     .maybeSingle();
+
+  let language: "en" | "fr" = "fr";
+  if (phone?.user_id) {
+    const { data: profile } = await db
+      .from("profiles")
+      .select("preferred_language")
+      .eq("id", phone.user_id)
+      .maybeSingle();
+    language = normalizeLanguage(profile?.preferred_language);
+  }
+
   await db.from("sms_logs").insert({
     user_id: phone?.user_id ?? null,
     direction: "inbound",
@@ -41,10 +53,8 @@ export async function POST(req: Request) {
     body,
   });
 
-  // NB : les commandes SMS restent en français pour l'instant (bonne première
-  // issue) ; on passe quand même la langue par défaut pour typer la session.
   const reply = await handleSmsCommand(
-    { callId: "sms", userId: phone?.user_id ?? null, callerNumber: from, verified: false, language: "fr" },
+    { callId: "sms", userId: phone?.user_id ?? null, callerNumber: from, verified: false, language },
     body,
   );
 
