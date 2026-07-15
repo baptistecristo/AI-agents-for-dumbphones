@@ -77,6 +77,11 @@ export async function POST(req: Request) {
     userId: null as string | null,
     preferredName: null as string | null,
     language: defaultLanguage(), // appelant inconnu -> env DEFAULT_LANGUAGE
+    // Débit : volontairement absent de la session runtime. Le TTS local (Piper)
+    // n'expose aucun réglage de débit — PiperTTSService ne prend ni rate ni
+    // length_scale — donc renvoyer voice_speed ici serait une promesse vide.
+    // Le réglage par appelant ne vaut que sur le chemin Vapi (ElevenLabs).
+    voiceSpeed: null as number | null,
   };
   if (caller) {
     const { data: phone } = await db
@@ -95,6 +100,7 @@ export async function POST(req: Request) {
         userId: phone.user_id,
         preferredName: profile?.preferred_name || profile?.full_name || null,
         language: normalizeLanguage(profile?.preferred_language),
+        voiceSpeed: null,
       };
     }
   }

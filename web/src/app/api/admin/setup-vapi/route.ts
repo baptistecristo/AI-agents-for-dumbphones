@@ -19,11 +19,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "non autorisé" }, { status: 401 });
   }
 
-  // Assistant générique (l'assistant-request personnalise à chaque appel)
+  // Assistant générique (l'assistant-request personnalise à chaque appel).
+  // voiceSpeed: null -> débit normal, et c'est la seule réponse possible : cet
+  // assistant est persistant, il n'appartient à aucun appelant, donc il n'y a
+  // pas de profil dont lire le débit. Le réglage par personne s'applique dans
+  // le webhook (assistant-request), le seul endroit qui sait qui décroche.
   const generic = buildInboundAssistant({
     userId: null,
     preferredName: null,
     language: defaultLanguage(),
+    voiceSpeed: null,
   });
 
   const assistant = await upsertAssistant(envOr("VAPI_ASSISTANT_ID", "") || undefined, generic);

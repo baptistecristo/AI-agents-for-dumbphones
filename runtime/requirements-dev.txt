@@ -1,0 +1,10 @@
+# Outils de développement du runtime — NE PAS fusionner avec requirements.txt,
+# qui est installé sur le serveur vocal de production (un linter n'y a rien à faire).
+#
+# Pas de `-r requirements.txt` ici : ruff est un analyseur statique, il n'a besoin
+# d'aucune dépendance du projet. La CI peut donc linter sans installer pipecat
+# (et torch avec lui). Pour faire tourner le serveur, installer les deux fichiers.
+#
+# Version épinglée : un ruff local plus récent que celui de la CI signalerait des
+# erreurs différentes, ce qui est le meilleur moyen de dégoûter un contributeur.
+ruff==0.15.21

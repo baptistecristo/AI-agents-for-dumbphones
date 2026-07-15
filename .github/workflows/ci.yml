@@ -47,6 +47,13 @@ jobs:
         working-directory: runtime
       - run: python -m unittest discover -s tests
         working-directory: runtime
+      # Lint en dernier, volontairement : le garde-fou d'import ci-dessus est le
+      # signal qui compte. Une ligne trop longue ne doit pas empêcher de le voir.
+      # ruff n'a besoin d'aucune dépendance du projet, d'où son fichier séparé.
+      - run: pip install -r requirements-dev.txt
+        working-directory: runtime
+      - run: ruff check .
+        working-directory: runtime
 
   scripts:
     name: scripts — tests

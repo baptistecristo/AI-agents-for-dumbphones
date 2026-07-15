@@ -1,11 +1,27 @@
 // Skill Auth — code jetable (Twilio Verify) envoyé au NUMÉRO ENREGISTRÉ de la
 // personne, jamais au caller-ID (spoofable). Débloque les fonctions protégées
-// pour la durée de l'appel. Fail-closed : si Twilio n'est pas configuré, l'envoi
-// échoue proprement et les fonctions protégées restent verrouillées.
+// pour la durée de l'appel. Fail-closed : sans fournisseur SMS branché, aucun
+// code ne part et les fonctions protégées restent verrouillées — mais on le DIT,
+// au lieu de laisser croire à une panne passagère.
 
-import { checkPhoneVerification, startPhoneVerification } from "../twilio";
+import {
+  checkPhoneVerification,
+  smsProviderConfigured,
+  startPhoneVerification,
+  warnSmsProviderMissing,
+} from "../twilio";
 import { supabaseAdmin } from "../supabase/admin";
 import { CallSession, SkillResult, t } from "./types";
+
+// L'envoi de codes n'est pas configuré : état permanent et identique des deux
+// côtés du code (demande ET vérification). Ne nomme que le chemin « verify » :
+// « send » se configure séparément et peut très bien marcher ici.
+function codeSendingUnavailable(session: CallSession): SkillResult {
+  return t(session, {
+    fr: "INDISPONIBLE : l'envoi de codes n'est pas configuré sur cette instance, le code ne peut pas être envoyé. Ce n'est pas une panne passagère : ne propose pas de réessayer. Dis-le honnêtement, les données personnelles restent verrouillées tant que l'envoi de codes n'est pas configuré.",
+    en: "UNAVAILABLE: one-time code sending is not configured on this instance, so the code cannot be sent. This is not a temporary glitch: do not offer to retry. Say so honestly, personal data stays locked until one-time code sending is configured.",
+  });
+}
 
 // Le numéro vérifié du compte : cible unique de l'OTP. On prend le plus ancien
 // vérifié (stable), jamais un numéro fourni par l'appelant ou le LLM.
@@ -23,6 +39,12 @@ async function registeredNumber(userId: string): Promise<string | null> {
 
 export async function requestCode(session: CallSession): Promise<SkillResult> {
   if (!session.userId) return t(session, { fr: "Appelant non identifié.", en: "Unidentified caller." });
+  // Rien de branché : état permanent, pas un incident. On le distingue du catch
+  // plus bas, sinon l'agent propose de réessayer un envoi qui n'aura jamais lieu.
+  if (!smsProviderConfigured("verify")) {
+    warnSmsProviderMissing(`code demandé pendant l'appel ${session.callId}`);
+    return codeSendingUnavailable(session);
+  }
   const e164 = await registeredNumber(session.userId);
   if (!e164)
     return t(session, {
@@ -32,10 +54,13 @@ export async function requestCode(session: CallSession): Promise<SkillResult> {
   try {
     // Twilio Verify borne lui-même le nombre d'envois et la durée de validité.
     await startPhoneVerification(e164);
-  } catch {
+  } catch (err) {
+    // Vraie panne d'envoi : le fournisseur est bien branché mais n'a pas pris
+    // le SMS. Réessayer a du sens, contrairement au cas ci-dessus.
+    console.error("Envoi du code", err);
     return t(session, {
-      fr: "L'envoi du code est indisponible pour le moment.",
-      en: "Sending the code is unavailable right now.",
+      fr: "L'envoi du code a échoué. Propose de réessayer dans un instant.",
+      en: "Sending the code failed. Offer to try again in a moment.",
     });
   }
   return t(session, {
@@ -46,13 +71,26 @@ export async function requestCode(session: CallSession): Promise<SkillResult> {
 
 export async function verifyCode(session: CallSession, args: { code: string }): Promise<SkillResult> {
   if (!session.userId) return t(session, { fr: "Appelant non identifié.", en: "Unidentified caller." });
+  // Même garde qu'à la demande. Sans elle, checkPhoneVerification appelle env()
+  // qui lève, le catch plus bas l'aplatit en « Code incorrect », et la personne
+  // rappelle des chiffres corrects contre une instance qui n'a jamais pu lui en
+  // envoyer. Un défaut de configuration ne doit pas prendre le visage d'une
+  // erreur de l'appelant.
+  if (!smsProviderConfigured("verify")) {
+    warnSmsProviderMissing(`code vérifié pendant l'appel ${session.callId}`);
+    return codeSendingUnavailable(session);
+  }
   const e164 = await registeredNumber(session.userId);
   if (!e164) return t(session, { fr: "Aucun numéro vérifié.", en: "No verified number." });
   const cleaned = (args.code ?? "").replace(/\D/g, "");
   let ok = false;
   try {
     ok = await checkPhoneVerification(e164, cleaned);
-  } catch {
+  } catch (err) {
+    // Fournisseur branché mais en panne : on ne peut pas conclure. Le refus
+    // reste le même côté appelant (rien ne se débloque), mais il est tracé pour
+    // ne pas se lire comme une salve de codes faux.
+    console.error("Vérification du code", err);
     ok = false;
   }
   if (!ok) return t(session, { fr: "Code incorrect.", en: "Wrong code." });

@@ -3,7 +3,7 @@
 // Fournisseur : OpenRouteService (gratuit jusqu'à 2000 req/j, EU-friendly).
 
 import { envOr } from "../env";
-import { sendSms } from "../twilio";
+import { sendSms, smsProviderConfigured, warnSmsProviderMissing } from "../twilio";
 import { CallSession, SkillResult, t } from "./types";
 
 type OrsFeature = {
@@ -78,34 +78,76 @@ export async function getDirections(
     .map((s, i) => `${i + 1}. ${s.instruction} (${s.distance > 950 ? `${(s.distance / 1000).toFixed(1)} km` : `${Math.round(s.distance)} m`})`);
 
   // SMS en morceaux lisibles (max ~450 caractères par SMS, max 3 SMS)
-  if (session.callerNumber) {
+  const providerReady = smsProviderConfigured("send");
+  let smsSent = false;
+  let smsPartial = false;
+  if (session.callerNumber && !providerReady) {
+    warnSmsProviderMissing(`étapes d'itinéraire pendant l'appel ${session.callId}`);
+  } else if (session.callerNumber && steps.length > 0) {
     const header = t(session, {
       fr: `Itinéraire vers ${args.destination} (${km} km, ~${minutes} min) :\n`,
       en: `Route to ${args.destination} (${km} km, ~${minutes} min):\n`,
     });
+    // Le plafond porte sur l'ENVOI, pas sur le découpage. Le borner dans la
+    // condition de coupe laissait le dernier morceau tout absorber : sur un
+    // trajet en voiture de 60 étapes, le 3e « SMS » faisait plusieurs milliers
+    // de caractères, facturés en autant de segments concaténés.
     const chunks: string[] = [];
     let current = header;
     for (const step of steps) {
-      if ((current + step).length > 450 && chunks.length < 2) {
+      if ((current + step).length > 450) {
         chunks.push(current.trimEnd());
         current = "";
       }
       current += step + "\n";
     }
     chunks.push(current.trimEnd());
-    for (const [i, chunk] of chunks.entries()) {
+    // Au-delà de 3 SMS, on coupe — et on ne prétend pas avoir tout envoyé.
+    const sent = chunks.slice(0, 3);
+    for (const [i, chunk] of sent.entries()) {
       await sendSms({
         to: session.callerNumber,
-        body: chunks.length > 1 ? `(${i + 1}/${chunks.length}) ${chunk}` : chunk,
+        body: sent.length > 1 ? `(${i + 1}/${sent.length}) ${chunk}` : chunk,
         userId: session.userId ?? undefined,
         kind: "route_steps",
       });
     }
+    smsSent = sent.length === chunks.length;
+    smsPartial = !smsSent;
   }
 
+  // La phrase de fin dit ce qui s'est réellement passé : promettre un SMS qui
+  // n'est jamais parti laisse la personne guetter son téléphone pour rien.
+  // L'ordre des cas suit celui des causes, du plus précis au plus général.
+  const tail = smsSent
+    ? { fr: "Les étapes complètes viennent d'être envoyées par SMS.", en: "The full steps were just sent to you by SMS." }
+    : smsPartial
+      ? {
+          fr: "Le trajet est trop long pour tenir en SMS : seul le début vient de partir. Propose de lire la suite à voix haute.",
+          en: "The route is too long to text in full: only the start was just sent. Offer to read the rest out loud.",
+        }
+      : steps.length === 0
+        ? {
+            fr: "Le trajet est trop court pour avoir des étapes détaillées : il n'y a rien à envoyer par SMS.",
+            en: "The route is too short to have detailed steps: there is nothing to text.",
+          }
+        : !providerReady
+          ? {
+              fr: "Je ne peux pas envoyer les étapes par SMS : aucun fournisseur SMS n'est branché ici. Propose de lire la suite à voix haute.",
+              en: "I can't text the steps: no SMS provider is connected here. Offer to read the rest out loud.",
+            }
+          : {
+              fr: "Je n'ai pas de numéro où envoyer les étapes. Propose de lire la suite à voix haute.",
+              en: "I have no number to text the steps to. Offer to read the rest out loud.",
+            };
+
+  // Sans étape détaillée, « Pour commencer : » ne commence rien : on l'omet.
   const firstSteps = steps.slice(0, 2).join(t(session, { fr: " Puis : ", en: " Then: " }));
+  const opening = firstSteps
+    ? t(session, { fr: ` Pour commencer : ${firstSteps}.`, en: ` To start: ${firstSteps}.` })
+    : "";
   return t(session, {
-    fr: `Trajet de ${km} kilomètres, environ ${minutes} minutes ${args.mode === "driving" ? "en voiture" : "à pied"}. Pour commencer : ${firstSteps}. Les étapes complètes viennent d'être envoyées par SMS.`,
-    en: `A ${km}-kilometre trip, about ${minutes} minutes ${args.mode === "driving" ? "by car" : "on foot"}. To start: ${firstSteps}. The full steps were just sent to you by SMS.`,
+    fr: `Trajet de ${km} kilomètres, environ ${minutes} minutes ${args.mode === "driving" ? "en voiture" : "à pied"}.${opening} ${tail.fr}`,
+    en: `A ${km}-kilometre trip, about ${minutes} minutes ${args.mode === "driving" ? "by car" : "on foot"}.${opening} ${tail.en}`,
   });
 }

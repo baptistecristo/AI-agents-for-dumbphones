@@ -11,7 +11,8 @@ téléphone ⇄ opérateur (Twilio/Telnyx) ⇄ WS média ⇄ ce serveur :
 ```
 
 **Aucune logique métier ici** : prompts, skills, auth d'appel, consentements viennent
-de l'API Next.js. Ce serveur ne fait que l'audio temps réel.
+de l'API Next.js. Ce serveur ne fait que l'audio temps réel. Le code jetable part par
+SMS depuis l'API, jamais d'ici : ce runtime ne décide pas ce qui est protégé.
 
 ## Installation (serveur EU, ex. Hetzner CX32 ~10 €/mois)
 
