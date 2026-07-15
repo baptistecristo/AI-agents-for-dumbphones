@@ -54,13 +54,17 @@ function assignLanded (responseAssignees, login) {
 
 const MS_PER_DAY = 86400000
 
+// Every timestamp here decides whether someone keeps their issue. NaN compares
+// false against everything, so a bad one flowing onward would not error: it
+// would quietly lose a comparison and hand back the wrong date. It stops here.
+function parseTime (iso) {
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) throw new TypeError(`unparseable timestamp: ${iso}`)
+  return t
+}
+
 function quietDays (lastActivityIso, nowIso) {
-  const from = Date.parse(lastActivityIso)
-  const to = Date.parse(nowIso)
-  if (Number.isNaN(from) || Number.isNaN(to)) {
-    throw new TypeError(`unparseable timestamp: ${lastActivityIso} .. ${nowIso}`)
-  }
-  return Math.floor((to - from) / MS_PER_DAY)
+  return Math.floor((parseTime(nowIso) - parseTime(lastActivityIso)) / MS_PER_DAY)
 }
 
 // Without the push-access skip the bot unassigns Baptiste from his own
@@ -75,7 +79,7 @@ function decideSweep ({ assignedAt, assigneeComments, hasOpenLinkedPr, nudgedAt,
   if (hasOpenLinkedPr) return { action: 'none', reason: 'open-pr', days: 0 }
 
   const lastActivity = (assigneeComments || []).reduce(
-    (latest, c) => (Date.parse(c) > Date.parse(latest) ? c : latest),
+    (latest, c) => (parseTime(c) > parseTime(latest) ? c : latest),
     assignedAt
   )
   const days = quietDays(lastActivity, now)

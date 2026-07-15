@@ -269,3 +269,16 @@ test('decideSweep: the newest assignee comment wins, whatever the order', () => 
   })
   assert.equal(out.days, 3)
 })
+
+// The comment that would have saved this claim is the unreadable one. Compared
+// with `>`, its NaN loses, lastActivity falls back to the assignment date, and
+// the bot releases someone who spoke yesterday. It must fail loudly instead.
+test('decideSweep: an unparseable comment timestamp throws, never releases', () => {
+  assert.throws(() => decideSweep({
+    assignedAt: T0,
+    assigneeComments: ['not-a-date'],
+    hasOpenLinkedPr: false,
+    nudgedAt: null,
+    now: '2026-07-08T00:00:00Z'
+  }), TypeError)
+})
