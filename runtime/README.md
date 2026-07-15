@@ -68,7 +68,12 @@ est épinglé. Le changement de voix/langue en cours d'appel est un
 
 ## Limites connues (v1)
 
-- **DTMF sortant** (« tapez 1 ») non géré en self-host : les serveurs vocaux
-  ne peuvent pas être navigués. Le runtime Vapi (`RUNTIME=vapi`) le fait.
+- **DTMF sortant** (« tapez 1 ») pas encore câblé : ce runtime ne navigue pas les
+  serveurs vocaux. Pipecat fournit les deux moitiés, elles ne sont pas branchées
+  dans `bot.py` : `OutputDTMFFrame` passe par `BaseOutputTransport.write_dtmf`,
+  qui pousse les tons dans le flux audio quand le transport n'a pas de DTMF natif
+  (media stream Twilio compris), et `IVRNavigator`
+  (`pipecat.extensions.ivr.ivr_navigator`) choisit la touche. Le runtime Vapi
+  (`RUNTIME=vapi`) le fait déjà.
 - Latence : compter 1,5–2,5 s sur CPU (whisper medium). Passer `WHISPER_MODEL=small`
   ou un GPU pour descendre vers ~1 s. Vapi fait mieux (~0,8 s) si la démo l'exige.
