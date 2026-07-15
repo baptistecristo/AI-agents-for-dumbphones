@@ -4,25 +4,78 @@
 // quand parler est difficile. Réutilise exactement les mêmes skills que la voix.
 //
 // Commandes : AIDE · METEO [ville] [demain] · AGENDA [demain] ·
-// RAPPEL <heure> <texte> [demain] · RAPPELS · FAIT <texte> · ROUTE <destination>
+// RAPPEL <heure> <texte> [demain] · RAPPELS · DEJA <texte> · ROUTE <destination>
+// FAIT est reconnu mais refusé ici (voir plus bas) : il n'existe qu'en appel.
 //
-// Volontairement absents par SMS : envoi de SMS à des tiers et appels sortants
-// (actions protégées : elles exigent le code jetable en appel, que le canal SMS
-// ne sait pas gérer). Les commandes SMS de lecture (AGENDA, RAPPELS) restent sur
-// l'identité de l'expéditeur — validée par la signature Twilio — sans code : le
-// gate `verify_code` ne couvre que le canal vocal (voir la note de périmètre).
+// Ce routeur est une SECONDE porte vers les mêmes skills que la voix. Ce qui est
+// verrouillé en appel doit donc l'être ici, et ça se décide dans gate.ts, jamais
+// dans ce fichier : requiresVerificationOverSms() y dérive la règle du SMS de la
+// même table que la voix, pour qu'aucune des deux ne puisse dériver seule.
+//
+// La signature Twilio ne remplace pas le code : elle prouve que la requête vient
+// de Twilio, pas que l'expéditeur est le bon. L'identifiant d'expéditeur s'usurpe.
+// Mais un SMS usurpé part sans retour : la réponse est envoyée à celui qui a
+// écrit, donc au numéro ENREGISTRÉ. L'usurpateur déclenche une lecture que la
+// victime seule reçoit, et n'apprend rien. En appel il l'ENTENDRAIT : c'est
+// pourquoi l'agenda exige le code au téléphone et pas ici. Ce qu'il ÉCRIT, en
+// revanche, s'écrit quand même — d'où le refus des écritures. Voir gate.ts, qui
+// porte le raisonnement complet.
+//
+// Un code jetable ne se vérifie pas par SMS : il part vers le numéro enregistré
+// et se valide DANS l'appel, qui lui donne son début et sa fin. Par SMS il n'y a
+// pas d'appel où ce déverrouillage puisse vivre, et faire répondre un code pour
+// dire « j'ai pris mes cachets » coûterait deux messages de plus que décrocher.
+// Les écritures protégées sont donc refusées ici, avec la seule issue qui existe
+// vraiment : appeler.
 
+import { cityFromAddress } from "./skills";
 import { listEvents } from "./skills/agenda";
 import { getDirections } from "./skills/directions";
+import { requiresVerificationOverSms, type ToolName } from "./skills/gate";
 import { didIAlready, listReminders, markDone, setReminder } from "./skills/reminders";
 import { CallSession, t } from "./skills/types";
 import { getWeather } from "./skills/weather";
 import { supabaseAdmin } from "./supabase/admin";
+import { smsProviderConfigured } from "./twilio";
 
+// FAIT n'est pas annoncé : il sera refusé (gate.ts). Le lister serait promettre
+// par écrit ce qu'on refuse au message suivant.
 const getHelp = (session: CallSession) => t(session, {
-  fr: `Commandes SMS :\nMETEO [ville] [demain]\nAGENDA [demain]\nRAPPEL 18h30 prendre médicament [demain]\nRAPPELS (liste)\nFAIT <quoi> (marquer fait)\nDEJA <quoi> (est-ce fait ?)\nROUTE <destination>\nOu appelez-moi, tout simplement 📞`,
-  en: `SMS Commands:\nWEATHER [city] [tomorrow]\nAGENDA [tomorrow]\nREMIND 18:30 take medication [tomorrow]\nREMINDERS (list)\nDONE <what> (mark done)\nALREADY <what> (is it done?)\nROUTE <destination>\nOr simply call me 📞`
+  fr: `Commandes SMS :\nMETEO [ville] [demain]\nAGENDA [demain]\nRAPPEL 18h30 prendre médicament [demain]\nRAPPELS (liste)\nDEJA <quoi> (est-ce fait ?)\nROUTE <destination>\n« C'est fait » est au téléphone : appelez-moi 📞`,
+  en: `SMS Commands:\nWEATHER [city] [tomorrow]\nAGENDA [tomorrow]\nREMIND 18:30 take medication [tomorrow]\nREMINDERS (list)\nALREADY <what> (is it done?)\nROUTE <destination>\n"It's done" is by phone: call me 📞`
 });
+
+// Refus d'un outil classé "code" sur un canal qui n'a aucun moyen de vérifier un
+// code. On ne dit pas « demandez un code » : par SMS, ça n'aboutit nulle part.
+// Deux textes, parce que « appelez-moi » est un mensonge sur une instance sans
+// service Verify — l'appel y refusera exactement la même chose (cf. index.ts).
+function gatedOverSms(session: CallSession, keyword: string): string {
+  if (!smsProviderConfigured("verify")) {
+    return t(session, {
+      fr: `« ${keyword} » demande un code de sécurité, et l'envoi de codes n'est pas configuré ici : cette fonction est hors service, par SMS comme au téléphone. Envoyez AIDE pour ce qui marche.`,
+      en: `"${keyword}" needs a security code, and code sending isn't configured here: this feature is out of service, by SMS and by phone alike. Send HELP for what does work.`,
+    });
+  }
+  return t(session, {
+    fr: `« ${keyword} » demande un code de sécurité, et un code ne peut se vérifier qu'au téléphone. Appelez-moi, je vous le demanderai 📞`,
+    en: `"${keyword}" needs a security code, and a code can only be checked by phone. Call me and I'll ask you for it 📞`,
+  });
+}
+
+// Passage unique de ce routeur vers un skill : chaque commande déclare le NOM
+// d'outil de gate.ts qu'elle exécute, et le gate s'applique ici plutôt que dans
+// chaque branche. Le typage en ToolName fait échouer la compilation sur un nom
+// inventé, et une reclassification dans gate.ts se propage ici toute seule —
+// c'est exactement ce qui manquait quand FAIT marquait les rappels sans code.
+async function runTool(
+  session: CallSession,
+  keyword: string,
+  name: ToolName,
+  run: () => Promise<string>,
+): Promise<string> {
+  if (requiresVerificationOverSms(name)) return gatedOverSms(session, keyword);
+  return await run();
+}
 
 // Construit une date Europe/Paris pour aujourd'hui/demain à HH:MM
 function parisDateAt(hour: number, minute: number, dayOffset: number): Date {
@@ -77,12 +130,16 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
   if (["METEO", "WEATHER"].includes(k)) {
     const isTomorrow = /\b(DEMAIN|TOMORROW)\b/i.test(args);
     const city = args.replace(/\b(demain|tomorrow)\b/gi, "").trim() || undefined;
-    return await getWeather(session, { city, day: isTomorrow ? "tomorrow" : "today" }, await homeCity(session));
+    return await runTool(session, k, "get_weather", async () =>
+      getWeather(session, { city, day: isTomorrow ? "tomorrow" : "today" }, await homeCity(session)),
+    );
   }
 
   if (["AGENDA", "SCHEDULE"].includes(k)) {
     const isTomorrow = /\b(DEMAIN|TOMORROW)\b/i.test(args);
-    return await listEvents(session, { day: isTomorrow ? "tomorrow" : "today" });
+    return await runTool(session, k, "list_events", async () =>
+      listEvents(session, { day: isTomorrow ? "tomorrow" : "today" }),
+    );
   }
 
   if (["RAPPEL", "REMIND", "REMINDER"].includes(k)) {
@@ -101,26 +158,37 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
       });
     }
     const due = parisDateAt(time.hour, time.minute, tomorrow ? 1 : 0);
-    return await setReminder(session, { text: reminderText, due_at: due.toISOString() });
+    return await runTool(session, k, "set_reminder", async () =>
+      setReminder(session, { text: reminderText, due_at: due.toISOString() }),
+    );
   }
 
   if (["RAPPELS", "REMINDERS"].includes(k)) {
-    return await listReminders(session);
+    return await runTool(session, k, "list_reminders", async () => listReminders(session));
   }
 
   if (["FAIT", "DONE"].includes(k)) {
-    if (!args) return t(session, { fr: "Format : FAIT prendre médicament", en: "Format: DONE take medication" });
-    return await markDone(session, { what: args });
+    // Le gate refuse avant de lire `args` : sans quoi « FAIT » tout court se
+    // ferait répondre par un format à suivre, une invitation à réessayer une
+    // commande qui n'aboutira jamais par SMS.
+    return await runTool(session, k, "mark_done", async () => {
+      if (!args) return t(session, { fr: "Format : FAIT prendre médicament", en: "Format: DONE take medication" });
+      return markDone(session, { what: args });
+    });
   }
 
   if (["DEJA", "ALREADY"].includes(k)) {
-    if (!args) return t(session, { fr: "Format : DEJA pris médicament", en: "Format: ALREADY took medication" });
-    return await didIAlready(session, { what: args });
+    return await runTool(session, k, "did_i_already", async () => {
+      if (!args) return t(session, { fr: "Format : DEJA pris médicament", en: "Format: ALREADY took medication" });
+      return didIAlready(session, { what: args });
+    });
   }
 
   if (["ROUTE", "ITINERAIRE", "DIRECTIONS"].includes(k)) {
-    if (!args) return t(session, { fr: "Format : ROUTE 12 rue de la Paix, Paris", en: "Format: ROUTE 12 rue de la Paix, Paris" });
-    return await getDirections(session, { destination: args }, await homeAddress(session));
+    return await runTool(session, k, "get_directions", async () => {
+      if (!args) return t(session, { fr: "Format : ROUTE 12 rue de la Paix, Paris", en: "Format: ROUTE 12 rue de la Paix, Paris" });
+      return getDirections(session, { destination: args }, await homeAddress(session));
+    });
   }
 
   if (k === "STOP") {
@@ -147,7 +215,7 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
   }
 
   if (/m[ée]t[ée]o/i.test(upper) || /weather/i.test(upper)) {
-    return await getWeather(session, {}, await homeCity(session));
+    return await runTool(session, k, "get_weather", async () => getWeather(session, {}, await homeCity(session)));
   }
 
   return t(session, {
@@ -161,10 +229,12 @@ async function homeAddress(session: CallSession): Promise<string | null> {
   return data?.home_address ?? null;
 }
 
+// La même réduction que la voix, pas une deuxième. Celle qui vivait ici gardait
+// la ligne entière dès que l'adresse n'avait ni virgule ni code postal (« 12 rue
+// des Lilas Lyon ») et l'envoyait telle quelle au géocodeur. METEO est "free" :
+// le gate ne la rattrape pas, il ne voit que des noms d'outils, jamais un
+// argument. Le calcul écrit deux fois avait dérivé une fois ; il n'est plus
+// écrit qu'ici, et se teste au même endroit que la voix (home-address.test.ts).
 async function homeCity(session: CallSession): Promise<string | null> {
-  const addr = await homeAddress(session);
-  if (!addr) return null;
-  // Dernière composante de l'adresse = la ville, la plupart du temps
-  const parts = addr.split(",").map((p) => p.trim().replace(/^\d{5}\s*/, ""));
-  return parts[parts.length - 1] || null;
+  return cityFromAddress(await homeAddress(session));
 }

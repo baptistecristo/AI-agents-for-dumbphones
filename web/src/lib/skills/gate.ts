@@ -78,3 +78,48 @@ export function isClassified(name: string): name is ToolName {
 export function requiresVerification(name: string): boolean {
   return !isClassified(name) || TOOL_POLICY[name] === "code";
 }
+
+// ——— Le canal SMS ———
+//
+// Ce que le code protège n'est pas la même chose selon l'outil, et le SMS rend
+// cette différence visible.
+//
+// "read"  = la donnée EST la réponse. Rien ne persiste.
+// "write" = l'effet survit à la réponse, ou part vers un tiers.
+//
+// En appel, les deux exigent le code : l'usurpateur ENTEND la réponse, donc une
+// lecture le sert directement. Par SMS, non — la réponse est envoyée à celui qui
+// a écrit, c'est-à-dire au numéro ENREGISTRÉ, jamais à l'usurpateur, qui n'a
+// aucun moyen de la lire. Il déclencherait une lecture que la victime seule
+// reçoit. Une écriture, elle, s'exécute quoi qu'il arrive à la réponse : FAIT
+// éteint le rappel, et le cron ne l'enverra plus.
+//
+// D'où la règle : par SMS, seules les écritures exigent le code — et comme un
+// code ne peut pas se vérifier par SMS, elles sont simplement refusées là-bas.
+//
+// Ceci n'est PAS une seconde table qu'on tiendrait à la main à côté de la
+// première : `Record<CodeToolName, …>` la dérive de TOOL_POLICY. Classer un
+// nouvel outil "code" sans dire ce qu'il fait ne compile pas, et repasser un
+// outil en "free" fait rejeter sa ligne ici. Les deux tables ne peuvent pas
+// diverger en silence, ce qui était la seule bonne raison de n'en avoir qu'une.
+export type ToolEffect = "read" | "write";
+
+type CodeToolName = { [K in ToolName]: (typeof TOOL_POLICY)[K] extends "code" ? K : never }[ToolName];
+
+export const CODE_TOOL_EFFECT = {
+  list_events: "read",
+  find_contact: "read",
+  recall: "read",
+  create_event: "write",
+  move_event: "write",
+  mark_done: "write",
+  send_sms: "write",
+  place_call: "write",
+} as const satisfies Record<CodeToolName, ToolEffect>;
+
+// Fail-closed comme au-dessus : un nom inconnu exige le code ici aussi.
+export function requiresVerificationOverSms(name: string): boolean {
+  if (!isClassified(name)) return true;
+  if (TOOL_POLICY[name] !== "code") return false;
+  return CODE_TOOL_EFFECT[name as CodeToolName] === "write";
+}
