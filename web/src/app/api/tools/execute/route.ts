@@ -1,6 +1,6 @@
-// Runtime self-host -> exécution d'un outil. La logique métier (skills, PIN,
-// consentements) vit ici, dans une seule implémentation, quel que soit le
-// runtime vocal (Vapi ou Pipecat).
+// Runtime self-host -> exécution d'un outil. La logique métier (skills, auth
+// d'appel, consentements) vit ici, dans une seule implémentation, quel que soit
+// le runtime vocal (Vapi ou Pipecat).
 
 import { NextResponse } from "next/server";
 import { safeEqual } from "@/lib/crypto";

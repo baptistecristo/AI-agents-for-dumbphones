@@ -10,8 +10,8 @@ téléphone ⇄ opérateur (Twilio/Telnyx) ⇄ WS média ⇄ ce serveur :
                                              └── outils → API Next.js (/api/tools/execute)
 ```
 
-**Aucune logique métier ici** : prompts, skills, PIN, consentements viennent de
-l'API Next.js. Ce serveur ne fait que l'audio temps réel.
+**Aucune logique métier ici** : prompts, skills, auth d'appel, consentements viennent
+de l'API Next.js. Ce serveur ne fait que l'audio temps réel.
 
 ## Installation (serveur EU, ex. Hetzner CX32 ~10 €/mois)
 

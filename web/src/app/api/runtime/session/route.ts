@@ -1,7 +1,7 @@
 // Runtime self-host -> ouverture de session d'appel.
 // Le runtime (Pipecat) envoie le numéro appelant et l'id d'appel opérateur ;
 // on renvoie le prompt système personnalisé + le message d'accueil + la langue
-// de l'appel, et on crée la ligne de journal qui servira de session (PIN,
+// de l'appel, et on crée la ligne de journal qui servira de session (auth,
 // user, langue) aux outils.
 
 import { NextResponse } from "next/server";
