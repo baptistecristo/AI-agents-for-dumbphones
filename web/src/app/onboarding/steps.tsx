@@ -14,7 +14,7 @@ export function PhoneStep() {
     <section>
       <h1 className="text-2xl font-semibold">Le téléphone à relier</h1>
       <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-        C'est le numéro depuis lequel tu appelleras ton assistant. Un code de vérification
+        C&apos;est le numéro depuis lequel tu appelleras ton assistant. Un code de vérification
         arrive par SMS.
       </p>
 
@@ -30,7 +30,7 @@ export function PhoneStep() {
           <input name="full_name" placeholder="Sam Riviere" className="w-full rounded-lg border border-neutral-300 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium">Comment l'assistant doit t'appeler</span>
+          <span className="mb-1 block text-sm font-medium">Comment l&apos;assistant doit t&apos;appeler</span>
           <input name="preferred_name" placeholder="Sam" className="w-full rounded-lg border border-neutral-300 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900" />
         </label>
         <label className="block">

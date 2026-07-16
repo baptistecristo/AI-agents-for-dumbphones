@@ -168,10 +168,10 @@ export default function Home() {
         <h2 className="font-display text-3xl">Conçu pour être sûr, pas pour te retenir</h2>
         <div className="mt-10 grid gap-8 md:grid-cols-3">
           <div>
-            <h3 className="text-lg font-bold">🔐 Un code secret, à l'oral</h3>
+            <h3 className="text-lg font-bold">🔐 Un code secret, à l&apos;oral</h3>
             <p className="mt-2 leading-relaxed text-ink/75">
               Envoyer un message ou passer un appel à ta place exige ton code à quatre chiffres.
-              Un numéro d'appelant peut être usurpé ; le code, non.
+              Un numéro d&apos;appelant peut être usurpé ; le code, non.
             </p>
           </div>
           <div>
@@ -185,7 +185,7 @@ export default function Home() {
             <h3 className="text-lg font-bold">🇪🇺 Des données en Europe</h3>
             <p className="mt-2 leading-relaxed text-ink/75">
               Consentements enregistrés et révocables, données hébergées en Europe, droit à
-              l'effacement. Tu vois tout sur ton tableau de bord. Et le code est open-source.
+              l&apos;effacement. Tu vois tout sur ton tableau de bord. Et le code est open-source.
             </p>
           </div>
         </div>
@@ -195,11 +195,11 @@ export default function Home() {
       <section className="bg-bleu">
         <div className="mx-auto max-w-6xl px-6 py-16 text-center">
           <h2 className="font-display text-3xl text-white">
-            Garde l'utile. Largue le reste.
+            Garde l&apos;utile. Largue le reste.
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-white/80">
             Crée ton compte, relie ton numéro, choisis ton code secret. Il ne reste
-            plus qu'à appeler.
+            plus qu&apos;à appeler.
           </p>
           <a
             href="/connexion"
@@ -212,7 +212,7 @@ export default function Home() {
 
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-ink/60">
         <p>
-          ☎ {brand} — l'assistant qu'on appelle, tout simplement.
+          ☎ {brand} — l&apos;assistant qu&apos;on appelle, tout simplement.
         </p>
         <p>Fait en France · Données hébergées en Europe · RGPD</p>
       </footer>

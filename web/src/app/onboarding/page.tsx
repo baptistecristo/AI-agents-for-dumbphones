@@ -42,9 +42,9 @@ export default async function OnboardingPage() {
 
       {step === "google" && (
         <section>
-          <h1 className="text-2xl font-semibold">Connecter l'agenda et les contacts</h1>
+          <h1 className="text-2xl font-semibold">Connecter l&apos;agenda et les contacts</h1>
           <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-            En connectant ton compte Google, l'assistant pourra lire et gérer tes rendez-vous et
+            En connectant ton compte Google, l&apos;assistant pourra lire et gérer tes rendez-vous et
             retrouver tes contacts. Les accès sont chiffrés et révocables à tout moment.
           </p>
           <div className="mt-8 space-y-3">
@@ -56,7 +56,7 @@ export default async function OnboardingPage() {
             </a>
             <form action={skipGoogle}>
               <button className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900">
-                Passer pour l'instant
+                Passer pour l&apos;instant
               </button>
             </form>
           </div>
@@ -65,9 +65,9 @@ export default async function OnboardingPage() {
 
       {step === "consents" && (
         <section>
-          <h1 className="text-2xl font-semibold">Ce que l'assistant a le droit de faire</h1>
+          <h1 className="text-2xl font-semibold">Ce que l&apos;assistant a le droit de faire</h1>
           <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-            Chaque autorisation est enregistrée, horodatée et révocable. C'est toi qui décides.
+            Chaque autorisation est enregistrée, horodatée et révocable. C&apos;est toi qui décides.
           </p>
           <form action={saveConsents} className="mt-8 space-y-3">
             {[
