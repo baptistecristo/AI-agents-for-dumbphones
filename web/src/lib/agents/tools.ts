@@ -96,6 +96,26 @@ export function agentTools() {
       ["city"],
     ),
 
+    // --- Dictionnaire ---
+    serverTool(
+      "define",
+      "Give the dictionary definition of an English word.",
+      { word: { type: "string", description: "The English word to define" } },
+      ["word"],
+    ),
+
+    // --- Conversion (unités + devises) ---
+    serverTool(
+      "convert",
+      "Convert a value between units (distance, weight, temperature, volume, speed) or between currencies (ISO codes like EUR, USD).",
+      {
+        value: { type: "number", description: "The numeric amount to convert" },
+        from: { type: "string", description: "Source unit or currency, e.g. 'km', 'kg', 'celsius', 'EUR'" },
+        to: { type: "string", description: "Target unit or currency, e.g. 'miles', 'lb', 'fahrenheit', 'USD'" },
+      },
+      ["value", "from", "to"],
+    ),
+
     // --- Navigation par SMS ---
     serverTool(
       "get_directions",

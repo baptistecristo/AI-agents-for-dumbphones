@@ -38,7 +38,7 @@ describe("requiresVerification", () => {
   });
 
   it("leaves light writes, generic queries, and the auth tools free", () => {
-    for (const n of ["get_weather", "get_directions", "get_current_time", "set_reminder", "remember", "request_code", "verify_code"])
+    for (const n of ["get_weather", "get_directions", "get_current_time", "define", "convert", "set_reminder", "remember", "request_code", "verify_code"])
       expect(requiresVerification(n)).toBe(false);
   });
 

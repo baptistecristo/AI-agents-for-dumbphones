@@ -168,6 +168,23 @@ def inbound_tools() -> ToolsSchema:
                 },
                 ["city"],
             ),
+            _schema(
+                "define",
+                "Donne la définition d'un mot anglais.",
+                {"word": {"type": "string", "description": "Le mot anglais à définir"}},
+                ["word"],
+            ),
+            _schema(
+                "convert",
+                "Convertit une valeur entre unités (distance, poids, température, volume, vitesse) "
+                "ou entre devises (codes ISO comme EUR, USD).",
+                {
+                    "value": {"type": "number", "description": "La valeur numérique à convertir"},
+                    "from": {"type": "string", "description": "Unité ou devise de départ, ex. 'km', 'kg', 'celsius', 'EUR'"},
+                    "to": {"type": "string", "description": "Unité ou devise d'arrivée, ex. 'miles', 'lb', 'fahrenheit', 'USD'"},
+                },
+                ["value", "from", "to"],
+            ),
             END_CALL,
         ]
     )
