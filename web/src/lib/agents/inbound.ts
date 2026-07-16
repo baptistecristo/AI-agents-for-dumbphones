@@ -5,6 +5,7 @@
 
 import { envOr } from "../env";
 import { Language } from "../language";
+import { smsProviderConfigured } from "../twilio";
 import { webhookServer } from "../vapi";
 import { agentTools } from "./tools";
 
@@ -61,6 +62,22 @@ export function clampVoiceSpeed(value: unknown): number {
   return Math.min(VOICE_SPEED_MAX, Math.max(VOICE_SPEED_MIN, n));
 }
 
+// Quand aucun outil ne couvre la demande : l'agent le note
+// (report_unsupported_request) au lieu de refuser sèchement. L'offre de SMS
+// n'apparaît QUE si l'envoi est branché — on ne promet jamais un texte qu'on ne
+// peut pas envoyer, et l'offre s'allume d'elle-même le jour où le SMS est branché.
+function gapSection(language: Language): string {
+  const smsOffer = smsProviderConfigured("send");
+  if (language === "en") {
+    return `If asked for anything none of your tools cover, don't just refuse: say "I can't do that yet, but I've noted it so it will be added", and call report_unsupported_request once with a short English summary of the missing capability (not the caller's private details).${
+      smsOffer ? ` Then ask: "Do you want an SMS when it's done?" — if they say yes, set notify_caller=true.` : ""
+    }`;
+  }
+  return `Si on te demande autre chose qu'aucun de tes outils ne couvre, ne refuse pas sèchement : dis « Je ne sais pas encore faire ça, mais je l'ai noté pour qu'on l'ajoute », et appelle report_unsupported_request une fois avec un court résumé en anglais de la capacité manquante (pas les détails privés de la personne).${
+    smsOffer ? ` Ensuite demande : « Tu veux un SMS quand ce sera fait ? » — si oui, mets notify_caller=true.` : ""
+  }`;
+}
+
 function promptFr(ctx: CallerContext, name: string): string {
   return `Tu es ${name}, l'assistant téléphonique de ${ctx.preferredName ?? "ton interlocuteur"}.
 La personne qui t'appelle a volontairement quitté son smartphone pour retrouver son attention. Elle a gardé un téléphone simple, sans écran utile : ta voix est le seul « côté utile » du smartphone qu'elle a conservé. Sois exactement ça : utile, rapide, puis silencieux.
@@ -105,7 +122,7 @@ Si la personne t'apprend quelque chose de durable (un lieu, une personne, une pr
 - Contacts : retrouver un numéro.
 - Messages : envoyer un SMS dicté (avec relecture et code).
 - Appels : réserver un resto, un taxi, prendre un rendez-vous à sa place (avec récapitulatif et code). Le résultat arrivera par SMS.
-Si on te demande autre chose, dis honnêtement que tu ne sais pas encore le faire.
+${gapSection("fr")}
 
 # Début d'appel
 Salue par le prénom si tu le connais, puis UNE question ouverte : « Salut ${ctx.preferredName ?? ""} ! Qu'est-ce que je peux faire pour toi ? »
@@ -156,7 +173,7 @@ If the person tells you something durable (a place, a person, a preference), kee
 - Contacts: find a phone number.
 - Messages: send a dictated SMS (with read-back and code).
 - Calls: book a restaurant, a taxi, or an appointment on their behalf (with recap and code). The result will arrive by SMS.
-If asked for anything else, say honestly that you can't do that yet.
+${gapSection("en")}
 
 # Start of call
 Greet by first name if you know it, then ONE open question: "Hey ${ctx.preferredName ?? ""}! What can I do for you?"

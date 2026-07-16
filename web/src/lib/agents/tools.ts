@@ -198,5 +198,21 @@ export function agentTools() {
       { code: { type: "string", description: "The 4 digits the user said or keyed in" } },
       ["code"],
     ),
+
+    // --- Manque de capacité : remonter ce que l'agent ne sait pas encore faire ---
+    serverTool(
+      "report_unsupported_request",
+      "Call this ONCE when the caller asks for something that NO other tool can do — a capability the agent is missing. Describe the missing CAPABILITY in general English terms, not the caller's private details. Set notify_caller=true only if you offered an SMS and the caller said yes.",
+      {
+        request_summary: {
+          type: "string",
+          description: "Short English, capability-level, e.g. 'check live train departure times for a station'.",
+        },
+        caller_words: { type: "string", description: "Roughly what the caller said, for context (optional)." },
+        language: { type: "string", enum: ["en", "fr"], description: "The call language." },
+        notify_caller: { type: "boolean", description: "true only if the caller asked to be texted when it ships." },
+      },
+      ["request_summary"],
+    ),
   ];
 }

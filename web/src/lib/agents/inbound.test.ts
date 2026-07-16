@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   type CallerContext,
   VOICE_SPEED_DEFAULT,
@@ -73,5 +73,41 @@ describe("inboundSystemPrompt — consignes de la personne", () => {
     expect(prompt).toContain("x".repeat(800));
     expect(prompt).not.toContain("x".repeat(801));
     expect(prompt).toContain("…");
+  });
+});
+
+// Manque de capacité : l'agent le remonte (report_unsupported_request) au lieu de
+// refuser sèchement, et n'offre le SMS que si l'envoi est réellement branché — on
+// ne promet jamais un texte qu'on ne peut pas envoyer.
+const OLD_ENV = { ...process.env };
+afterEach(() => {
+  process.env = { ...OLD_ENV };
+});
+
+function withSmsOn() {
+  process.env.TWILIO_ACCOUNT_SID = "sid";
+  process.env.TWILIO_AUTH_TOKEN = "tok";
+  process.env.TWILIO_FROM_NUMBER = "+10000000000";
+}
+function withSmsOff() {
+  delete process.env.TWILIO_ACCOUNT_SID;
+  delete process.env.TWILIO_AUTH_TOKEN;
+  delete process.env.TWILIO_FROM_NUMBER;
+}
+
+describe("inboundSystemPrompt — remontée des manques de capacité", () => {
+  it("always instructs the agent to call report_unsupported_request", () => {
+    withSmsOff();
+    const p = inboundSystemPrompt(ctx({ language: "en" }));
+    expect(p).toContain("report_unsupported_request");
+    expect(p).toContain("noted it so it will be added");
+  });
+
+  it("offers the SMS only when a send-capable SMS provider is connected", () => {
+    withSmsOff();
+    expect(inboundSystemPrompt(ctx({ language: "en" }))).not.toContain("SMS when it's done");
+
+    withSmsOn();
+    expect(inboundSystemPrompt(ctx({ language: "en" }))).toContain("SMS when it's done");
   });
 });
