@@ -3,6 +3,14 @@
 import { CallSession, SkillResult, t } from "./types";
 
 export async function define(session: CallSession, args: { word?: string }): Promise<SkillResult> {
+  // dictionaryapi.dev est anglais uniquement. Sur un appel FR, on le dit plutôt
+  // que de lire une définition anglaise à quelqu'un qui a appelé en français.
+  if (session.language !== "en")
+    return t(session, {
+      fr: "Je ne sais définir que des mots anglais.",
+      en: "I can only define English words.",
+    });
+
   const word = args.word?.trim();
   if (!word) return t(session, { fr: "Quel mot dois-je définir ?", en: "Which word should I define?" });
 
