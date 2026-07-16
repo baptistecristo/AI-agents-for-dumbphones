@@ -196,6 +196,13 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
           </button>
         </form>
       )}
+
+      {providers.length > 0 && (
+        <p className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+          L&apos;e-mail n&apos;arrive pas, ou le lien ne s&apos;ouvre pas ? Certains services
+          (Outlook…) bloquent les liens de connexion. Essaie plutôt un des boutons plus haut.
+        </p>
+      )}
     </main>
   );
 }
