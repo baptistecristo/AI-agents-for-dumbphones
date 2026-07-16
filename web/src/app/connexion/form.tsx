@@ -106,7 +106,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
         </p>
       )}
 
-      {providers.length > 0 && (
+      {(providers.length > 0 || !emailCode) && (
         <div className="mt-8 space-y-3">
           {providers.map(({ id, status }) => {
             const { label, Icon } = PROVIDERS[id];
@@ -124,7 +124,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
                   </span>
                   {label}
                   <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
-                    bientôt
+                    à fixer
                   </span>
                 </Link>
               );
@@ -142,10 +142,29 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
               </button>
             );
           })}
+
+          {!emailCode && (
+            // Le code à 6 chiffres exige un SMTP custom + {{ .Token }} dans le
+            // gabarit. Tant que ce n'est pas en place, on l'affiche « à fixer »,
+            // comme les fournisseurs OAuth pas encore câblés. Le lien magique,
+            // lui, part par le service e-mail par défaut : il fonctionne.
+            <Link
+              href="/connexion/bientot?p=code"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white/60 px-4 py-3 text-base font-semibold text-neutral-500 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900/50 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            >
+              <span className="opacity-60" aria-hidden="true">
+                🔢
+              </span>
+              Connexion par code à 6 chiffres
+              <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
+                à fixer
+              </span>
+            </Link>
+          )}
         </div>
       )}
 
-      {providers.length > 0 && (
+      {(providers.length > 0 || !emailCode) && (
         <div className="my-8 flex items-center gap-4" aria-hidden="true">
           <span className="h-px flex-1 bg-black/10 dark:bg-white/15" />
           <span className="text-sm text-neutral-500">ou par e-mail</span>
