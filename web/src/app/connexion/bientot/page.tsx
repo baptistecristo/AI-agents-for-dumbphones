@@ -1,9 +1,15 @@
-// Page d'attente pour une connexion OAuth pas encore activée. Le bouton
-// « bientôt » du formulaire renvoie ici (avec ?p=<fournisseur>) au lieu de lancer
-// une connexion qui échouerait. Publique : hors du matcher du proxy.
+// Page d'attente pour une méthode de connexion pas encore en service (OAuth pas
+// câblé, ou code e-mail sans SMTP). Les boutons « à fixer » du formulaire
+// renvoient ici avec ?p=<méthode>, au lieu de lancer une connexion qui
+// échouerait. Publique : hors du matcher du proxy.
 
 import Link from "next/link";
 import { PROVIDERS, type OAuthId } from "../providers";
+
+// Méthodes hors OAuth qui peuvent aussi être « à fixer ».
+const OTHER: Record<string, string> = {
+  code: "La connexion par code à 6 chiffres",
+};
 
 export default async function BientotPage({
   searchParams,
@@ -11,7 +17,8 @@ export default async function BientotPage({
   searchParams: Promise<{ p?: string }>;
 }) {
   const p = (await searchParams).p;
-  const name = p && p in PROVIDERS ? PROVIDERS[p as OAuthId].name : "Ce service";
+  const name =
+    p && p in PROVIDERS ? PROVIDERS[p as OAuthId].name : p && OTHER[p] ? OTHER[p] : "Cette connexion";
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16 text-center">
@@ -19,11 +26,12 @@ export default async function BientotPage({
         🚧
       </p>
       <h1 className="mt-4 font-display text-3xl tracking-tight text-ink dark:text-neutral-50">
-        {name} arrive bientôt
+        {name}
       </h1>
-      <p className="mt-3 text-neutral-600 dark:text-neutral-400">
-        Cette connexion n&apos;est pas encore activée. En attendant, connecte-toi par e-mail :
-        c&apos;est déjà prêt, et le code à 6 chiffres marche même quand le lien est bloqué.
+      <p className="mt-1 text-sm font-bold uppercase tracking-wide text-neutral-400">à fixer</p>
+      <p className="mt-4 text-neutral-600 dark:text-neutral-400">
+        Cette méthode n&apos;est pas encore en service. En attendant, connecte-toi par e-mail avec
+        le lien reçu : il fonctionne déjà.
       </p>
       <Link
         href="/connexion"
