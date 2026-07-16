@@ -52,6 +52,13 @@ link and the token so one email serves both methods:
 checks it). `{{ .ConfirmationURL }}` is the PKCE magic link that lands on
 `/auth/callback`.
 
+The code input on the sign-in page is off by default and shown only when
+`NEXT_PUBLIC_EMAIL_CODE=true`. Turn it on **after** you have custom SMTP and the
+`{{ .Token }}` template above — otherwise the email carries only a link and the
+code field would ask for a code that never arrives. With the default Supabase
+email service (no custom SMTP), templates can't be edited, so leave the code off
+and rely on the magic link.
+
 ## 3. OAuth providers
 
 Enable each under **Authentication → Providers**. Every provider redirects back to
