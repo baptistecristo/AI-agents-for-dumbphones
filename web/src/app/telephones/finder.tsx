@@ -225,9 +225,12 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
           </p>
         </div>
         {price != null && (
-          <p className="whitespace-nowrap font-display text-lg">
-            {tr.approxPrice} {currency(region)}
-            {price}
+          <p className="flex items-baseline gap-0.5 whitespace-nowrap">
+            <span className="text-xs text-ink/40">~</span>
+            <span className="text-lg font-bold tabular-nums text-ink">
+              {currency(region)}
+              {price}
+            </span>
           </p>
         )}
       </div>
@@ -259,9 +262,15 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
           href={shop.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-block rounded-lg bg-bleu px-4 py-2 text-center text-sm font-bold text-white transition hover:bg-bleu-fonce"
+          className="mt-4 block rounded-lg border border-bleu/20 bg-bleu/5 px-4 py-2.5 text-center transition hover:border-bleu/50 hover:bg-bleu/10"
         >
-          {tr.shopAt} {shop.label} ↗
+          <span className="block text-[11px] font-bold uppercase tracking-wide text-ink/45">{tr.shopAt}:</span>
+          <span className="mt-0.5 inline-flex items-center gap-1 text-base font-bold text-bleu">
+            {shop.label}
+            <span aria-hidden className="text-xs">
+              ↗
+            </span>
+          </span>
         </a>
       )}
     </li>
