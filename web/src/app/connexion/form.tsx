@@ -30,6 +30,10 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
 
   const providers = displayedProviders();
   const hasLive = providers.some((p) => p.status === "live");
+  // Le code à 6 chiffres n'existe que si le gabarit e-mail expose {{ .Token }},
+  // ce qui exige un SMTP custom. Sans ça, l'e-mail ne contient qu'un lien :
+  // on masque le champ code pour ne pas réclamer un code qui n'arrive jamais.
+  const emailCode = process.env.NEXT_PUBLIC_EMAIL_CODE === "true";
 
   async function signInWith(id: OAuthId) {
     setError(null);
@@ -154,34 +158,45 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
           <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
             <p className="font-bold">C&apos;est envoyé 📬</p>
             <p className="mt-1 text-sm">
-              Ouvre l&apos;e-mail reçu à <strong>{email}</strong>. Saisis le code à 6 chiffres
-              ci-dessous, ou clique simplement le lien.
+              {emailCode ? (
+                <>
+                  Ouvre l&apos;e-mail reçu à <strong>{email}</strong>. Saisis le code à 6 chiffres
+                  ci-dessous, ou clique simplement le lien.
+                </>
+              ) : (
+                <>
+                  Ouvre l&apos;e-mail reçu à <strong>{email}</strong> et clique sur le lien pour
+                  continuer.
+                </>
+              )}
             </p>
           </div>
 
-          <form onSubmit={verifyCode} className="space-y-4">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium">Code à 6 chiffres</span>
-              <input
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]*"
-                maxLength={6}
-                required
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="123456"
-                className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={verifying || code.length < 6}
-              className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
-            >
-              {verifying ? "Vérification…" : "Valider le code"}
-            </button>
-          </form>
+          {emailCode && (
+            <form onSubmit={verifyCode} className="space-y-4">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium">Code à 6 chiffres</span>
+                <input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="123456"
+                  className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={verifying || code.length < 6}
+                className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
+              >
+                {verifying ? "Vérification…" : "Valider le code"}
+              </button>
+            </form>
+          )}
 
           <button
             type="button"
@@ -213,7 +228,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
             disabled={sending}
             className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
           >
-            {sending ? "Envoi…" : "Recevoir mon lien et mon code"}
+            {sending ? "Envoi…" : emailCode ? "Recevoir mon lien et mon code" : "Recevoir mon lien de connexion"}
           </button>
         </form>
       )}
