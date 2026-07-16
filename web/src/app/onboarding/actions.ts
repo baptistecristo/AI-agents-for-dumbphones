@@ -73,6 +73,17 @@ export async function saveIdentity(formData: FormData): Promise<void> {
     .eq("id", userId);
 }
 
+export async function skipPhone(formData: FormData): Promise<void> {
+  // Aucun téléphone à relier pour l'instant : on enregistre l'identité déjà
+  // saisie et on avance sans vérification SMS. Le numéro pourra être ajouté plus
+  // tard depuis « Compte ». Sans cette sortie, l'onboarding bloque l'accès à
+  // l'espace tant qu'un code SMS n'est pas reçu — impossible sans téléphone.
+  const userId = await currentUserId();
+  await saveIdentity(formData);
+  await supabaseAdmin().from("profiles").update({ onboarding_step: "google" }).eq("id", userId);
+  redirect("/onboarding");
+}
+
 export async function skipGoogle(): Promise<void> {
   const userId = await currentUserId();
   await supabaseAdmin().from("profiles").update({ onboarding_step: "consents" }).eq("id", userId);
