@@ -52,6 +52,13 @@ link and the token so one email serves both methods:
 checks it). `{{ .ConfirmationURL }}` is the PKCE magic link that lands on
 `/auth/callback`.
 
+The code input on the sign-in page is off by default and shown only when
+`NEXT_PUBLIC_EMAIL_CODE=true`. Turn it on **after** you have custom SMTP and the
+`{{ .Token }}` template above — otherwise the email carries only a link and the
+code field would ask for a code that never arrives. With the default Supabase
+email service (no custom SMTP), templates can't be edited, so leave the code off
+and rely on the magic link.
+
 ## 3. OAuth providers
 
 Enable each under **Authentication → Providers**. Every provider redirects back to
@@ -69,17 +76,28 @@ https://<your-project-ref>.supabase.co/auth/v1/callback
 | Apple | Apple Developer → Services ID + key | Requires a **paid** Apple Developer account. The heaviest to set up; skip until you want it (see the env var below). |
 | GitHub | GitHub → Settings → Developer settings → OAuth Apps | Set "Authorization callback URL" to the Supabase callback. Cheapest to add; handy for the developer early-adopters. |
 
-## 4. Which buttons show — `NEXT_PUBLIC_AUTH_PROVIDERS`
+## 4. Which buttons show — two env vars
 
-The OAuth buttons are gated by this env var so you never render a button for a
-provider you have not enabled (clicking one would error). Comma-separated;
-unset = all four shown.
+Buttons are driven by two comma-separated lists so you never render a live button
+for a provider you have not enabled (clicking one would error), while still being
+able to advertise what is coming:
+
+- **`NEXT_PUBLIC_AUTH_PROVIDERS`** — providers actually enabled in Supabase. Their
+  button starts the OAuth flow. **Default: none.**
+- **`NEXT_PUBLIC_AUTH_PROVIDERS_SOON`** — providers shown greyed out with a
+  "bientôt" badge; the button routes to `/connexion/bientot` instead of signing
+  in. **Default: all four.**
+
+A provider listed as live wins over soon. Move a provider from the soon list to
+the live list the day you wire it (OAuth app created, secret pasted into
+Supabase).
 
 ```bash
-# show only the ones you have configured
-NEXT_PUBLIC_AUTH_PROVIDERS=google,microsoft,github   # e.g. Apple not ready yet
+# Google is live; the rest are still "coming soon"
+NEXT_PUBLIC_AUTH_PROVIDERS=google
+NEXT_PUBLIC_AUTH_PROVIDERS_SOON=apple,microsoft,github
 ```
 
 Accepted tokens: `google`, `apple`, `microsoft` (alias `outlook`, `azure`),
-`github`. The email link and 6-digit code are always available regardless of this
-setting.
+`github`. The email link and 6-digit code are always available regardless of
+these settings.

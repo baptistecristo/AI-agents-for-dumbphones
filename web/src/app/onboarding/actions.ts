@@ -30,11 +30,15 @@ export async function sendOtp(_prev: unknown, formData: FormData): Promise<{ ok:
   if (!e164) return { ok: false, message: "Numéro invalide. Exemple : 06 12 34 56 78" };
   try {
     await startPhoneVerification(e164);
-    return { ok: true, message: "Code envoyé par SMS.", e164 };
   } catch (err) {
     console.error("OTP send", err);
     return { ok: false, message: "Impossible d'envoyer le code (service SMS). Réessaie." };
   }
+  // On enregistre au passage l'identité saisie dans le même formulaire : il n'y a
+  // plus de bouton « Enregistrer » séparé. Ces champs restent modifiables ensuite
+  // dans « Mon agent ».
+  await saveIdentity(formData);
+  return { ok: true, message: "Code envoyé par SMS.", e164 };
 }
 
 export async function confirmOtp(_prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string }> {

@@ -1,15 +1,23 @@
 // Fournisseurs de connexion OAuth affichés sur le formulaire.
 //
-// La liste est pilotée par NEXT_PUBLIC_AUTH_PROVIDERS (liste séparée par des
-// virgules) pour n'afficher QUE les boutons dont le fournisseur est réellement
-// activé dans Supabase — sinon un clic mènerait à une erreur « provider not
-// enabled ». Non définie : on montre les quatre (choix par défaut du projet).
-// Le code e-mail à 6 chiffres, lui, ne dépend d'aucun fournisseur et reste
-// toujours disponible comme repli.
+// Deux listes, pilotées par l'environnement (valeurs : google, apple, microsoft
+// [= azure/outlook], github) :
+//   • NEXT_PUBLIC_AUTH_PROVIDERS      — fournisseurs RÉELLEMENT activés dans
+//     Supabase. Leur bouton lance la connexion. Défaut : aucun. Tant qu'un
+//     fournisseur n'est pas activé côté Supabase, son bouton ne doit pas tenter
+//     de connexion (« provider not enabled »).
+//   • NEXT_PUBLIC_AUTH_PROVIDERS_SOON — fournisseurs affichés en « bientôt » :
+//     bouton visible mais grisé, qui renvoie vers une page d'attente. Défaut :
+//     les quatre. On déplace un fournisseur de SOON vers PROVIDERS le jour où on
+//     l'active (app OAuth créée, secret collé dans Supabase).
+//
+// Un fournisseur « live » l'emporte sur « soon ». Le lien magique et le code
+// e-mail à 6 chiffres ne dépendent d'aucun fournisseur et restent toujours là.
 
 import type { Provider } from "@supabase/supabase-js";
 
 export type OAuthId = "google" | "apple" | "azure" | "github";
+export type ProviderStatus = "live" | "soon";
 
 const ORDER: OAuthId[] = ["google", "apple", "azure", "github"];
 
@@ -23,22 +31,35 @@ const ALIASES: Record<string, OAuthId> = {
   github: "github",
 };
 
-export const PROVIDERS: Record<OAuthId, { label: string; provider: Provider; Icon: () => React.ReactElement }> = {
-  google: { label: "Continuer avec Google", provider: "google", Icon: GoogleIcon },
-  apple: { label: "Continuer avec Apple", provider: "apple", Icon: AppleIcon },
-  azure: { label: "Continuer avec Microsoft", provider: "azure", Icon: MicrosoftIcon },
-  github: { label: "Continuer avec GitHub", provider: "github", Icon: GitHubIcon },
+export const PROVIDERS: Record<
+  OAuthId,
+  { label: string; name: string; provider: Provider; Icon: () => React.ReactElement }
+> = {
+  google: { label: "Continuer avec Google", name: "Google", provider: "google", Icon: GoogleIcon },
+  apple: { label: "Continuer avec Apple", name: "Apple", provider: "apple", Icon: AppleIcon },
+  azure: { label: "Continuer avec Microsoft", name: "Microsoft", provider: "azure", Icon: MicrosoftIcon },
+  github: { label: "Continuer avec GitHub", name: "GitHub", provider: "github", Icon: GitHubIcon },
 };
 
-export function enabledProviders(): OAuthId[] {
-  const raw = process.env.NEXT_PUBLIC_AUTH_PROVIDERS;
-  if (raw === undefined) return ORDER;
+function parseList(raw: string | undefined, fallback: OAuthId[]): OAuthId[] {
+  if (raw === undefined) return fallback;
   const wanted = new Set<OAuthId>();
   for (const token of raw.split(",")) {
     const id = ALIASES[token.trim().toLowerCase()];
     if (id) wanted.add(id);
   }
   return ORDER.filter((id) => wanted.has(id));
+}
+
+export function displayedProviders(): { id: OAuthId; status: ProviderStatus }[] {
+  const live = parseList(process.env.NEXT_PUBLIC_AUTH_PROVIDERS, []);
+  const soon = parseList(process.env.NEXT_PUBLIC_AUTH_PROVIDERS_SOON, ORDER);
+  return ORDER.filter((id) => live.includes(id) || soon.includes(id)).map(
+    (id): { id: OAuthId; status: ProviderStatus } => ({
+      id,
+      status: live.includes(id) ? "live" : "soon",
+    }),
+  );
 }
 
 function GoogleIcon() {

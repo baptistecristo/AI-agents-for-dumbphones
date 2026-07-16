@@ -12,9 +12,10 @@
 // saisit, à son gré. Le code ne dépend d'aucune allowlist de redirection, donc
 // il fonctionne dès que le gabarit e-mail expose {{ .Token }}.
 
+import Link from "next/link";
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { enabledProviders, PROVIDERS, type OAuthId } from "./providers";
+import { displayedProviders, PROVIDERS, type OAuthId } from "./providers";
 
 const NEXT = "/onboarding";
 
@@ -27,7 +28,12 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
   const [verifying, setVerifying] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<OAuthId | null>(null);
 
-  const providers = enabledProviders();
+  const providers = displayedProviders();
+  const hasLive = providers.some((p) => p.status === "live");
+  // Le code à 6 chiffres n'existe que si le gabarit e-mail expose {{ .Token }},
+  // ce qui exige un SMTP custom. Sans ça, l'e-mail ne contient qu'un lien :
+  // on masque le champ code pour ne pas réclamer un code qui n'arrive jamais.
+  const emailCode = process.env.NEXT_PUBLIC_EMAIL_CODE === "true";
 
   async function signInWith(id: OAuthId) {
     setError(null);
@@ -100,10 +106,29 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
         </p>
       )}
 
-      {providers.length > 0 && (
+      {(providers.length > 0 || !emailCode) && (
         <div className="mt-8 space-y-3">
-          {providers.map((id) => {
+          {providers.map(({ id, status }) => {
             const { label, Icon } = PROVIDERS[id];
+            if (status === "soon") {
+              // Bouton visible mais pas encore câblé : on renvoie vers une page
+              // d'attente plutôt que de lancer une connexion qui échouerait.
+              return (
+                <Link
+                  key={id}
+                  href={`/connexion/bientot?p=${id}`}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white/60 px-4 py-3 text-base font-semibold text-neutral-500 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900/50 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                >
+                  <span className="opacity-60">
+                    <Icon />
+                  </span>
+                  {label}
+                  <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
+                    à fixer
+                  </span>
+                </Link>
+              );
+            }
             return (
               <button
                 key={id}
@@ -117,10 +142,29 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
               </button>
             );
           })}
+
+          {!emailCode && (
+            // Le code à 6 chiffres exige un SMTP custom + {{ .Token }} dans le
+            // gabarit. Tant que ce n'est pas en place, on l'affiche « à fixer »,
+            // comme les fournisseurs OAuth pas encore câblés. Le lien magique,
+            // lui, part par le service e-mail par défaut : il fonctionne.
+            <Link
+              href="/connexion/bientot?p=code"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white/60 px-4 py-3 text-base font-semibold text-neutral-500 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900/50 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            >
+              <span className="opacity-60" aria-hidden="true">
+                🔢
+              </span>
+              Connexion par code à 6 chiffres
+              <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
+                à fixer
+              </span>
+            </Link>
+          )}
         </div>
       )}
 
-      {providers.length > 0 && (
+      {(providers.length > 0 || !emailCode) && (
         <div className="my-8 flex items-center gap-4" aria-hidden="true">
           <span className="h-px flex-1 bg-black/10 dark:bg-white/15" />
           <span className="text-sm text-neutral-500">ou par e-mail</span>
@@ -133,34 +177,45 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
           <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
             <p className="font-bold">C&apos;est envoyé 📬</p>
             <p className="mt-1 text-sm">
-              Ouvre l&apos;e-mail reçu à <strong>{email}</strong>. Saisis le code à 6 chiffres
-              ci-dessous, ou clique simplement le lien.
+              {emailCode ? (
+                <>
+                  Ouvre l&apos;e-mail reçu à <strong>{email}</strong>. Saisis le code à 6 chiffres
+                  ci-dessous, ou clique simplement le lien.
+                </>
+              ) : (
+                <>
+                  Ouvre l&apos;e-mail reçu à <strong>{email}</strong> et clique sur le lien pour
+                  continuer.
+                </>
+              )}
             </p>
           </div>
 
-          <form onSubmit={verifyCode} className="space-y-4">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium">Code à 6 chiffres</span>
-              <input
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]*"
-                maxLength={6}
-                required
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="123456"
-                className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={verifying || code.length < 6}
-              className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
-            >
-              {verifying ? "Vérification…" : "Valider le code"}
-            </button>
-          </form>
+          {emailCode && (
+            <form onSubmit={verifyCode} className="space-y-4">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium">Code à 6 chiffres</span>
+                <input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="123456"
+                  className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={verifying || code.length < 6}
+                className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
+              >
+                {verifying ? "Vérification…" : "Valider le code"}
+              </button>
+            </form>
+          )}
 
           <button
             type="button"
@@ -192,12 +247,12 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
             disabled={sending}
             className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
           >
-            {sending ? "Envoi…" : "Recevoir mon lien et mon code"}
+            {sending ? "Envoi…" : emailCode ? "Recevoir mon lien et mon code" : "Recevoir mon lien de connexion"}
           </button>
         </form>
       )}
 
-      {providers.length > 0 && (
+      {hasLive && (
         <p className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
           L&apos;e-mail n&apos;arrive pas, ou le lien ne s&apos;ouvre pas ? Certains services
           (Outlook…) bloquent les liens de connexion. Essaie plutôt un des boutons plus haut.
