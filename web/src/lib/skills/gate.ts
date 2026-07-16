@@ -56,6 +56,8 @@ export const TOOL_POLICY = {
   get_weather: "free",
   get_current_time: "free",
   get_directions: "free",
+  define: "free",
+  convert: "free",
   // Écriture légère
   remember: "free",
   // Auth : doivent rester libres pour pouvoir débloquer le reste

@@ -7,6 +7,8 @@ import { smsProviderConfigured } from "../twilio";
 import { createEvent, listEvents, moveEvent } from "./agenda";
 import { requestCode, verifyCode } from "./auth";
 import { findContact } from "./contacts";
+import { convert } from "./convert";
+import { define } from "./define";
 import { getDirections } from "./directions";
 import { isClassified, requiresVerification } from "./gate";
 import { recall, remember } from "./memory";
@@ -109,6 +111,10 @@ export async function executeTool(name: string, args: any, session: CallSession)
         return await getDirections(session, args, session.verified ? await homeAddressOf(session.userId) : null);
       case "get_current_time":
         return await getCurrentTime(session, args);
+      case "define":
+        return await define(session, args);
+      case "convert":
+        return await convert(session, args);
       case "find_contact":
         return await findContact(session, args);
       case "send_sms":
