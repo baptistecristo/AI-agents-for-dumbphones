@@ -180,8 +180,14 @@ def inbound_tools() -> ToolsSchema:
                 "ou entre devises (codes ISO comme EUR, USD).",
                 {
                     "value": {"type": "number", "description": "La valeur numérique à convertir"},
-                    "from": {"type": "string", "description": "Unité ou devise de départ, ex. 'km', 'kg', 'celsius', 'EUR'"},
-                    "to": {"type": "string", "description": "Unité ou devise d'arrivée, ex. 'miles', 'lb', 'fahrenheit', 'USD'"},
+                    "from": {
+                        "type": "string",
+                        "description": "Unité ou devise de départ, ex. 'km', 'kg', 'celsius', 'EUR'",
+                    },
+                    "to": {
+                        "type": "string",
+                        "description": "Unité ou devise d'arrivée, ex. 'miles', 'lb', 'fahrenheit', 'USD'",
+                    },
                 },
                 ["value", "from", "to"],
             ),
