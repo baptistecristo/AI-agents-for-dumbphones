@@ -191,6 +191,20 @@ def inbound_tools() -> ToolsSchema:
                 },
                 ["value", "from", "to"],
             ),
+            _schema(
+                "report_unsupported_request",
+                "À appeler UNE fois quand l'appelant demande quelque chose qu'AUCUN autre outil ne "
+                "sait faire — une capacité manquante. Décris la CAPABILITÉ manquante en anglais, en "
+                "termes généraux, pas les détails privés de l'appelant. notify_caller=true seulement "
+                "si tu as proposé un SMS et que l'appelant a dit oui.",
+                {
+                    "request_summary": {"type": "string"},
+                    "caller_words": {"type": "string"},
+                    "language": {"type": "string", "enum": ["en", "fr"]},
+                    "notify_caller": {"type": "boolean"},
+                },
+                ["request_summary"],
+            ),
             END_CALL,
         ]
     )
