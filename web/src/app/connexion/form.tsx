@@ -12,9 +12,10 @@
 // saisit, à son gré. Le code ne dépend d'aucune allowlist de redirection, donc
 // il fonctionne dès que le gabarit e-mail expose {{ .Token }}.
 
+import Link from "next/link";
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { enabledProviders, PROVIDERS, type OAuthId } from "./providers";
+import { displayedProviders, PROVIDERS, type OAuthId } from "./providers";
 
 const NEXT = "/onboarding";
 
@@ -27,7 +28,8 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
   const [verifying, setVerifying] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<OAuthId | null>(null);
 
-  const providers = enabledProviders();
+  const providers = displayedProviders();
+  const hasLive = providers.some((p) => p.status === "live");
 
   async function signInWith(id: OAuthId) {
     setError(null);
@@ -102,8 +104,27 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
 
       {providers.length > 0 && (
         <div className="mt-8 space-y-3">
-          {providers.map((id) => {
+          {providers.map(({ id, status }) => {
             const { label, Icon } = PROVIDERS[id];
+            if (status === "soon") {
+              // Bouton visible mais pas encore câblé : on renvoie vers une page
+              // d'attente plutôt que de lancer une connexion qui échouerait.
+              return (
+                <Link
+                  key={id}
+                  href={`/connexion/bientot?p=${id}`}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white/60 px-4 py-3 text-base font-semibold text-neutral-500 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900/50 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                >
+                  <span className="opacity-60">
+                    <Icon />
+                  </span>
+                  {label}
+                  <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
+                    bientôt
+                  </span>
+                </Link>
+              );
+            }
             return (
               <button
                 key={id}
@@ -197,7 +218,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
         </form>
       )}
 
-      {providers.length > 0 && (
+      {hasLive && (
         <p className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
           L&apos;e-mail n&apos;arrive pas, ou le lien ne s&apos;ouvre pas ? Certains services
           (Outlook…) bloquent les liens de connexion. Essaie plutôt un des boutons plus haut.
