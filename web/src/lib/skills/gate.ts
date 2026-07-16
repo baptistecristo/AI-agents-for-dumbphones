@@ -60,6 +60,9 @@ export const TOOL_POLICY = {
   convert: "free",
   // Écriture légère
   remember: "free",
+  // Remonter un manque de capacité : aucune donnée stockée lue, rien d'envoyé
+  // ni dépensé pendant l'appel — juste une note pour le mainteneur.
+  report_unsupported_request: "free",
   // Auth : doivent rester libres pour pouvoir débloquer le reste
   request_code: "free",
   verify_code: "free",

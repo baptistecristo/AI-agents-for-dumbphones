@@ -10,6 +10,7 @@ import { findContact } from "./contacts";
 import { convert } from "./convert";
 import { define } from "./define";
 import { getDirections } from "./directions";
+import { reportGap } from "./gap";
 import { isClassified, requiresVerification } from "./gate";
 import { recall, remember } from "./memory";
 import { placeCall } from "./outbound";
@@ -129,6 +130,8 @@ export async function executeTool(name: string, args: any, session: CallSession)
         return await requestCode(session);
       case "verify_code":
         return await verifyCode(session, args);
+      case "report_unsupported_request":
+        return await reportGap(session, args);
       default:
         return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.` });
     }
