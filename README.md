@@ -72,8 +72,8 @@ Those gaps *are* the invitation. The fun open problems:
   self-host voice, this is the problem:
   [Discussion #9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 - 📞 **The number is capped and rate-limited now** — 180s per call, 5 calls per caller
-  per hour, 60 a day across everyone. That was the last thing standing between it and
-  this README. Now it's the credits.
+  per hour, 20 per caller per day, and 60 a day across everyone. That was the last thing
+  standing between it and this README. Now it's the credits.
 
 If you build voice AI, self-host things, or just want people to be able to leave the
 smartphone without going off-grid — **we'd love a few founding co-builders.** See
@@ -119,7 +119,7 @@ is drawn the way it is.
 | Public-number guard | 180s per call, plus three limits that stack: **5 calls per caller per hour** and **20 per caller per day** stop one person redialling in a loop, and **60 calls a day across everyone** caps the bill even if the abuse comes from fifty different numbers. Over any of them, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
 | Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, call auth (`request_code` / `verify_code`) | `web/src/lib/skills/` |
-| SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `DONE`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift) | `web/src/lib/sms-commands.ts` |
+| SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `REMINDERS`, `ALREADY`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift). `DONE` is phone-only — marking a reminder done needs the call | `web/src/lib/sms-commands.ts` |
 | Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`, `voice_speed`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
 | Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent), dashboard with language and speaking-rate settings | `web/src/app/` |
 
