@@ -31,6 +31,9 @@ export default function Home() {
           ☎ <span className="ml-1">{brand}</span>
         </p>
         <nav className="flex items-center gap-4">
+          <a href="/telephones" className="hidden rounded-lg px-4 py-2 text-sm font-bold text-bleu underline-offset-4 hover:underline sm:inline">
+            Trouver un téléphone
+          </a>
           <a href="/connexion" className="rounded-lg px-4 py-2 text-sm font-bold text-bleu underline-offset-4 hover:underline">
             Se connecter
           </a>
@@ -160,6 +163,26 @@ export default function Home() {
             <span className="font-mono font-bold">AGENDA</span> ou{" "}
             <span className="font-mono font-bold">RAPPEL 18h appeler le proprio</span> au même numéro.
           </p>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------- choisir un téléphone */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="flex flex-col items-start gap-6 rounded-2xl border border-ink/10 bg-bulle/50 p-8 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-xl">
+            <h2 className="font-display text-2xl">Pas encore de téléphone simple&nbsp;?</h2>
+            <p className="mt-2 leading-relaxed text-ink/75">
+              Barre ou clapet, avec Google Maps ou juste le strict nécessaire, en Europe ou ailleurs :
+              notre comparateur t&rsquo;aide à trouver le tien, filtres à l&rsquo;appui — et distingue
+              honnêtement un vrai téléphone simple d&rsquo;un smartphone déguisé.
+            </p>
+          </div>
+          <a
+            href="/telephones"
+            className="whitespace-nowrap rounded-xl bg-bleu px-6 py-4 text-lg font-bold text-white shadow-md transition hover:bg-bleu-fonce"
+          >
+            Trouver mon téléphone →
+          </a>
         </div>
       </section>
 
