@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/baptistecristo/AI-agents-for-dumbphones/actions/workflows/ci.yml/badge.svg)](https://github.com/baptistecristo/AI-agents-for-dumbphones/actions/workflows/ci.yml)
 
+**Live site:** [ai-agents-for-dumbphones.vercel.app](https://ai-agents-for-dumbphones.vercel.app). Create an account and set up your agent from the browser.
+
 **Ditch the smartphone without losing the useful stuff.** Instead of an app, you
 **call a number and ask** — weather, directions, a reminder, your calendar, a quick
 text to someone. You keep the utility, you lose the doomscroll.
@@ -192,6 +194,8 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
 
 - **[Sift](https://github.com/edleeman17/sift)** (MIT) — a dumbphone companion; its
   two-way SMS command model inspired `sms-commands.ts`.
+- **[Omi](https://github.com/BasedHardware/omi)** — an open-source, wearable AI
+  companion; a kindred bet that you keep the assistant and drop the screen.
 - **[Pipecat](https://github.com/pipecat-ai/pipecat)** / **[LiveKit Agents](https://github.com/livekit/agents)** — the self-hosted voice runtime.
 - **Open-Meteo** (free weather + geocoding), **OpenRouteService** (EU directions), **WorldTimeAPI** (free local time).
 

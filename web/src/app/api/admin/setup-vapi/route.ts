@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     preferredName: null,
     language: defaultLanguage(),
     voiceSpeed: null,
+    agentInstructions: null,
   });
 
   const assistant = await upsertAssistant(envOr("VAPI_ASSISTANT_ID", "") || undefined, generic);

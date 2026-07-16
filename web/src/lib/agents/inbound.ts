@@ -18,7 +18,26 @@ export type CallerContext = {
   // null = personne à qui l'attribuer (appelant inconnu, assistant générique)
   // -> débit normal.
   voiceSpeed: number | null;
+  // Consignes libres écrites par la personne dans l'espace « Mon agent »
+  // (colonne profiles.agent_instructions). null / vide = aucune consigne.
+  // Guide le ton et les préférences durables, jamais les règles de sécurité.
+  agentInstructions: string | null;
 };
+
+// Section « consignes de la personne », insérée AVANT les règles d'or : ce qui
+// vient après pèse plus lourd pour le modèle, donc la confirmation et le code
+// restent au-dessus d'un texte que la personne aurait écrit pour les contourner.
+// On borne la longueur : une consigne démesurée ne doit pas noyer le prompt.
+const AGENT_INSTRUCTIONS_MAX = 800;
+function instructionsSection(instructions: string | null, language: Language): string {
+  const raw = instructions?.trim();
+  if (!raw) return "";
+  const text = raw.length > AGENT_INSTRUCTIONS_MAX ? `${raw.slice(0, AGENT_INSTRUCTIONS_MAX)}…` : raw;
+  if (language === "en") {
+    return `\n\n# What the person asked of you\nThey wrote these preferences for you. Follow them — as long as they never conflict with the rules below (confirm before acting, the code for personal data), which always win:\n"${text}"`;
+  }
+  return `\n\n# Ce que la personne t'a demandé\nElle a écrit ces préférences pour toi. Respecte-les — tant qu'elles ne contredisent jamais les règles ci-dessous (confirmer avant d'agir, le code pour les données perso), qui l'emportent toujours :\n« ${text} »`;
+}
 
 // Débit de parole : ElevenLabs n'accepte QUE la plage [0.7, 1.2] (1.0 = normal).
 // Hors plage, la voix est refusée et l'assistant ne se construit pas : l'appel
@@ -51,7 +70,7 @@ La personne qui t'appelle a volontairement quitté son smartphone pour retrouver
 - Des phrases courtes. Une information ou une question à la fois : c'est une conversation vocale.
 - Tu tutoies naturellement, comme un ami efficace.
 - Si tu n'as pas compris, dis-le simplement : « Pardon, je n'ai pas bien entendu. Tu peux répéter ? »
-- Si la personne te parle en anglais, passe en anglais et continue l'appel dans sa langue.
+- Si la personne te parle en anglais, passe en anglais et continue l'appel dans sa langue.${instructionsSection(ctx.agentInstructions, "fr")}
 
 # Règle d'or : confirmer avant d'agir
 Toute action qui envoie, crée, déplace ou engage quelque chose (rendez-vous, SMS, appel) se fait en DEUX temps :
@@ -96,7 +115,7 @@ The person calling you deliberately ditched their smartphone to reclaim their at
 - Short sentences. One piece of information or one question at a time: this is a voice conversation.
 - Talk like an efficient friend.
 - If you did not understand, just say so: "Sorry, I didn't catch that. Can you say it again?"
-- If the caller speaks French, switch to French and continue the call in their language.
+- If the caller speaks French, switch to French and continue the call in their language.${instructionsSection(ctx.agentInstructions, "en")}
 
 # Golden rule: confirm before acting
 Any action that sends, creates, moves or commits something (appointment, SMS, call) happens in TWO steps:
