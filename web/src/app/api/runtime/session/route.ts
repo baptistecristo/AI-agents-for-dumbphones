@@ -10,6 +10,7 @@ import { outboundSystemPrompt } from "@/lib/agents/outbound";
 import { safeEqual } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { defaultLanguage, normalizeLanguage } from "@/lib/language";
+import { agentInstructionsOf } from "@/lib/profile";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function authorized(req: Request): boolean {
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
     // length_scale — donc renvoyer voice_speed ici serait une promesse vide.
     // Le réglage par appelant ne vaut que sur le chemin Vapi (ElevenLabs).
     voiceSpeed: null as number | null,
+    agentInstructions: null as string | null,
   };
   if (caller) {
     const { data: phone } = await db
@@ -101,6 +103,7 @@ export async function POST(req: Request) {
         preferredName: profile?.preferred_name || profile?.full_name || null,
         language: normalizeLanguage(profile?.preferred_language),
         voiceSpeed: null,
+        agentInstructions: await agentInstructionsOf(phone.user_id),
       };
     }
   }

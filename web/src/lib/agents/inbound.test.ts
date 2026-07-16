@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  type CallerContext,
   VOICE_SPEED_DEFAULT,
   VOICE_SPEED_MAX,
   VOICE_SPEED_MIN,
   clampVoiceSpeed,
+  inboundSystemPrompt,
 } from "./inbound";
 
 // Ce qui est en jeu : une valeur hors de [0.7, 1.2] fait refuser la voix par
@@ -28,5 +30,48 @@ describe("clampVoiceSpeed", () => {
   it("retombe sur le débit normal pour tout ce qui n'est pas un nombre", () => {
     for (const junk of [null, undefined, "", "   ", "vite", NaN, Infinity, -Infinity, {}, []])
       expect(clampVoiceSpeed(junk)).toBe(VOICE_SPEED_DEFAULT);
+  });
+});
+
+// Les consignes libres de la personne (profiles.agent_instructions) partent dans
+// le prompt, mais elles ne doivent JAMAIS l'emporter sur les règles de sécurité,
+// ni le noyer sous un texte démesuré.
+const ctx = (over: Partial<CallerContext> = {}): CallerContext => ({
+  userId: "u1",
+  preferredName: "Sam",
+  language: "fr",
+  voiceSpeed: null,
+  agentInstructions: null,
+  ...over,
+});
+
+describe("inboundSystemPrompt — consignes de la personne", () => {
+  it("injecte les consignes en français, avant la règle d'or", () => {
+    const prompt = inboundSystemPrompt(ctx({ agentInstructions: "Vouvoie-moi toujours." }));
+    expect(prompt).toContain("Vouvoie-moi toujours.");
+    expect(prompt).toContain("Ce que la personne t'a demandé");
+    // La sécurité gagne : les consignes apparaissent AVANT la règle d'or.
+    expect(prompt.indexOf("Vouvoie-moi toujours.")).toBeLessThan(prompt.indexOf("Règle d'or"));
+  });
+
+  it("injecte les consignes en anglais quand la langue est 'en'", () => {
+    const prompt = inboundSystemPrompt(ctx({ language: "en", agentInstructions: "Call me sir." }));
+    expect(prompt).toContain("Call me sir.");
+    expect(prompt).toContain("What the person asked of you");
+    expect(prompt.indexOf("Call me sir.")).toBeLessThan(prompt.indexOf("Golden rule"));
+  });
+
+  it("n'ajoute aucune section quand il n'y a pas de consigne", () => {
+    for (const empty of [null, "", "   "]) {
+      const prompt = inboundSystemPrompt(ctx({ agentInstructions: empty }));
+      expect(prompt).not.toContain("Ce que la personne t'a demandé");
+    }
+  });
+
+  it("borne une consigne démesurée pour ne pas noyer le prompt", () => {
+    const prompt = inboundSystemPrompt(ctx({ agentInstructions: "x".repeat(900) }));
+    expect(prompt).toContain("x".repeat(800));
+    expect(prompt).not.toContain("x".repeat(801));
+    expect(prompt).toContain("…");
   });
 });
