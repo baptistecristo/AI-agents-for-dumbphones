@@ -3,7 +3,7 @@
 // Étapes interactives de l'onboarding (composants client).
 
 import { useActionState } from "react";
-import { confirmOtp, sendOtp } from "./actions";
+import { confirmOtp, sendOtp, skipPhone } from "./actions";
 
 export function PhoneStep() {
   const [sendState, sendAction, sending] = useActionState(sendOtp, null);
@@ -47,6 +47,13 @@ export function PhoneStep() {
             className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-lg font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-900"
           >
             {sending ? "Envoi…" : "Envoyer le code de vérification"}
+          </button>
+          <button
+            formAction={skipPhone}
+            formNoValidate
+            className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900"
+          >
+            Passer pour l&apos;instant (pas de téléphone à relier)
           </button>
         </form>
       ) : (
