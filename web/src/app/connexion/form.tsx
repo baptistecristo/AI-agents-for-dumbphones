@@ -1,55 +1,181 @@
 "use client";
 
-// Formulaire de connexion / inscription par lien magique (e-mail). L'utilisateur
-// du dumbphone crée son propre compte, une fois, depuis n'importe quel navigateur.
-// Le parent (page serveur) lui dit si le dernier lien était expiré : pas d'effet
-// client à lire l'URL, donc pas de rendu en cascade.
+// Formulaire de connexion / inscription. Cinq portes d'entrée, une seule page :
+//   • OAuth Google / Apple / Microsoft / GitHub (boutons pilotés par la config,
+//     cf. providers.tsx) ;
+//   • lien magique par e-mail ;
+//   • code à 6 chiffres par e-mail — le repli qui marche partout, même quand un
+//     antivirus de messagerie (Outlook SafeLinks…) « pré-ouvre » et brûle le lien
+//     magique avant l'utilisateur.
+//
+// Le même envoi d'e-mail contient le lien ET le code : la personne clique ou
+// saisit, à son gré. Le code ne dépend d'aucune allowlist de redirection, donc
+// il fonctionne dès que le gabarit e-mail expose {{ .Token }}.
 
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { enabledProviders, PROVIDERS, type OAuthId } from "./providers";
+
+const NEXT = "/onboarding";
 
 export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState<OAuthId | null>(null);
 
-  async function sendLink(e: React.FormEvent) {
+  const providers = enabledProviders();
+
+  async function signInWith(id: OAuthId) {
+    setError(null);
+    setOauthBusy(id);
+    const supabase = supabaseBrowser();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: PROVIDERS[id].provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${NEXT}` },
+    });
+    // En cas de succès, la page est déjà redirigée vers le fournisseur.
+    if (error) {
+      setOauthBusy(null);
+      setError("La connexion n'a pas pu démarrer. Réessaie dans un instant.");
+    }
+  }
+
+  async function sendEmail(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    setSending(true);
     setError(null);
     const supabase = supabaseBrowser();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=/onboarding` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${NEXT}`,
+        shouldCreateUser: true,
+      },
     });
-    setLoading(false);
+    setSending(false);
     if (error) setError("L'envoi a échoué. Vérifie l'adresse et réessaie.");
     else setSent(true);
   }
 
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setVerifying(true);
+    setError(null);
+    const supabase = supabaseBrowser();
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code.trim(),
+      type: "email",
+    });
+    if (error) {
+      setVerifying(false);
+      setError("Code incorrect ou expiré. Vérifie les 6 chiffres, ou demande un nouvel envoi.");
+      return;
+    }
+    // Session posée : rechargement complet pour que le serveur voie le cookie.
+    window.location.href = NEXT;
+  }
+
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">Se connecter</h1>
+      <h1 className="font-display text-4xl tracking-tight text-ink dark:text-neutral-50">Se connecter</h1>
       <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-        Reçois un lien de connexion par e-mail. Pas de mot de passe à retenir.
+        Choisis ta méthode. Première visite ? Ton compte se crée tout seul.
       </p>
 
       {linkExpired && !sent && (
-        <p className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          Ce lien n&apos;est plus valable (expiré ou déjà utilisé). Demande-en un nouveau ci-dessous.
+        <p className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          La connexion précédente n&apos;a pas abouti (lien expiré, déjà utilisé, ou refusée par le
+          fournisseur). Réessaie ci-dessous.
         </p>
       )}
 
+      {error && (
+        <p className="mt-6 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          {error}
+        </p>
+      )}
+
+      {providers.length > 0 && (
+        <div className="mt-8 space-y-3">
+          {providers.map((id) => {
+            const { label, Icon } = PROVIDERS[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => signInWith(id)}
+                disabled={oauthBusy !== null}
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white px-4 py-3 text-base font-semibold text-ink shadow-sm transition hover:bg-neutral-50 disabled:opacity-50 dark:border-white/15 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800"
+              >
+                <Icon />
+                {oauthBusy === id ? "Redirection…" : label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {providers.length > 0 && (
+        <div className="my-8 flex items-center gap-4" aria-hidden="true">
+          <span className="h-px flex-1 bg-black/10 dark:bg-white/15" />
+          <span className="text-sm text-neutral-500">ou par e-mail</span>
+          <span className="h-px flex-1 bg-black/10 dark:bg-white/15" />
+        </div>
+      )}
+
       {sent ? (
-        <div className="mt-8 rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-          <p className="font-medium">C&apos;est envoyé 📬</p>
-          <p className="mt-1 text-sm">
-            Ouvre l&apos;e-mail reçu à <strong>{email}</strong> et clique sur le lien pour continuer.
-          </p>
+        <div className="space-y-6">
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+            <p className="font-bold">C&apos;est envoyé 📬</p>
+            <p className="mt-1 text-sm">
+              Ouvre l&apos;e-mail reçu à <strong>{email}</strong>. Saisis le code à 6 chiffres
+              ci-dessous, ou clique simplement le lien.
+            </p>
+          </div>
+
+          <form onSubmit={verifyCode} className="space-y-4">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium">Code à 6 chiffres</span>
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={6}
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="123456"
+                className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={verifying || code.length < 6}
+              className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
+            >
+              {verifying ? "Vérification…" : "Valider le code"}
+            </button>
+          </form>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSent(false);
+              setCode("");
+              setError(null);
+            }}
+            className="text-sm text-neutral-500 underline-offset-2 hover:underline"
+          >
+            Changer d&apos;adresse ou renvoyer
+          </button>
         </div>
       ) : (
-        <form onSubmit={sendLink} className="mt-8 space-y-4">
+        <form onSubmit={sendEmail} className="space-y-4">
           <label className="block">
             <span className="mb-1 block text-sm font-medium">Adresse e-mail</span>
             <input
@@ -58,22 +184,18 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="prenom@exemple.fr"
-              className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-lg outline-none focus:border-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-neutral-100"
+              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-lg outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
             />
           </label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-lg font-medium text-white transition hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+            disabled={sending}
+            className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
           >
-            {loading ? "Envoi…" : "Recevoir mon lien de connexion"}
+            {sending ? "Envoi…" : "Recevoir mon lien et mon code"}
           </button>
         </form>
       )}
-      <p className="mt-8 text-center text-sm text-neutral-500">
-        Première visite ? Le lien crée ton compte automatiquement.
-      </p>
     </main>
   );
 }
