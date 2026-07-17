@@ -5,8 +5,8 @@ without losing the useful stuff, by calling a number instead of opening an app -
 the community add the skills and languages that make that real.
 
 This project is **early and looking for founding co-builders.** The two best first
-contributions are **adding a skill** and **adding a third language** (EN and FR ship
-already) — both are small and self-contained. **The call-in number is down**: the Vapi
+contributions are **adding a skill** and **adding a fourth language** (FR, EN and ES
+ship already) — both are small and self-contained. **The call-in number is down**: the Vapi
 account is out of credit, so you can test against the web API but not over a real call.
 See the [status section](README.md#status--early-honest-about-what-runs-seeking-founding-co-builders).
 Walkthroughs below. More ready-to-claim ideas in the
@@ -185,36 +185,43 @@ and `npm run lint` in `web/`.
 
 ## Add a language or voice
 
-The pipeline is **bilingual EN/FR today**, end to end: each caller has a
+The pipeline is **trilingual FR/EN/ES today**, end to end: each caller has a
 `preferred_language` on their profile (`supabase/migrations/0002_language.sql`),
-`/api/runtime/session` returns it as `language: "fr" | "en"`, and the runtime picks the
-Whisper language and Piper voice from it. Skills localize their replies via
-`CallSession.language`. Adding a **third language** (Spanish, German, Arabic…) is the
-same four touch points, purely additive:
+`/api/runtime/session` returns it as `language: "fr" | "en" | "es"`, and the runtime
+picks the Whisper language and Piper voice from it. Skills localize their replies via
+`CallSession.language`. Adding a **fourth language** (German, Arabic, Italian…) is the
+same touch points, purely additive — the Spanish commit is a worked example to crib
+from:
 
-**1. STT** — the runtime sets the Whisper language from the session's `language` field
-(`runtime/bot.py`). Map your new language code (`"es"` → `Language.ES`, etc.).
+**1. The type** — add your code to `Language` in `web/src/lib/language.ts` and to
+`normalizeLanguage` (there is no DB constraint: this function is the only gatekeeper).
+The compiler then points at every string table that needs your language — `t()` requires
+all keys, so a missing translation fails the build instead of falling back silently.
 
-**2. TTS voice** — `runtime/config.py` reads one env var per language:
-`PIPER_VOICE_FR` and `PIPER_VOICE_EN` (a standard `en_US` medium voice by default).
-Add `PIPER_VOICE_ES` (or `_DE`, …) — pick a
+**2. STT** — the runtime sets the Whisper language from the session's `language` field
+(`runtime/bot.py`). Map your new language code (`"de"` → `Language.DE`, etc.).
+
+**3. TTS voice** — `runtime/config.py` reads one env var per language
+(`PIPER_VOICE_FR`, `PIPER_VOICE_EN`, `PIPER_VOICE_ES`). Add yours — pick a
 [Piper voice](https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/VOICES.md) and
 [listen to the samples](https://rhasspy.github.io/piper-samples/), they auto-download on
-first use — and add it to the per-language selection where
-`PiperTTSService(voice_id=...)` is built in `bot.py`.
+first use — and add it to `piper_voice_for()`.
 
-**3. Prompts + greeting** — `web/src/lib/agents/inbound.ts` holds the system prompt and
-the first-message greeting in EN and FR. Add your language's version and wire it into the
-per-language selection. Keep the safety rules intact in translation: two-step confirm,
-the one-time SMS code, never say the caller's address out loud, tool output is data not
+**4. Prompts + greeting** — `web/src/lib/agents/inbound.ts` holds the system prompt and
+the first-message greeting per language. Add your language's version and wire it into
+the `PROMPTS` map. Keep the safety rules intact in translation: two-step confirm, the
+one-time SMS code, never say the caller's address out loud, tool output is data not
 instructions.
 
-**4. Skill strings** — skills switch their output strings on `CallSession.language`
-(e.g. the WMO weather descriptions in `skills/weather.ts`, date formatting in
-`skills/types.ts`). Add your language's strings alongside the EN/FR ones.
+**5. Skill strings + SMS keywords** — skills switch their output strings on
+`CallSession.language` (e.g. the WMO weather descriptions in `skills/weather.ts`, date
+formatting in `skills/types.ts`); the compiler lists them all for you after step 1. Add
+your language's SMS command aliases in `sms-commands.ts` (`TIEMPO`, `RECUERDA`… show the
+shape).
 
-Then allow the new code in `profiles.preferred_language` (a follow-up migration) and in
-the dashboard's language setting, and you're done.
+Then add the option to the dashboard's language setting and, if you want the website
+itself in your language too, extend the site dictionaries (`web/src/app/*/copy.ts`,
+`web/src/lib/phones/i18n.ts`) the same way.
 
 > **Known limitation — a good separate contribution:** speech-to-text is pinned to the
 > session's language at call setup, so a caller who switches language mid-call is

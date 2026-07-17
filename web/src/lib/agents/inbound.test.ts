@@ -61,6 +61,13 @@ describe("inboundSystemPrompt — consignes de la personne", () => {
     expect(prompt.indexOf("Call me sir.")).toBeLessThan(prompt.indexOf("Golden rule"));
   });
 
+  it("injecte les consignes en espagnol quand la langue est 'es'", () => {
+    const prompt = inboundSystemPrompt(ctx({ language: "es", agentInstructions: "Háblame de usted." }));
+    expect(prompt).toContain("Háblame de usted.");
+    expect(prompt).toContain("Lo que la persona te ha pedido");
+    expect(prompt.indexOf("Háblame de usted.")).toBeLessThan(prompt.indexOf("Regla de oro"));
+  });
+
   it("n'ajoute aucune section quand il n'y a pas de consigne", () => {
     for (const empty of [null, "", "   "]) {
       const prompt = inboundSystemPrompt(ctx({ agentInstructions: empty }));

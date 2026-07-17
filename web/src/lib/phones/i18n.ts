@@ -1,5 +1,5 @@
-// Dictionnaire d'étiquettes FR/EN pour le comparateur. Pas de librairie i18n :
-// une seule page bilingue, un simple objet suffit.
+// Dictionnaire d'étiquettes FR/EN/ES pour le comparateur. Pas de librairie
+// i18n : une seule page trilingue, un simple objet suffit.
 
 import type { FormFactor, Lang, Nav, Os, Region } from "./types";
 
@@ -89,6 +89,49 @@ export const UI = {
       proprietary: "In-house OS",
       feature: "Feature phone",
       series30: "Series 30+",
+    } as Record<Os, string>,
+  },
+  es: {
+    pageTitle: "Encuentra tu teléfono básico",
+    intro:
+      "Responde a unas preguntas y mira los teléfonos que te encajan. Distinguimos la navegación de verdad de un simple chip GPS, y un teléfono básico de verdad de un smartphone disfrazado.",
+    bandWarning:
+      "Comprueba siempre las bandas 4G de tu operador antes de comprar: un modelo importado puede no tener cobertura donde vives.",
+    region: "Tu región",
+    navNeed: "Navegación",
+    type: "Tipo de teléfono",
+    form: "Formato",
+    maxPrice: "Precio máx",
+    sort: "Ordenar por precio",
+    reset: "Restablecer",
+    results: (n: number) => `${n} teléfono${n > 1 ? "s" : ""}`,
+    empty: "Ningún teléfono coincide. Prueba a relajar un filtro (el precio o la navegación).",
+    shopAt: "Ver en",
+    approxPrice: "≈",
+    any: "Da igual",
+    priceNote: "Precios orientativos, cambian.",
+    regions: { europe: "Europa", america: "Norteamérica", global: "Internacional" } as Record<Region, string>,
+    navNeeds: {
+      "full-maps": "Google Maps / navegación completa",
+      "any-nav": "Navegación paso a paso",
+      "location-ok": "Con la localización basta",
+    },
+    types: { true: "Teléfono básico de verdad", false: "Smartphone simplificado" },
+    forms: { flip: "De tapa", candybar: "De barra", touch: "Táctil", qwerty: "Teclado QWERTY" } as Record<FormFactor, string>,
+    navBadges: {
+      "full-maps": "Google Maps",
+      "basic-nav": "Navegación propia",
+      "location-only": "GPS solo localización",
+      none: "Sin GPS",
+    } as Record<Nav, string>,
+    trueBadge: "Teléfono básico de verdad",
+    smartBadge: "Smartphone simplificado",
+    osLabels: {
+      kaios: "KaiOS",
+      "android-lite": "Android ligero",
+      proprietary: "OS propio",
+      feature: "Feature phone",
+      series30: "Serie 30+",
     } as Record<Os, string>,
   },
 } as const;

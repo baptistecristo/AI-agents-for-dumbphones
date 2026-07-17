@@ -5,21 +5,16 @@
 // vivent dans actions.ts, les interactions par ligne dans forms.tsx.
 
 import { redirect } from "next/navigation";
+import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { DASHBOARD } from "../copy";
 import { fr } from "../format";
 import { Bubble, Card, EmptyState, Hint, PageIntro, Section, fieldLabel, inputCls, primaryBtn, textareaCls } from "../ui";
 import { addMemory } from "./actions";
 import { CancelReminderButton, NoteRow } from "./forms";
 
 export const dynamic = "force-dynamic";
-
-// La récurrence, dite avec des mots plutôt qu'un code technique.
-const RECURRENCE_LABEL: Record<string, string> = {
-  daily: "chaque jour",
-  weekly: "chaque semaine",
-  monthly: "chaque mois",
-};
 
 export default async function MemoirePage() {
   const supabase = await supabaseServer();
@@ -41,75 +36,68 @@ export default async function MemoirePage() {
 
   const notes = memories ?? [];
   const pending = reminders ?? [];
+  const lang = await siteLanguage();
+  const tr = DASHBOARD[lang].memoire;
 
   return (
     <>
-      <PageIntro eyebrow="Ma mémoire" title="Ma mémoire">
-        Les infos que tu me confies et les rappels que tu m&apos;as demandés. C&apos;est ce que je garde pour toi entre deux appels.
+      <PageIntro eyebrow={tr.eyebrow} title={tr.title}>
+        {tr.intro}
       </PageIntro>
 
       <Section
-        title="Mes notes"
-        description="Une info à retenir : un code, une date, une habitude. Un sujet (la clé) et ce dont je dois me souvenir."
+        title={tr.notes.title}
+        description={tr.notes.description}
       >
         <div className="mb-4">
-          <Bubble>
-            Ce que tu écris ici, je m&apos;en souviens quand tu m&apos;appelles. Demande-moi « c&apos;est quoi le code du
-            garage ? » et je te le lis — mais seulement après ton code. Sans lui, tes notes ne sortent pas.
-          </Bubble>
+          <Bubble>{tr.notes.bubble}</Bubble>
         </div>
 
         <Card className="mb-4">
           <form action={addMemory} className="space-y-4">
             <label className="block">
-              {fieldLabel("Le sujet")}
+              {fieldLabel(tr.notes.keyLabel)}
               <input
                 name="key"
                 required
                 maxLength={80}
-                placeholder="Ex. : code du garage"
+                placeholder={tr.notes.keyPlaceholder}
                 className={inputCls}
               />
-              <Hint>Le mot-clé pour retrouver la note plus tard. « code du garage », « médecin », « poubelles »…</Hint>
+              <Hint>{tr.notes.keyHint}</Hint>
             </label>
             <label className="block">
-              {fieldLabel("Ce dont je dois me souvenir")}
+              {fieldLabel(tr.notes.valueLabel)}
               <textarea
                 name="value"
                 required
                 maxLength={500}
                 rows={2}
-                placeholder="Ex. : 4592, puis dièse. Le bouton est à gauche."
+                placeholder={tr.notes.valuePlaceholder}
                 className={textareaCls}
               />
             </label>
-            <button className={primaryBtn}>Ajouter à ma mémoire</button>
+            <button className={primaryBtn}>{tr.notes.add}</button>
           </form>
         </Card>
 
         {notes.length === 0 ? (
-          <EmptyState>
-            Tu n&apos;as encore rien noté. Ajoute une info ci-dessus — ou dis-moi « retiens que… » en m&apos;appelant, et
-            elle apparaîtra ici.
-          </EmptyState>
+          <EmptyState>{tr.notes.empty}</EmptyState>
         ) : (
           <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
             {notes.map((m) => (
-              <NoteRow key={m.key} noteKey={m.key} value={m.value} />
+              <NoteRow key={m.key} noteKey={m.key} value={m.value} lang={lang} />
             ))}
           </Card>
         )}
       </Section>
 
       <Section
-        title="Mes rappels"
-        description="Les rappels en attente. Ils se créent en m'appelant ; ici, tu peux les annuler."
+        title={tr.reminders.title}
+        description={tr.reminders.description}
       >
         {pending.length === 0 ? (
-          <EmptyState>
-            Aucun rappel pour l&apos;instant. Tu en programmes un en m&apos;appelant (« rappelle-moi de… »). Il apparaîtra
-            ici, et tu pourras l&apos;annuler.
-          </EmptyState>
+          <EmptyState>{tr.reminders.empty}</EmptyState>
         ) : (
           <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
             {pending.map((r) => (
@@ -117,11 +105,11 @@ export default async function MemoirePage() {
                 <div className="min-w-0">
                   <p className="text-sm text-ink dark:text-neutral-100">{r.text}</p>
                   <p className="mt-0.5 text-xs text-neutral-400">
-                    {fr(r.due_at)}
-                    {r.recurrence ? ` · ${RECURRENCE_LABEL[r.recurrence] ?? r.recurrence}` : ""}
+                    {fr(r.due_at, lang)}
+                    {r.recurrence ? ` · ${tr.recurrence[r.recurrence as keyof typeof tr.recurrence] ?? r.recurrence}` : ""}
                   </p>
                 </div>
-                <CancelReminderButton id={r.id} label={r.text} />
+                <CancelReminderButton id={r.id} label={r.text} lang={lang} />
               </div>
             ))}
           </Card>

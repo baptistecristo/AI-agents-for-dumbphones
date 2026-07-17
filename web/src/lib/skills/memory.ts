@@ -8,6 +8,7 @@ export async function remember(session: CallSession, args: { key: string; value:
     return t(session, {
       fr: "Appelant non identifié : je ne peux rien retenir.",
       en: "Unidentified caller: I can't remember anything.",
+      es: "Persona no identificada: no puedo memorizar nada.",
     });
   const key = args.key.toLowerCase().trim();
   // Prendre une note est libre (sans code), mais un appel non vérifié ne doit
@@ -24,6 +25,7 @@ export async function remember(session: CallSession, args: { key: string; value:
       return t(session, {
         fr: `J'ai déjà une note « ${key} ». Pour la remplacer, il me faudra ton code.`,
         en: `I already have a "${key}" note. To replace it, I'll need your code.`,
+        es: `Ya tengo una nota «${key}». Para reemplazarla, necesitaré tu código.`,
       });
   }
   const { error } = await supabaseAdmin().from("memories").upsert(
@@ -39,15 +41,17 @@ export async function remember(session: CallSession, args: { key: string; value:
     return t(session, {
       fr: "Je n'ai pas réussi à l'enregistrer, désolé.",
       en: "I couldn't save it, sorry.",
+      es: "No he podido guardarlo, lo siento.",
     });
   return t(session, {
     fr: `C'est retenu : ${args.key} → ${args.value}.`,
     en: `Got it: ${args.key} → ${args.value}.`,
+    es: `Memorizado: ${args.key} → ${args.value}.`,
   });
 }
 
 export async function recall(session: CallSession, args: { query: string }): Promise<SkillResult> {
-  if (!session.userId) return t(session, { fr: "Appelant non identifié.", en: "Unidentified caller." });
+  if (!session.userId) return t(session, { fr: "Appelant non identifié.", en: "Unidentified caller.", es: "Persona no identificada." });
   const q = args.query.toLowerCase().trim();
   const { data } = await supabaseAdmin()
     .from("memories")
@@ -59,6 +63,7 @@ export async function recall(session: CallSession, args: { query: string }): Pro
     return t(session, {
       fr: `Rien en mémoire à propos de « ${args.query} ».`,
       en: `Nothing in memory about "${args.query}".`,
+      es: `Nada en la memoria sobre «${args.query}».`,
     });
   return data.map((m) => `- ${m.key} : ${m.value}`).join("\n");
 }

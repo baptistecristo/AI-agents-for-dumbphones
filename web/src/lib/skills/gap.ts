@@ -38,10 +38,12 @@ export async function reportGap(
     return t(session, {
       fr: "C'est noté, je t'enverrai un SMS dès que ce sera disponible.",
       en: "Noted — I'll text you as soon as it's available.",
+      es: "Anotado, te enviaré un SMS en cuanto esté disponible.",
     });
   }
   return t(session, {
     fr: "C'est noté, ce sera ajouté.",
     en: "Noted, it'll be added.",
+    es: "Anotado, se añadirá.",
   });
 }

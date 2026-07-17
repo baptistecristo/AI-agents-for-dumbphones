@@ -4,21 +4,19 @@
 // échouerait. Publique : hors du matcher du proxy.
 
 import Link from "next/link";
+import { siteLanguage } from "@/lib/site-i18n";
+import { CONNEXION } from "../copy";
 import { PROVIDERS, type OAuthId } from "../providers";
-
-// Méthodes hors OAuth qui peuvent aussi être « à fixer ».
-const OTHER: Record<string, string> = {
-  code: "La connexion par code à 6 chiffres",
-};
 
 export default async function BientotPage({
   searchParams,
 }: {
   searchParams: Promise<{ p?: string }>;
 }) {
+  const tr = CONNEXION[await siteLanguage()];
   const p = (await searchParams).p;
   const name =
-    p && p in PROVIDERS ? PROVIDERS[p as OAuthId].name : p && OTHER[p] ? OTHER[p] : "Cette connexion";
+    p && p in PROVIDERS ? PROVIDERS[p as OAuthId].name : p === "code" ? tr.bientot.codeName : tr.bientot.fallbackName;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16 text-center">
@@ -28,16 +26,13 @@ export default async function BientotPage({
       <h1 className="mt-4 font-display text-3xl tracking-tight text-ink dark:text-neutral-50">
         {name}
       </h1>
-      <p className="mt-1 text-sm font-bold uppercase tracking-wide text-neutral-400">à fixer</p>
-      <p className="mt-4 text-neutral-600 dark:text-neutral-400">
-        Cette méthode n&apos;est pas encore en service. En attendant, connecte-toi par e-mail avec
-        le lien reçu : il fonctionne déjà.
-      </p>
+      <p className="mt-1 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr.comingSoonBadge}</p>
+      <p className="mt-4 text-neutral-600 dark:text-neutral-400">{tr.bientot.body}</p>
       <Link
         href="/connexion"
         className="mt-8 inline-block rounded-xl bg-bleu px-5 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce"
       >
-        Revenir à la connexion
+        {tr.bientot.back}
       </Link>
     </main>
   );

@@ -4,11 +4,14 @@
 // toujours pareil d'une page à l'autre.
 
 import { clampVoiceSpeed } from "@/lib/agents/inbound";
-import { normalizeLanguage } from "@/lib/language";
+import { Language, normalizeLanguage } from "@/lib/language";
 
-export function fr(dt: string | null): string {
+// Locale d'affichage par langue du site. Le fuseau reste Europe/Paris.
+const DATE_LOCALES: Record<Language, string> = { fr: "fr-FR", en: "en-GB", es: "es-ES" };
+
+export function fr(dt: string | null, lang: Language = "fr"): string {
   if (!dt) return "—";
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(DATE_LOCALES[lang], {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -17,19 +20,24 @@ export function fr(dt: string | null): string {
   }).format(new Date(dt));
 }
 
+// Chaque langue se lit dans sa propre langue : le libellé ne dépend donc pas
+// de la langue du site.
+const LANGUAGE_LABELS: Record<Language, string> = { fr: "Français", en: "English", es: "Español" };
+
 export function languageLabel(preferred: string | null | undefined): string {
-  return normalizeLanguage(preferred) === "en" ? "English" : "Français";
+  return LANGUAGE_LABELS[normalizeLanguage(preferred)];
 }
 
 // Débit de parole : des mots, pas des chiffres. « 0,85 » ne veut rien dire pour
 // une oreille, et une liste fermée ne peut produire qu'une valeur acceptée par
 // ElevenLabs (0.7 – 1.2) — le curseur libre, lui, invite à taper n'importe quoi.
-export const VOICE_SPEED_CHOICES: { value: number; label: string }[] = [
-  { value: 0.7, label: "Lent" },
-  { value: 0.85, label: "Posé" },
-  { value: 1.0, label: "Normal" },
-  { value: 1.1, label: "Vif" },
-  { value: 1.2, label: "Rapide" },
+// Le libellé existe dans chaque langue du site (`labels`), la valeur reste unique.
+export const VOICE_SPEED_CHOICES: { value: number; labels: Record<Language, string> }[] = [
+  { value: 0.7, labels: { fr: "Lent", en: "Slow", es: "Lento" } },
+  { value: 0.85, labels: { fr: "Posé", en: "Measured", es: "Pausado" } },
+  { value: 1.0, labels: { fr: "Normal", en: "Normal", es: "Normal" } },
+  { value: 1.1, labels: { fr: "Vif", en: "Brisk", es: "Vivo" } },
+  { value: 1.2, labels: { fr: "Rapide", en: "Fast", es: "Rápido" } },
 ];
 
 // Un profil peut porter un débit absent de la liste (ancien défaut, valeur
@@ -43,7 +51,7 @@ export function nearestVoiceSpeed(stored: unknown): number {
   ).value;
 }
 
-export function voiceSpeedLabel(stored: unknown): string {
+export function voiceSpeedLabel(stored: unknown, lang: Language): string {
   const value = nearestVoiceSpeed(stored);
-  return VOICE_SPEED_CHOICES.find((c) => c.value === value)?.label ?? "Normal";
+  return VOICE_SPEED_CHOICES.find((c) => c.value === value)?.labels[lang] ?? "Normal";
 }

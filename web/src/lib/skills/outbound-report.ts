@@ -46,7 +46,8 @@ export async function handleReportOutcome(
   }
   if (job.callback_number) {
     const lang = await languageOf(job.user_id);
-    const voicemail = lang === "en" ? "📞 Voicemail —" : "📞 Répondeur —";
+    const voicemail =
+      lang === "en" ? "📞 Voicemail —" : lang === "es" ? "📞 Buzón de voz —" : "📞 Répondeur —";
     const prefix = args.status === "success" ? "✅" : args.status === "voicemail" ? voicemail : "⚠️";
     await sendSms({
       to: job.callback_number,
@@ -85,7 +86,9 @@ export async function closeJobWithoutReport(jobId: string): Promise<void> {
       body:
         lang === "en"
           ? "⚠️ I couldn't reach them despite several tries. We'll try again later."
-          : "⚠️ Je n'ai pas réussi à joindre le destinataire malgré plusieurs essais. On réessaiera plus tard.",
+          : lang === "es"
+            ? "⚠️ No he conseguido contactar con el destinatario a pesar de varios intentos. Lo volveremos a intentar más tarde."
+            : "⚠️ Je n'ai pas réussi à joindre le destinataire malgré plusieurs essais. On réessaiera plus tard.",
       userId: job.user_id,
       kind: "outbound_report",
     });

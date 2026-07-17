@@ -4,20 +4,14 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { DASHBOARD } from "./copy";
 import { fr, languageLabel, voiceSpeedLabel } from "./format";
 import { Card, EmptyState, PageIntro, Section } from "./ui";
 
 export const dynamic = "force-dynamic";
-
-const JOB_STATUS: Record<string, string> = {
-  done: "✅ fait",
-  failed: "❌ échec",
-  calling: "📞 en cours",
-  needs_user: "⚠️ à voir",
-  pending: "⏳ en attente",
-};
 
 export default async function OverviewPage() {
   const supabase = await supabaseServer();
@@ -36,45 +30,48 @@ export default async function OverviewPage() {
       db.from("memories").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     ]);
 
+  const lang = await siteLanguage();
+  const tr = DASHBOARD[lang].overview;
+
   return (
     <>
-      <PageIntro eyebrow="Espace personnel" title="Aperçu">
-        Ce que ton agent a fait, et comment il est réglé. Le détail se change dans les autres sections.
+      <PageIntro eyebrow={tr.eyebrow} title={tr.title}>
+        {tr.intro}
       </PageIntro>
 
-      <Section title="Ton agent en un coup d'œil">
+      <Section title={tr.glanceTitle}>
         <Card>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
-            <Glance label="Langue" value={languageLabel(profile?.preferred_language)} />
-            <Glance label="Débit" value={voiceSpeedLabel(profile?.voice_speed)} />
-            <Glance label="Adresse « chez moi »" value={profile?.home_address ? "définie" : "—"} />
-            <Glance label="Notes en mémoire" value={String(memoryCount ?? 0)} />
+            <Glance label={tr.language} value={languageLabel(profile?.preferred_language)} />
+            <Glance label={tr.speed} value={voiceSpeedLabel(profile?.voice_speed, lang)} />
+            <Glance label={tr.homeAddress} value={profile?.home_address ? tr.homeSet : "—"} />
+            <Glance label={tr.memoryNotes} value={String(memoryCount ?? 0)} />
           </dl>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link href="/tableau-de-bord/agent" className="text-sm font-bold text-bleu underline-offset-2 hover:underline dark:text-bulle">
-              Régler mon agent →
+              {tr.tuneAgent}
             </Link>
             <Link href="/tableau-de-bord/memoire" className="text-sm font-bold text-bleu underline-offset-2 hover:underline dark:text-bulle">
-              Gérer ma mémoire →
+              {tr.manageMemory}
             </Link>
           </div>
         </Card>
       </Section>
 
-      <Section title="Derniers appels">
+      <Section title={tr.callsTitle}>
         {(calls ?? []).length === 0 ? (
-          <EmptyState>Aucun appel pour l&apos;instant. Appelle ton numéro pour essayer !</EmptyState>
+          <EmptyState>{tr.callsEmpty}</EmptyState>
         ) : (
           <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
             {(calls ?? []).map((c, i) => (
               <div key={i} className="flex items-baseline justify-between gap-4 p-4">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-ink dark:text-neutral-100">
-                    {c.direction === "inbound" ? "📞 Appel reçu" : `🤖 Mission ${c.agent}`}
+                    {c.direction === "inbound" ? tr.inboundCall : tr.mission.replace("%s", c.agent)}
                   </p>
-                  <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">{c.summary ?? "(pas encore de résumé)"}</p>
+                  <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">{c.summary ?? tr.noSummary}</p>
                 </div>
-                <span className="shrink-0 text-xs text-neutral-400">{fr(c.started_at)}</span>
+                <span className="shrink-0 text-xs text-neutral-400">{fr(c.started_at, lang)}</span>
               </div>
             ))}
           </Card>
@@ -82,12 +79,12 @@ export default async function OverviewPage() {
       </Section>
 
       {(jobs ?? []).length > 0 && (
-        <Section title="Missions (appels passés à ta place)">
+        <Section title={tr.jobsTitle}>
           <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
             {(jobs ?? []).map((j, i) => (
               <div key={i} className="p-4">
                 <p className="text-sm font-bold text-ink dark:text-neutral-100">
-                  {j.kind} — {JOB_STATUS[j.status] ?? j.status}
+                  {j.kind} — {tr.jobStatus[j.status as keyof typeof tr.jobStatus] ?? j.status}
                 </p>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">{j.goal}</p>
                 {j.result && <p className="mt-1 text-sm text-ink dark:text-neutral-200">{j.result}</p>}
@@ -97,10 +94,10 @@ export default async function OverviewPage() {
         </Section>
       )}
 
-      <Section title="Rappels à venir">
+      <Section title={tr.remindersTitle}>
         {(reminders ?? []).length === 0 ? (
           <EmptyState>
-            Aucun rappel programmé. <Link href="/tableau-de-bord/memoire" className="font-bold text-bleu underline dark:text-bulle">En ajouter un →</Link>
+            {tr.remindersEmpty}<Link href="/tableau-de-bord/memoire" className="font-bold text-bleu underline dark:text-bulle">{tr.remindersEmptyLink}</Link>
           </EmptyState>
         ) : (
           <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
@@ -110,7 +107,7 @@ export default async function OverviewPage() {
                   {r.text}
                   {r.recurrence ? <span className="text-neutral-400"> · {r.recurrence}</span> : ""}
                 </p>
-                <span className="shrink-0 text-xs text-neutral-400">{fr(r.due_at)}</span>
+                <span className="shrink-0 text-xs text-neutral-400">{fr(r.due_at, lang)}</span>
               </div>
             ))}
           </Card>

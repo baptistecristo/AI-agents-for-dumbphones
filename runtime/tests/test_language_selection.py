@@ -9,18 +9,21 @@ from pathlib import Path
 os.environ.setdefault("RUNTIME_API_SECRET", "test-secret")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from config import PIPER_VOICE_EN, PIPER_VOICE_FR, piper_voice_for
+from config import PIPER_VOICE_EN, PIPER_VOICE_ES, PIPER_VOICE_FR, piper_voice_for
 
 
 class LanguageSelectionTests(unittest.TestCase):
     def test_english_uses_english_voice(self) -> None:
         self.assertEqual(piper_voice_for("en"), PIPER_VOICE_EN)
 
+    def test_spanish_uses_spanish_voice(self) -> None:
+        self.assertEqual(piper_voice_for("es"), PIPER_VOICE_ES)
+
     def test_french_keeps_default_voice(self) -> None:
         self.assertEqual(piper_voice_for("fr"), PIPER_VOICE_FR)
 
     def test_unknown_language_falls_back_to_french(self) -> None:
-        self.assertEqual(piper_voice_for("es"), PIPER_VOICE_FR)
+        self.assertEqual(piper_voice_for("de"), PIPER_VOICE_FR)
         self.assertEqual(piper_voice_for(""), PIPER_VOICE_FR)
 
 

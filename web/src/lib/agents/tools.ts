@@ -209,7 +209,7 @@ export function agentTools() {
           description: "Short English, capability-level, e.g. 'check live train departure times for a station'.",
         },
         caller_words: { type: "string", description: "Roughly what the caller said, for context (optional)." },
-        language: { type: "string", enum: ["en", "fr"], description: "The call language." },
+        language: { type: "string", enum: ["en", "fr", "es"], description: "The call language." },
         notify_caller: { type: "boolean", description: "true only if the caller asked to be texted when it ships." },
       },
       ["request_summary"],

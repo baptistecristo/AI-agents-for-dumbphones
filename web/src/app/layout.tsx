@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible, Young_Serif } from "next/font/google";
+import { Language } from "@/lib/language";
+import { siteLanguage } from "@/lib/site-i18n";
 import "./globals.css";
 
 // Corps : Atkinson Hyperlegible — police conçue pour la basse vision
@@ -18,19 +20,35 @@ const display = Young_Serif({
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
 
-export const metadata: Metadata = {
-  title: `${brand} — l'assistant qu'on appelle, tout simplement`,
-  description:
-    "Tu as quitté le smartphone, garde le côté utile : appelle un numéro pour la météo, un itinéraire, un rappel, un SMS dicté ou une table réservée. Aucune application. Open-source.",
+const META: Record<Language, { title: string; description: string }> = {
+  fr: {
+    title: `${brand} — l'assistant qu'on appelle, tout simplement`,
+    description:
+      "Tu as quitté le smartphone, garde le côté utile : appelle un numéro pour la météo, un itinéraire, un rappel, un SMS dicté ou une table réservée. Aucune application. Open-source.",
+  },
+  en: {
+    title: `${brand} — the assistant you just call`,
+    description:
+      "You ditched the smartphone, keep the useful part: call a number for the weather, directions, a reminder, a dictated text or a booked table. No app. Open-source.",
+  },
+  es: {
+    title: `${brand} — el asistente al que simplemente llamas`,
+    description:
+      "Dejaste el smartphone, quédate con lo útil: llama a un número para el tiempo, una ruta, un recordatorio, un SMS dictado o una mesa reservada. Sin aplicación. Open-source.",
+  },
 };
 
-export default function RootLayout({
+export async function generateMetadata(): Promise<Metadata> {
+  return META[await siteLanguage()];
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${body.variable} ${display.variable} h-full antialiased`}>
+    <html lang={await siteLanguage()} className={`${body.variable} ${display.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

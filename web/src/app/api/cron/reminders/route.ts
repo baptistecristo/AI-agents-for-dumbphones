@@ -48,10 +48,13 @@ export async function GET(req: Request) {
           .select("preferred_language")
           .eq("id", r.user_id)
           .maybeSingle();
+        const lang = normalizeLanguage(profile?.preferred_language);
         const body =
-          normalizeLanguage(profile?.preferred_language) === "en"
+          lang === "en"
             ? `🔔 Reminder: ${r.text}`
-            : `🔔 Rappel : ${r.text}`;
+            : lang === "es"
+              ? `🔔 Recordatorio: ${r.text}`
+              : `🔔 Rappel : ${r.text}`;
         await sendSms({ to: phone.e164, body, userId: r.user_id, kind: "reminder" });
         sent++;
       } catch (err) {

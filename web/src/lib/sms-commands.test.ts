@@ -40,7 +40,7 @@ import { handleSmsCommand } from "./sms-commands";
 
 // Le pire cas réaliste : un compte reconnu (l'identifiant d'expéditeur porte un
 // numéro enregistré) et aucun code, ce que le canal SMS ne peut jamais fournir.
-const smsSession = (language: "fr" | "en" = "fr"): CallSession => ({
+const smsSession = (language: "fr" | "en" | "es" = "fr"): CallSession => ({
   callId: "sms",
   userId: "user-1",
   callerNumber: "+33600000000",
@@ -72,6 +72,12 @@ describe("le routeur SMS applique TOOL_POLICY", () => {
     const reply = await handleSmsCommand(smsSession("en"), "DONE take pills");
     expect(markDone).not.toHaveBeenCalled();
     expect(reply).toContain("code");
+  });
+
+  it("refuse HECHO comme FAIT : l'alias espagnol non plus", async () => {
+    const reply = await handleSmsCommand(smsSession("es"), "HECHO tomar medicación");
+    expect(markDone).not.toHaveBeenCalled();
+    expect(reply).toContain("código");
   });
 
   it("refuse FAIT sans argument sans proposer un format qui n'aboutirait pas", async () => {
@@ -162,6 +168,17 @@ describe("le routeur SMS laisse passer ce que le gate laisse libre", () => {
   it("répond météo et itinéraire sans code", async () => {
     expect(await handleSmsCommand(smsSession(), "METEO Lyon")).toBe("MÉTÉO DITE");
     expect(await handleSmsCommand(smsSession(), "ROUTE gare de Lyon")).toBe("ITINÉRAIRE CALCULÉ");
+  });
+
+  it("comprend les commandes espagnoles : mêmes skills, mêmes règles", async () => {
+    expect(await handleSmsCommand(smsSession("es"), "RECUERDA 18:30 tomar medicación")).toBe("RAPPEL POSÉ");
+    expect(await handleSmsCommand(smsSession("es"), "RECORDATORIOS")).toBe("RAPPELS LISTÉS");
+    expect(await handleSmsCommand(smsSession("es"), "YA tomé medicación")).toBe("DÉJÀ RÉPONDU");
+    expect(await handleSmsCommand(smsSession("es"), "TIEMPO Madrid")).toBe("MÉTÉO DITE");
+    expect(await handleSmsCommand(smsSession("es"), "RUTA Calle Mayor 12, Madrid")).toBe("ITINÉRAIRE CALCULÉ");
+    const help = await handleSmsCommand(smsSession("es"), "AYUDA");
+    expect(help).toContain("TIEMPO");
+    expect(help).not.toContain("HECHO <");
   });
 });
 

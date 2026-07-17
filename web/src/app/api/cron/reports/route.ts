@@ -64,7 +64,9 @@ export async function GET(req: Request) {
     const body =
       g.language === "en"
         ? "Good news — the thing you asked our voice agent for is available now. Call back and try it."
-        : "Bonne nouvelle — ce que tu avais demandé à notre agent est disponible. Rappelle pour l'essayer.";
+        : g.language === "es"
+          ? "Buena noticia — lo que le pediste a nuestro agente ya está disponible. Vuelve a llamar para probarlo."
+          : "Bonne nouvelle — ce que tu avais demandé à notre agent est disponible. Rappelle pour l'essayer.";
     try {
       await sendSms({ to: g.caller_number as string, body, kind: "gap_resolved" });
       await db.from("capability_gaps").update({ caller_notified_at: new Date().toISOString() }).eq("id", g.id);

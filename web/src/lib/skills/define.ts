@@ -9,16 +9,18 @@ export async function define(session: CallSession, args: { word?: string }): Pro
     return t(session, {
       fr: "Je ne sais définir que des mots anglais.",
       en: "I can only define English words.",
+      es: "Solo sé definir palabras en inglés.",
     });
 
   const word = args.word?.trim();
-  if (!word) return t(session, { fr: "Quel mot dois-je définir ?", en: "Which word should I define?" });
+  if (!word) return t(session, { fr: "Quel mot dois-je définir ?", en: "Which word should I define?", es: "¿Qué palabra debo definir?" });
 
   const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
   if (!res.ok)
     return t(session, {
       fr: `Je ne trouve pas de définition pour « ${word} ».`,
       en: `I couldn't find a definition for "${word}".`,
+      es: `No encuentro ninguna definición para «${word}».`,
     });
 
   const data = (await res.json()) as { meanings?: { definitions?: { definition?: string }[] }[] }[];
@@ -27,7 +29,8 @@ export async function define(session: CallSession, args: { word?: string }): Pro
     return t(session, {
       fr: `Aucune définition pour « ${word} ».`,
       en: `No definition found for "${word}".`,
+      es: `Ninguna definición para «${word}».`,
     });
 
-  return t(session, { fr: `${word} : ${first}`, en: `${word}: ${first}` });
+  return t(session, { fr: `${word} : ${first}`, en: `${word}: ${first}`, es: `${word}: ${first}` });
 }

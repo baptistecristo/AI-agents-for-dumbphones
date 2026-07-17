@@ -12,6 +12,7 @@ export async function getCurrentTime(
     return t(session, {
       fr: "Pour quelle ville ?",
       en: "For which city?",
+      es: "¿Para qué ciudad?",
     });
 
   const geoRes = await fetch(
@@ -22,6 +23,7 @@ export async function getCurrentTime(
     return t(session, {
       fr: "Le service de recherche de ville ne répond pas, réessayez plus tard.",
       en: "The city lookup service isn't responding, try again later.",
+      es: "El servicio de búsqueda de ciudades no responde, inténtalo más tarde.",
     });
 
   const geo = (await geoRes.json()) as {
@@ -34,6 +36,7 @@ export async function getCurrentTime(
     return t(session, {
       fr: `Je ne trouve pas la ville « ${city} ».`,
       en: `I can't find the city "${city}".`,
+      es: `No encuentro la ciudad «${city}».`,
     });
 
   const timeRes = await fetch(
@@ -44,6 +47,7 @@ export async function getCurrentTime(
     return t(session, {
       fr: "Le service d'heure locale ne répond pas, réessayez plus tard.",
       en: "The local time service isn't responding, try again later.",
+      es: "El servicio de hora local no responde, inténtalo más tarde.",
     });
 
   const data = (await timeRes.json()) as {
@@ -54,10 +58,11 @@ export async function getCurrentTime(
     return t(session, {
       fr: "Le service d'heure locale ne répond pas, réessayez plus tard.",
       en: "The local time service isn't responding, try again later.",
+      es: "El servicio de hora local no responde, inténtalo más tarde.",
     });
 
   const localTime = new Intl.DateTimeFormat(
-    session.language === "fr" ? "fr-FR" : "en-US",
+    session.language === "fr" ? "fr-FR" : session.language === "es" ? "es-ES" : "en-US",
     {
       timeZone: place.timezone,
       hour: "numeric",
@@ -68,5 +73,6 @@ export async function getCurrentTime(
   return t(session, {
     fr: `À ${place.name}, il est ${localTime}.`,
     en: `In ${place.name}, it's ${localTime}.`,
+    es: `En ${place.name} son las ${localTime}.`,
   });
 }

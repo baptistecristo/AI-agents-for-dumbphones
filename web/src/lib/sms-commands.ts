@@ -5,6 +5,7 @@
 //
 // Commandes : AIDE · METEO [ville] [demain] · AGENDA [demain] ·
 // RAPPEL <heure> <texte> [demain] · RAPPELS · DEJA <texte> · ROUTE <destination>
+// (avec leurs équivalents anglais et espagnols : WEATHER/TIEMPO, REMIND/RECUERDA…)
 // FAIT est reconnu mais refusé ici (voir plus bas) : il n'existe qu'en appel.
 //
 // Ce routeur est une SECONDE porte vers les mêmes skills que la voix. Ce qui est
@@ -42,7 +43,8 @@ import { smsProviderConfigured } from "./twilio";
 // par écrit ce qu'on refuse au message suivant.
 const getHelp = (session: CallSession) => t(session, {
   fr: `Commandes SMS :\nMETEO [ville] [demain]\nAGENDA [demain]\nRAPPEL 18h30 prendre médicament [demain]\nRAPPELS (liste)\nDEJA <quoi> (est-ce fait ?)\nROUTE <destination>\n« C'est fait » est au téléphone : appelez-moi 📞`,
-  en: `SMS Commands:\nWEATHER [city] [tomorrow]\nAGENDA [tomorrow]\nREMIND 18:30 take medication [tomorrow]\nREMINDERS (list)\nALREADY <what> (is it done?)\nROUTE <destination>\n"It's done" is by phone: call me 📞`
+  en: `SMS Commands:\nWEATHER [city] [tomorrow]\nAGENDA [tomorrow]\nREMIND 18:30 take medication [tomorrow]\nREMINDERS (list)\nALREADY <what> (is it done?)\nROUTE <destination>\n"It's done" is by phone: call me 📞`,
+  es: `Comandos SMS:\nTIEMPO [ciudad] [mañana]\nAGENDA [mañana]\nRECUERDA 18:30 tomar medicación [mañana]\nRECORDATORIOS (lista)\nYA <qué> (¿está hecho?)\nRUTA <destino>\n«Ya está hecho» es por teléfono: llámame 📞`
 });
 
 // Refus d'un outil classé "code" sur un canal qui n'a aucun moyen de vérifier un
@@ -54,11 +56,13 @@ function gatedOverSms(session: CallSession, keyword: string): string {
     return t(session, {
       fr: `« ${keyword} » demande un code de sécurité, et l'envoi de codes n'est pas configuré ici : cette fonction est hors service, par SMS comme au téléphone. Envoyez AIDE pour ce qui marche.`,
       en: `"${keyword}" needs a security code, and code sending isn't configured here: this feature is out of service, by SMS and by phone alike. Send HELP for what does work.`,
+      es: `«${keyword}» requiere un código de seguridad, y el envío de códigos no está configurado aquí: esta función está fuera de servicio, tanto por SMS como por teléfono. Envía AYUDA para ver lo que sí funciona.`,
     });
   }
   return t(session, {
     fr: `« ${keyword} » demande un code de sécurité, et un code ne peut se vérifier qu'au téléphone. Appelez-moi, je vous le demanderai 📞`,
     en: `"${keyword}" needs a security code, and a code can only be checked by phone. Call me and I'll ask you for it 📞`,
+    es: `«${keyword}» requiere un código de seguridad, y un código solo puede verificarse por teléfono. Llámame y te lo pediré 📞`,
   });
 }
 
@@ -117,34 +121,43 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
   if (!session.userId) {
     return t(session, {
       fr: "Bonjour ! Ce numéro est celui d'un assistant vocal personnel. Inscription (avec l'aide d'un proche) sur le site.",
-      en: "Hello! This number belongs to a personal voice assistant. Registration (with the help of a relative) is on the website."
+      en: "Hello! This number belongs to a personal voice assistant. Registration (with the help of a relative) is on the website.",
+      es: "¡Hola! Este número es el de un asistente de voz personal. El registro (con la ayuda de un allegado) se hace en la web."
     });
   }
 
-  const k = keyword.toUpperCase().replace(/[ÉÈÊ]/g, "E");
+  // Accents aplatis pour comparer les mots-clés : RECUÉRDAME -> RECUERDAME,
+  // DÉJÀ -> DEJA. Le tilde (Ñ) est conservé : aucun mot-clé n'en porte.
+  const k = keyword
+    .toUpperCase()
+    .replace(/[ÉÈÊ]/g, "E")
+    .replace(/[ÁÀÂ]/g, "A")
+    .replace(/[ÍÎ]/g, "I")
+    .replace(/[ÓÔ]/g, "O")
+    .replace(/[ÚÙÛ]/g, "U");
 
-  if (["AIDE", "HELP", "?"].includes(k)) {
+  if (["AIDE", "HELP", "AYUDA", "?"].includes(k)) {
     return getHelp(session);
   }
 
-  if (["METEO", "WEATHER"].includes(k)) {
-    const isTomorrow = /\b(DEMAIN|TOMORROW)\b/i.test(args);
-    const city = args.replace(/\b(demain|tomorrow)\b/gi, "").trim() || undefined;
+  if (["METEO", "WEATHER", "TIEMPO", "CLIMA"].includes(k)) {
+    const isTomorrow = /\b(DEMAIN|TOMORROW|MA[ÑN]ANA)\b/i.test(args);
+    const city = args.replace(/\b(demain|tomorrow|ma[ñn]ana)\b/gi, "").trim() || undefined;
     return await runTool(session, k, "get_weather", async () =>
       getWeather(session, { city, day: isTomorrow ? "tomorrow" : "today" }, await homeCity(session)),
     );
   }
 
   if (["AGENDA", "SCHEDULE"].includes(k)) {
-    const isTomorrow = /\b(DEMAIN|TOMORROW)\b/i.test(args);
+    const isTomorrow = /\b(DEMAIN|TOMORROW|MA[ÑN]ANA)\b/i.test(args);
     return await runTool(session, k, "list_events", async () =>
       listEvents(session, { day: isTomorrow ? "tomorrow" : "today" }),
     );
   }
 
-  if (["RAPPEL", "REMIND", "REMINDER"].includes(k)) {
-    const tomorrow = /\b(demain|tomorrow)\b/i.test(args);
-    const words = args.replace(/\b(demain|tomorrow)\b/gi, "").trim().split(/\s+/);
+  if (["RAPPEL", "REMIND", "REMINDER", "RECUERDA", "RECUERDAME"].includes(k)) {
+    const tomorrow = /\b(demain|tomorrow|ma[ñn]ana)\b/i.test(args);
+    const words = args.replace(/\b(demain|tomorrow|ma[ñn]ana)\b/gi, "").trim().split(/\s+/);
     let time = parseTime(words[0]);
     let reminderText = words.slice(1).join(" ");
     if (!time && words.length > 1) {
@@ -154,7 +167,8 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
     if (!time || !reminderText) {
       return t(session, {
         fr: "Format : RAPPEL 18h30 prendre médicament (ajoutez « demain » si besoin)",
-        en: "Format: REMIND 18:30 take medication (add 'tomorrow' if needed)"
+        en: "Format: REMIND 18:30 take medication (add 'tomorrow' if needed)",
+        es: "Formato: RECUERDA 18:30 tomar medicación (añade «mañana» si hace falta)"
       });
     }
     const due = parisDateAt(time.hour, time.minute, tomorrow ? 1 : 0);
@@ -163,30 +177,30 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
     );
   }
 
-  if (["RAPPELS", "REMINDERS"].includes(k)) {
+  if (["RAPPELS", "REMINDERS", "RECORDATORIOS"].includes(k)) {
     return await runTool(session, k, "list_reminders", async () => listReminders(session));
   }
 
-  if (["FAIT", "DONE"].includes(k)) {
+  if (["FAIT", "DONE", "HECHO"].includes(k)) {
     // Le gate refuse avant de lire `args` : sans quoi « FAIT » tout court se
     // ferait répondre par un format à suivre, une invitation à réessayer une
     // commande qui n'aboutira jamais par SMS.
     return await runTool(session, k, "mark_done", async () => {
-      if (!args) return t(session, { fr: "Format : FAIT prendre médicament", en: "Format: DONE take medication" });
+      if (!args) return t(session, { fr: "Format : FAIT prendre médicament", en: "Format: DONE take medication", es: "Formato: HECHO tomar medicación" });
       return markDone(session, { what: args });
     });
   }
 
-  if (["DEJA", "ALREADY"].includes(k)) {
+  if (["DEJA", "ALREADY", "YA"].includes(k)) {
     return await runTool(session, k, "did_i_already", async () => {
-      if (!args) return t(session, { fr: "Format : DEJA pris médicament", en: "Format: ALREADY took medication" });
+      if (!args) return t(session, { fr: "Format : DEJA pris médicament", en: "Format: ALREADY took medication", es: "Formato: YA tomé medicación" });
       return didIAlready(session, { what: args });
     });
   }
 
-  if (["ROUTE", "ITINERAIRE", "DIRECTIONS"].includes(k)) {
+  if (["ROUTE", "ITINERAIRE", "DIRECTIONS", "RUTA"].includes(k)) {
     return await runTool(session, k, "get_directions", async () => {
-      if (!args) return t(session, { fr: "Format : ROUTE 12 rue de la Paix, Paris", en: "Format: ROUTE 12 rue de la Paix, Paris" });
+      if (!args) return t(session, { fr: "Format : ROUTE 12 rue de la Paix, Paris", en: "Format: ROUTE 12 rue de la Paix, Paris", es: "Formato: RUTA Calle Mayor 12, Madrid" });
       return getDirections(session, { destination: args }, await homeAddress(session));
     });
   }
@@ -198,9 +212,10 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
         granted: false,
         scope_note: "STOP reçu par SMS",
       });
-      return t(session, { 
+      return t(session, {
         fr: "C'est noté, plus aucun SMS non sollicité. Répondez START pour réactiver.",
-        en: "Noted, no more unsolicited SMS. Reply START to reactivate."
+        en: "Noted, no more unsolicited SMS. Reply START to reactivate.",
+        es: "Anotado, no habrá más SMS no solicitados. Responde START para reactivarlos."
       });
   }
 
@@ -211,16 +226,17 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
         granted: true,
         scope_note: "START reçu par SMS",
       });
-      return t(session, { fr: "Les SMS sont réactivés ✅", en: "SMS are reactivated ✅" });
+      return t(session, { fr: "Les SMS sont réactivés ✅", en: "SMS are reactivated ✅", es: "Los SMS quedan reactivados ✅" });
   }
 
-  if (/m[ée]t[ée]o/i.test(upper) || /weather/i.test(upper)) {
+  if (/m[ée]t[ée]o/i.test(upper) || /weather/i.test(upper) || /\b(tiempo|clima)\b/i.test(upper)) {
     return await runTool(session, k, "get_weather", async () => getWeather(session, {}, await homeCity(session)));
   }
 
   return t(session, {
     fr: `Je n'ai pas compris « ${keyword} ». Envoyez AIDE pour la liste des commandes, ou appelez-moi 📞`,
-    en: `I didn't understand "${keyword}". Send HELP for the list of commands, or call me 📞`
+    en: `I didn't understand "${keyword}". Send HELP for the list of commands, or call me 📞`,
+    es: `No he entendido «${keyword}». Envía AYUDA para la lista de comandos, o llámame 📞`
   });
 }
 

@@ -9,12 +9,14 @@ export async function findContact(session: CallSession, args: { name: string }):
     return t(session, {
       fr: "Appelant non identifié : pas d'accès aux contacts.",
       en: "Unidentified caller: no access to contacts.",
+      es: "Persona no identificada: sin acceso a los contactos.",
     });
   const auth = await googleFor(session.userId);
   if (!auth)
     return t(session, {
       fr: "Le compte Google n'est pas connecté (à faire sur le site).",
       en: "The Google account isn't connected (to do on the website).",
+      es: "La cuenta de Google no está conectada (se hace en la web).",
     });
   const people = google.people({ version: "v1", auth });
   const res = await people.people.searchContacts({
@@ -27,15 +29,17 @@ export async function findContact(session: CallSession, args: { name: string }):
     return t(session, {
       fr: `Aucun contact trouvé pour « ${args.name} ».`,
       en: `No contact found for "${args.name}".`,
+      es: `Ningún contacto encontrado para «${args.name}».`,
     });
   const lines = results.map((r) => {
-    const name = r.person?.names?.[0]?.displayName ?? t(session, { fr: "Sans nom", en: "No name" });
-    const phone = r.person?.phoneNumbers?.[0]?.value ?? t(session, { fr: "pas de numéro", en: "no number" });
+    const name = r.person?.names?.[0]?.displayName ?? t(session, { fr: "Sans nom", en: "No name", es: "Sin nombre" });
+    const phone = r.person?.phoneNumbers?.[0]?.value ?? t(session, { fr: "pas de numéro", en: "no number", es: "sin número" });
     return `- ${name} : ${phone}`;
   });
   return t(session, {
     fr: `Contacts trouvés :\n${lines.join("\n")}`,
     en: `Contacts found:\n${lines.join("\n")}`,
+    es: `Contactos encontrados:\n${lines.join("\n")}`,
   });
 }
 

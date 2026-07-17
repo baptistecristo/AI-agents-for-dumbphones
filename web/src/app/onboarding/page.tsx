@@ -5,7 +5,10 @@
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { siteLanguage } from "@/lib/site-i18n";
+import { LangSwitcher } from "../lang-switcher";
 import { saveConsents, skipGoogle } from "./actions";
+import { CONSENT_SOURCES, ONBOARDING } from "./copy";
 import { PhoneStep } from "./steps";
 
 const STEPS = ["phone", "google", "consents"] as const;
@@ -26,9 +29,14 @@ export default async function OnboardingPage() {
   // "pin" est un état hérité (l'étape a été retirée) : on le traite comme terminé.
   if (step === "done" || step === "pin") redirect("/tableau-de-bord");
   const stepIndex = STEPS.indexOf(step as (typeof STEPS)[number]);
+  const lang = await siteLanguage();
+  const tr = ONBOARDING[lang];
 
   return (
     <main className="mx-auto min-h-screen max-w-lg px-6 py-12">
+      <div className="mb-6 flex justify-end">
+        <LangSwitcher current={lang} />
+      </div>
       <div className="mb-10 flex items-center gap-2">
         {STEPS.map((s, i) => (
           <div
@@ -38,25 +46,22 @@ export default async function OnboardingPage() {
         ))}
       </div>
 
-      {step === "phone" && <PhoneStep />}
+      {step === "phone" && <PhoneStep lang={lang} />}
 
       {step === "google" && (
         <section>
-          <h1 className="text-2xl font-semibold">Connecter l'agenda et les contacts</h1>
-          <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-            En connectant ton compte Google, l'assistant pourra lire et gérer tes rendez-vous et
-            retrouver tes contacts. Les accès sont chiffrés et révocables à tout moment.
-          </p>
+          <h1 className="text-2xl font-semibold">{tr.google.title}</h1>
+          <p className="mt-2 text-neutral-600 dark:text-neutral-400">{tr.google.body}</p>
           <div className="mt-8 space-y-3">
             <a
               href="/api/oauth/google"
               className="block w-full rounded-lg bg-neutral-900 px-4 py-3 text-center text-lg font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
             >
-              Connecter mon compte Google
+              {tr.google.connect}
             </a>
             <form action={skipGoogle}>
               <button className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900">
-                Passer pour l'instant
+                {tr.google.skip}
               </button>
             </form>
           </div>
@@ -65,29 +70,20 @@ export default async function OnboardingPage() {
 
       {step === "consents" && (
         <section>
-          <h1 className="text-2xl font-semibold">Ce que l'assistant a le droit de faire</h1>
-          <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-            Chaque autorisation est enregistrée, horodatée et révocable. C'est toi qui décides.
-          </p>
+          <h1 className="text-2xl font-semibold">{tr.consents.title}</h1>
+          <p className="mt-2 text-neutral-600 dark:text-neutral-400">{tr.consents.body}</p>
           <form action={saveConsents} className="mt-8 space-y-3">
-            {[
-              ["calendar", "Lire et modifier l'agenda", true],
-              ["contacts", "Lire les contacts", true],
-              ["sms", "Envoyer des SMS (rappels, itinéraires, comptes-rendus)", true],
-              ["outbound_calls", "Passer des appels à ma place (restaurant, taxi, rendez-vous)", true],
-              ["memory", "Retenir mes préférences (lieux, personnes, habitudes)", true],
-              ["recording", "Enregistrer et transcrire les appels pour le suivi", false],
-            ].map(([source, label, def]) => (
+            {CONSENT_SOURCES.map((source) => (
               <label
-                key={String(source)}
+                key={source}
                 className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
               >
-                <input type="checkbox" name={String(source)} defaultChecked={Boolean(def)} className="mt-1 h-5 w-5" />
-                <span>{String(label)}</span>
+                <input type="checkbox" name={source} defaultChecked={tr.consents.defaults[source]} className="mt-1 h-5 w-5" />
+                <span>{tr.consents.labels[source]}</span>
               </label>
             ))}
             <button className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-lg font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200">
-              Enregistrer mes choix
+              {tr.consents.save}
             </button>
           </form>
         </section>

@@ -4,9 +4,12 @@
 // un rappel. Toute confirmation passe par un état local à deux clics — jamais un
 // window.confirm() (dialogue bloquant du navigateur, proscrit ici). Les actions
 // serveur portent la vérité (garde d'accès, scope user.id) ; ces composants ne
-// font qu'appeler et afficher l'attente.
+// font qu'appeler et afficher l'attente. Composants client : la langue arrive
+// en prop depuis la page (serveur).
 
 import { useState, useTransition } from "react";
+import { Language } from "@/lib/language";
+import { DASHBOARD } from "../copy";
 import { cancelReminder, deleteMemory, updateMemory } from "./actions";
 import { primaryBtn, secondaryBtn, textareaCls } from "../ui";
 
@@ -17,7 +20,8 @@ const rowBtn =
 const rowDangerBtn =
   "rounded-md px-2 py-1 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu dark:text-red-400 dark:hover:bg-red-950/40";
 
-export function NoteRow({ noteKey, value }: { noteKey: string; value: string }) {
+export function NoteRow({ noteKey, value, lang }: { noteKey: string; value: string; lang: Language }) {
+  const tr = DASHBOARD[lang].memoire.row;
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -57,15 +61,15 @@ export function NoteRow({ noteKey, value }: { noteKey: string; value: string }) 
           onChange={(e) => setDraft(e.target.value)}
           rows={2}
           maxLength={500}
-          aria-label={`Modifier la note « ${noteKey} »`}
+          aria-label={tr.editAria.replace("%s", noteKey)}
           className={textareaCls}
         />
         <div className="mt-3 flex gap-2">
           <button type="button" onClick={save} disabled={pending || !draft.trim()} className={primaryBtn}>
-            {pending ? "Enregistrement…" : "Enregistrer"}
+            {pending ? tr.saving : tr.save}
           </button>
           <button type="button" onClick={cancelEdit} disabled={pending} className={secondaryBtn}>
-            Annuler
+            {tr.cancel}
           </button>
         </div>
       </div>
@@ -81,32 +85,32 @@ export function NoteRow({ noteKey, value }: { noteKey: string; value: string }) 
       <div className="flex shrink-0 items-center gap-1">
         {confirmDelete ? (
           <>
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">Supprimer&nbsp;?</span>
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">{tr.deleteQ}</span>
             <button
               type="button"
               onClick={remove}
               disabled={pending}
               className={rowDangerBtn}
-              aria-label={`Confirmer la suppression de la note « ${noteKey} »`}
+              aria-label={tr.confirmDeleteAria.replace("%s", noteKey)}
             >
-              Oui
+              {tr.yes}
             </button>
             <button type="button" onClick={() => setConfirmDelete(false)} disabled={pending} className={rowBtn}>
-              Non
+              {tr.no}
             </button>
           </>
         ) : (
           <>
-            <button type="button" onClick={startEdit} className={rowBtn} aria-label={`Modifier la note « ${noteKey} »`}>
-              Modifier
+            <button type="button" onClick={startEdit} className={rowBtn} aria-label={tr.editAria.replace("%s", noteKey)}>
+              {tr.edit}
             </button>
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
               className={rowDangerBtn}
-              aria-label={`Supprimer la note « ${noteKey} »`}
+              aria-label={tr.deleteAria.replace("%s", noteKey)}
             >
-              Supprimer
+              {tr.delete}
             </button>
           </>
         )}
@@ -115,7 +119,8 @@ export function NoteRow({ noteKey, value }: { noteKey: string; value: string }) 
   );
 }
 
-export function CancelReminderButton({ id, label }: { id: string; label?: string }) {
+export function CancelReminderButton({ id, label, lang }: { id: string; label?: string; lang: Language }) {
+  const tr = DASHBOARD[lang].memoire.row;
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -131,21 +136,21 @@ export function CancelReminderButton({ id, label }: { id: string; label?: string
         type="button"
         onClick={() => setConfirming(true)}
         className={rowBtn}
-        aria-label={label ? `Annuler le rappel : ${label}` : "Annuler ce rappel"}
+        aria-label={label ? tr.cancelReminderAria.replace("%s", label) : tr.cancelReminderFallback}
       >
-        Annuler
+        {tr.cancel}
       </button>
     );
   }
 
   return (
     <span className="flex shrink-0 items-center gap-1">
-      <span className="text-xs text-neutral-500 dark:text-neutral-400">Annuler&nbsp;?</span>
+      <span className="text-xs text-neutral-500 dark:text-neutral-400">{tr.cancelQ}</span>
       <button type="button" onClick={cancel} disabled={pending} className={rowDangerBtn}>
-        Oui
+        {tr.yes}
       </button>
       <button type="button" onClick={() => setConfirming(false)} disabled={pending} className={rowBtn}>
-        Non
+        {tr.no}
       </button>
     </span>
   );
