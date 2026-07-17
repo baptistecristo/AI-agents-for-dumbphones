@@ -2,28 +2,28 @@
 
 import { CallSession, SkillResult, t } from "./types";
 
-const WMO: Record<number, { fr: string; en: string }> = {
-  0: { fr: "grand soleil", en: "clear skies" },
-  1: { fr: "plutôt dégagé", en: "mostly clear" },
-  2: { fr: "partiellement nuageux", en: "partly cloudy" },
-  3: { fr: "couvert", en: "overcast" },
-  45: { fr: "brouillard", en: "fog" },
-  48: { fr: "brouillard givrant", en: "freezing fog" },
-  51: { fr: "bruine légère", en: "light drizzle" },
-  53: { fr: "bruine", en: "drizzle" },
-  55: { fr: "bruine forte", en: "heavy drizzle" },
-  61: { fr: "pluie légère", en: "light rain" },
-  63: { fr: "pluie", en: "rain" },
-  65: { fr: "forte pluie", en: "heavy rain" },
-  71: { fr: "neige légère", en: "light snow" },
-  73: { fr: "neige", en: "snow" },
-  75: { fr: "forte neige", en: "heavy snow" },
-  80: { fr: "averses légères", en: "light showers" },
-  81: { fr: "averses", en: "showers" },
-  82: { fr: "fortes averses", en: "heavy showers" },
-  95: { fr: "orages", en: "thunderstorms" },
-  96: { fr: "orages avec grêle", en: "thunderstorms with hail" },
-  99: { fr: "gros orages avec grêle", en: "severe thunderstorms with hail" },
+const WMO: Record<number, { fr: string; en: string; es: string }> = {
+  0: { fr: "grand soleil", en: "clear skies", es: "cielo despejado" },
+  1: { fr: "plutôt dégagé", en: "mostly clear", es: "bastante despejado" },
+  2: { fr: "partiellement nuageux", en: "partly cloudy", es: "parcialmente nublado" },
+  3: { fr: "couvert", en: "overcast", es: "cubierto" },
+  45: { fr: "brouillard", en: "fog", es: "niebla" },
+  48: { fr: "brouillard givrant", en: "freezing fog", es: "niebla helada" },
+  51: { fr: "bruine légère", en: "light drizzle", es: "llovizna ligera" },
+  53: { fr: "bruine", en: "drizzle", es: "llovizna" },
+  55: { fr: "bruine forte", en: "heavy drizzle", es: "llovizna fuerte" },
+  61: { fr: "pluie légère", en: "light rain", es: "lluvia ligera" },
+  63: { fr: "pluie", en: "rain", es: "lluvia" },
+  65: { fr: "forte pluie", en: "heavy rain", es: "lluvia fuerte" },
+  71: { fr: "neige légère", en: "light snow", es: "nieve ligera" },
+  73: { fr: "neige", en: "snow", es: "nieve" },
+  75: { fr: "forte neige", en: "heavy snow", es: "nieve fuerte" },
+  80: { fr: "averses légères", en: "light showers", es: "chubascos ligeros" },
+  81: { fr: "averses", en: "showers", es: "chubascos" },
+  82: { fr: "fortes averses", en: "heavy showers", es: "chubascos fuertes" },
+  95: { fr: "orages", en: "thunderstorms", es: "tormentas" },
+  96: { fr: "orages avec grêle", en: "thunderstorms with hail", es: "tormentas con granizo" },
+  99: { fr: "gros orages avec grêle", en: "severe thunderstorms with hail", es: "tormentas fuertes con granizo" },
 };
 
 export async function getWeather(
@@ -36,6 +36,7 @@ export async function getWeather(
     return t(session, {
       fr: "Pour quelle ville ? (aucune ville de domicile n'est enregistrée)",
       en: "For which city? (no home city is set)",
+      es: "¿Para qué ciudad? (no hay ciudad de domicilio registrada)",
     });
 
   const geo = (await (
@@ -56,6 +57,9 @@ export async function getWeather(
       en: args.city
         ? `I can't find the city "${args.city}".`
         : "I don't recognise the city saved in the profile. Ask which city, without guessing.",
+      es: args.city
+        ? `No encuentro la ciudad «${args.city}».`
+        : "No reconozco la ciudad guardada en el perfil. Pregunta para qué ciudad, sin adivinar.",
     });
 
   const fc = (await (
@@ -76,18 +80,25 @@ export async function getWeather(
     return t(session, {
       fr: "Le service météo ne répond pas, réessayez plus tard.",
       en: "The weather service isn't responding, try again later.",
+      es: "El servicio del tiempo no responde, inténtalo más tarde.",
     });
 
   const idx = args.day === "tomorrow" ? 1 : 0;
-  const label = t(session, idx === 1 ? { fr: "Demain", en: "Tomorrow" } : { fr: "Aujourd'hui", en: "Today" });
+  const label = t(
+    session,
+    idx === 1
+      ? { fr: "Demain", en: "Tomorrow", es: "Mañana" }
+      : { fr: "Aujourd'hui", en: "Today", es: "Hoy" },
+  );
   const code = WMO[fc.daily.weather_code[idx]]
     ? t(session, WMO[fc.daily.weather_code[idx]])
-    : t(session, { fr: "temps incertain", en: "uncertain weather" });
+    : t(session, { fr: "temps incertain", en: "uncertain weather", es: "tiempo incierto" });
   const tmax = Math.round(fc.daily.temperature_2m_max[idx]);
   const tmin = Math.round(fc.daily.temperature_2m_min[idx]);
   const rain = fc.daily.precipitation_probability_max[idx];
   return t(session, {
     fr: `${label} à ${place.name} : ${code}, entre ${tmin} et ${tmax} degrés${rain >= 30 ? `, ${rain} % de risque de pluie — prévoir un parapluie` : ""}.`,
     en: `${label} in ${place.name}: ${code}, between ${tmin} and ${tmax} degrees${rain >= 30 ? `, ${rain}% chance of rain — bring an umbrella` : ""}.`,
+    es: `${label} en ${place.name}: ${code}, entre ${tmin} y ${tmax} grados${rain >= 30 ? `, ${rain} % de probabilidad de lluvia — lleva paraguas` : ""}.`,
   });
 }

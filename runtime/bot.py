@@ -82,11 +82,11 @@ async def run_call(
     session = await api_client.open_session(call_id, direction, caller_number, job_id)
     job_id = session.get("job_id") or job_id
 
-    # Langue de la session ("fr" | "en") : pilote la voix Piper ET la langue Whisper.
-    # STT épinglé (pas d'auto-détection) : le WhisperSTTService de Pipecat exige une
-    # langue concrète — run_stt fait assert_given(settings.language) avant transcribe.
+    # Langue de la session ("fr" | "en" | "es") : pilote la voix Piper ET la langue
+    # Whisper. STT épinglé (pas d'auto-détection) : le WhisperSTTService de Pipecat
+    # exige une langue concrète — run_stt fait assert_given(settings.language).
     language = session.get("language", "fr")
-    stt_language = Language.EN if language == "en" else Language.FR
+    stt_language = {"en": Language.EN, "es": Language.ES}.get(language, Language.FR)
 
     transport = FastAPIWebsocketTransport(
         websocket=websocket,

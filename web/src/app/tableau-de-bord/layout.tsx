@@ -5,9 +5,12 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { LangSwitcher } from "../lang-switcher";
 import { signOut } from "./actions";
+import { DASHBOARD } from "./copy";
 import { PersonalAreaNav } from "./nav";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +35,8 @@ export default async function PersonalAreaLayout({ children }: { children: React
   if (profile?.onboarding_step && profile.onboarding_step !== "done") redirect("/onboarding");
 
   const phone = phones?.[0]?.e164 ?? null;
+  const lang = await siteLanguage();
+  const tr = DASHBOARD[lang].layout;
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 sm:px-8">
@@ -41,32 +46,36 @@ export default async function PersonalAreaLayout({ children }: { children: React
             {brand}
           </Link>
           <h1 className="mt-1 text-2xl font-bold text-ink dark:text-neutral-50">
-            Bonjour {profile?.preferred_name || "👋"}
+            {tr.greeting} {profile?.preferred_name || "👋"}
           </h1>
           <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
-            {phone ? `Téléphone relié : ${phone}` : "Aucun téléphone relié"}
-            {google ? ` · Google : ${google.google_email}` : " · Google non connecté"}
+            {phone ? tr.phoneLinked.replace("%s", phone) : tr.noPhone}
+            {google ? tr.googleConnected.replace("%s", google.google_email) : tr.googleNotConnected}
           </p>
         </div>
-        <form action={signOut}>
-          <button className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-ink hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-900">
-            Se déconnecter
-          </button>
-        </form>
+        <div className="flex items-center gap-3">
+          <LangSwitcher current={lang} />
+          <form action={signOut}>
+            <button className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-ink hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-900">
+              {tr.signOut}
+            </button>
+          </form>
+        </div>
       </header>
 
       <div className="md:grid md:grid-cols-[13rem_1fr] md:gap-10">
         <div className="mb-6 md:mb-0">
           <div className="md:sticky md:top-8">
-            <PersonalAreaNav />
+            <PersonalAreaNav lang={lang} />
           </div>
         </div>
         <main className="min-w-0">{children}</main>
       </div>
 
       <footer className="mt-14 border-t border-neutral-200 pt-6 text-xs text-neutral-400 dark:border-neutral-800">
-        Tes données restent en Europe, chiffrées. Tu peux les exporter ou supprimer ton compte
-        depuis <Link href="/tableau-de-bord/compte" className="underline hover:text-bleu">Compte</Link> (droit à l&apos;effacement, RGPD).
+        {tr.footerBefore}
+        <Link href="/tableau-de-bord/compte" className="underline hover:text-bleu">{tr.footerLink}</Link>
+        {tr.footerAfter}
       </footer>
     </div>
   );

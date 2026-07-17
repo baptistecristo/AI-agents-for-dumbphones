@@ -19,10 +19,10 @@ export type Nav = "full-maps" | "basic-nav" | "location-only" | "none";
 
 export type Os = "kaios" | "android-lite" | "proprietary" | "feature" | "series30";
 
-/** Un texte disponible dans les deux langues de la page. */
-export type LangText = { fr: string; en: string };
+/** Un texte disponible dans les trois langues de la page. */
+export type LangText = { fr: string; en: string; es: string };
 
-export type Lang = "fr" | "en";
+export type Lang = "fr" | "en" | "es";
 
 export type Shop = {
   region: Region;

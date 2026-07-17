@@ -62,7 +62,7 @@ export async function executeTool(name: string, args: any, session: CallSession)
         `Outil ${name} absent de TOOL_POLICY (gate.ts) : exécution refusée. ` +
           `Classe-le "code" ou "free" — un outil non classé ne tourne pas.`,
       );
-      return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.` });
+      return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.`, es: `Herramienta desconocida: ${name}.` });
     }
     // Gate unique : les outils qui lisent des données stockées ou envoient/dépensent
     // exigent le code SMS. Le caller-ID seul ne débloque rien de sensible.
@@ -79,11 +79,13 @@ export async function executeTool(name: string, args: any, session: CallSession)
         return t(session, {
           fr: `INDISPONIBLE : « ${name} » touche à des données personnelles, ce qui exige un code par SMS, et l'envoi de codes n'est pas configuré sur cette instance. Le code ne peut pas être envoyé. N'appelle NI request_code NI verify_code, et ne demande pas de code à la personne. Dis-lui honnêtement que cette fonction est hors service tant que l'envoi de codes n'est pas configuré, et propose ce qui marche : météo, itinéraire, rappels, notes.`,
           en: `UNAVAILABLE: "${name}" touches personal data, which requires an SMS code, and one-time code sending is not configured on this instance. The code cannot be sent. Do NOT call request_code or verify_code, and do not ask the person for a code. Tell them honestly that this feature is out of service until one-time code sending is configured, and offer what does work: weather, directions, reminders, notes.`,
+          es: `NO DISPONIBLE: «${name}» toca datos personales, lo que exige un código por SMS, y el envío de códigos no está configurado en esta instancia. El código no puede enviarse. NO llames ni a request_code ni a verify_code, y no pidas ningún código a la persona. Dile honestamente que esta función está fuera de servicio mientras el envío de códigos no esté configurado, y propón lo que sí funciona: el tiempo, rutas, recordatorios, notas.`,
         });
       }
       return t(session, {
         fr: "REFUS : demande d'abord le code (request_code), puis vérifie-le (verify_code).",
         en: "REFUSED: ask for the code first (request_code), then verify it (verify_code).",
+        es: "RECHAZADO: pide primero el código (request_code) y luego verifícalo (verify_code).",
       });
     }
     switch (name) {
@@ -133,13 +135,14 @@ export async function executeTool(name: string, args: any, session: CallSession)
       case "report_unsupported_request":
         return await reportGap(session, args);
       default:
-        return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.` });
+        return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.`, es: `Herramienta desconocida: ${name}.` });
     }
   } catch (err) {
     console.error(`Outil ${name} en erreur`, err);
     return t(session, {
       fr: "Désolé, ce service ne répond pas pour le moment.",
       en: "Sorry, that service isn't responding right now.",
+      es: "Lo siento, ese servicio no responde en este momento.",
     });
   }
 }

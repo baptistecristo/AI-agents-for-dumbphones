@@ -4,8 +4,10 @@
 // derrière une phrase à recopier.
 
 import { redirect } from "next/navigation";
+import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { DASHBOARD } from "../copy";
 import { fr } from "../format";
 import { Bubble, Card, EmptyState, Hint, PageIntro, Section, primaryBtn, secondaryBtn } from "../ui";
 import { disconnectGoogle } from "./actions";
@@ -32,16 +34,18 @@ export default async function ComptePage({ searchParams }: { searchParams: Promi
   ]);
 
   const confirmationError = (await searchParams).erreur === "confirmation";
+  const lang = await siteLanguage();
+  const tr = DASHBOARD[lang].compte;
 
   return (
     <>
-      <PageIntro eyebrow="Compte" title="Compte">
-        Tes connexions, tes données, et la porte de sortie si un jour tu veux partir.
+      <PageIntro eyebrow={tr.eyebrow} title={tr.title}>
+        {tr.intro}
       </PageIntro>
 
       <Section
-        title="Téléphones reliés"
-        description="Les numéros depuis lesquels tu appelles ton agent. C'est à ton numéro qu'il te reconnaît."
+        title={tr.phones.title}
+        description={tr.phones.description}
       >
         {phones && phones.length > 0 ? (
           <Card>
@@ -55,76 +59,67 @@ export default async function ComptePage({ searchParams }: { searchParams: Promi
             </ul>
           </Card>
         ) : (
-          <EmptyState>Aucun numéro relié pour l&apos;instant.</EmptyState>
+          <EmptyState>{tr.phones.empty}</EmptyState>
         )}
-        <Hint>
-          Pour relier un autre numéro, ça se passe à la mise en route, ou avec le support : il faut le vérifier par SMS.
-        </Hint>
+        <Hint>{tr.phones.hint}</Hint>
       </Section>
 
       <Section
-        title="Google"
-        description="Ton agenda et tes contacts, pour que l'agent lise tes rendez-vous et appelle les bonnes personnes."
+        title={tr.google.title}
+        description={tr.google.description}
       >
         {google ? (
           <Card>
             <p className="text-ink dark:text-neutral-100">
-              Connecté avec <span className="font-medium">{google.google_email}</span>
+              {tr.google.connectedWith}<span className="font-medium">{google.google_email}</span>
             </p>
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Relié depuis le {fr(google.connected_at)}.</p>
+            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{tr.google.connectedSince.replace("%s", fr(google.connected_at, lang))}</p>
             <form action={disconnectGoogle} className="mt-4">
-              <button className={secondaryBtn}>Déconnecter Google</button>
+              <button className={secondaryBtn}>{tr.google.disconnect}</button>
             </form>
-            <Hint>
-              En te déconnectant, l&apos;agenda et les contacts s&apos;arrêtent jusqu&apos;à une nouvelle connexion. Le reste
-              de ton compte ne bouge pas.
-            </Hint>
+            <Hint>{tr.google.disconnectHint}</Hint>
           </Card>
         ) : (
           <Card>
-            <p className="text-neutral-600 dark:text-neutral-400">Google n&apos;est pas connecté.</p>
+            <p className="text-neutral-600 dark:text-neutral-400">{tr.google.notConnected}</p>
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              Sans lui, l&apos;agent ne peut ni lire ton agenda ni retrouver tes contacts.
+              {tr.google.notConnectedBody}
             </p>
             <a href="/api/oauth/google" className={`${primaryBtn} mt-4`}>
-              Connecter Google
+              {tr.google.connect}
             </a>
           </Card>
         )}
       </Section>
 
       <Section
-        title="Exporter mes données"
-        description="Tout ce que l'agent sait de toi, dans un fichier. Les jetons chiffrés n'y sont pas."
+        title={tr.export.title}
+        description={tr.export.description}
       >
         <Card>
           <p className="text-neutral-600 dark:text-neutral-400">
-            Un fichier JSON : ton profil, tes numéros, tes rappels, tes notes, et ton historique d&apos;appels et de SMS.
-            Il se télécharge tout de suite, et il est à toi.
+            {tr.export.body}
           </p>
           <a href="/api/account/export" className={`${secondaryBtn} mt-4`}>
-            Télécharger mes données
+            {tr.export.download}
           </a>
           <div className="mt-4">
-            <Bubble>
-              Ce fichier, c&apos;est tout ce que je garde de toi. Mes accès chiffrés n&apos;y sont pas : ils me servent à
-              agir, pas à être lus.
-            </Bubble>
+            <Bubble>{tr.export.bubble}</Bubble>
           </div>
         </Card>
       </Section>
 
       <Section
-        title="Supprimer mon compte"
-        description="Ton droit à l'effacement. Ce que tu supprimes ici part définitivement."
+        title={tr.danger.title}
+        description={tr.danger.description}
       >
         {confirmationError && (
           <p className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-800 dark:bg-red-950/50 dark:text-red-200">
-            La phrase de confirmation ne correspondait pas. Rien n&apos;a été supprimé.
+            {tr.danger.confirmError}
           </p>
         )}
         <Card>
-          <DeleteAccount />
+          <DeleteAccount lang={lang} />
         </Card>
       </Section>
     </>

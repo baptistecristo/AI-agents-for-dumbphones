@@ -5,7 +5,9 @@
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { siteLanguage } from "@/lib/site-i18n";
 import { checkPhoneVerification, startPhoneVerification } from "@/lib/twilio";
+import { CONSENT_SOURCES, ONBOARDING } from "./copy";
 
 async function currentUserId(): Promise<string> {
   const supabase = await supabaseServer();
@@ -26,30 +28,32 @@ function normalizeFrenchPhone(raw: string): string | null {
 
 export async function sendOtp(_prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string; e164?: string }> {
   await currentUserId();
+  const errors = ONBOARDING[await siteLanguage()].errors;
   const e164 = normalizeFrenchPhone(String(formData.get("phone") ?? ""));
-  if (!e164) return { ok: false, message: "Numéro invalide. Exemple : 06 12 34 56 78" };
+  if (!e164) return { ok: false, message: errors.invalidNumber };
   try {
     await startPhoneVerification(e164);
   } catch (err) {
     console.error("OTP send", err);
-    return { ok: false, message: "Impossible d'envoyer le code (service SMS). Réessaie." };
+    return { ok: false, message: errors.sendFailed };
   }
   // On enregistre au passage l'identité saisie dans le même formulaire : il n'y a
   // plus de bouton « Enregistrer » séparé. Ces champs restent modifiables ensuite
   // dans « Mon agent ».
   await saveIdentity(formData);
-  return { ok: true, message: "Code envoyé par SMS.", e164 };
+  return { ok: true, message: errors.codeSent, e164 };
 }
 
 export async function confirmOtp(_prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string }> {
   const userId = await currentUserId();
+  const errors = ONBOARDING[await siteLanguage()].errors;
   const e164 = String(formData.get("e164") ?? "");
   const code = String(formData.get("code") ?? "").trim();
   try {
     const ok = await checkPhoneVerification(e164, code);
-    if (!ok) return { ok: false, message: "Code incorrect. Réessaie." };
+    if (!ok) return { ok: false, message: errors.wrongCode };
   } catch {
-    return { ok: false, message: "Vérification impossible. Redemande un code." };
+    return { ok: false, message: errors.verifyFailed };
   }
   const db = supabaseAdmin();
   await db.from("phones").upsert(
@@ -57,7 +61,7 @@ export async function confirmOtp(_prev: unknown, formData: FormData): Promise<{ 
     { onConflict: "e164" },
   );
   await db.from("profiles").update({ onboarding_step: "google" }).eq("id", userId);
-  return { ok: true, message: "Numéro vérifié ✅" };
+  return { ok: true, message: errors.verified };
 }
 
 export async function saveIdentity(formData: FormData): Promise<void> {
@@ -90,22 +94,16 @@ export async function skipGoogle(): Promise<void> {
   redirect("/onboarding");
 }
 
-const CONSENT_LABELS: Record<string, string> = {
-  calendar: "Lire et modifier l'agenda",
-  contacts: "Lire les contacts",
-  sms: "Envoyer des SMS (rappels, itinéraires, comptes-rendus)",
-  outbound_calls: "Passer des appels à ma place (restaurant, taxi, rendez-vous)",
-  memory: "Retenir mes préférences (lieux, personnes, habitudes)",
-  recording: "Enregistrer et transcrire les appels pour le suivi",
-};
-
 export async function saveConsents(formData: FormData): Promise<void> {
   const userId = await currentUserId();
-  const rows = Object.keys(CONSENT_LABELS).map((source) => ({
+  // scope_note = le libellé réellement montré, dans la langue du site au moment
+  // du choix : le registre garde la phrase cochée, pas une traduction d'office.
+  const labels = ONBOARDING[await siteLanguage()].consents.labels;
+  const rows = CONSENT_SOURCES.map((source) => ({
     user_id: userId,
     source,
     granted: formData.get(source) === "on",
-    scope_note: CONSENT_LABELS[source],
+    scope_note: labels[source],
   }));
   const db = supabaseAdmin();
   await db.from("consents").insert(rows);

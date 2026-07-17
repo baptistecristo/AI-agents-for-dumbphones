@@ -1,6 +1,6 @@
 "use client";
 
-// Le comparateur interactif : état des filtres, bascule FR/EN, cartes.
+// Le comparateur interactif : état des filtres, bascule FR/EN/ES, cartes.
 // Toute la logique de filtrage vit dans `lib/phones/filter.ts` (testée seule).
 
 import { useMemo, useState } from "react";
@@ -26,8 +26,8 @@ function currency(region: Region) {
   return region === "america" ? "$" : "€";
 }
 
-export default function Finder() {
-  const [lang, setLang] = useState<Lang>("fr");
+export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
+  const [lang, setLang] = useState<Lang>(initialLang);
   const [region, setRegion] = useState<Region>("europe");
   const [nav, setNav] = useState<FilterCriteria["nav"]>(undefined);
   const [trueOnly, setTrueOnly] = useState<boolean | undefined>(undefined);
@@ -58,7 +58,7 @@ export default function Finder() {
       <div className="mb-4 flex items-start justify-between gap-4">
         <h1 className="font-display text-4xl leading-tight md:text-5xl">{tr.pageTitle}</h1>
         <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-ink/15 text-sm font-bold">
-          {(["fr", "en"] as Lang[]).map((l) => (
+          {(["fr", "en", "es"] as Lang[]).map((l) => (
             <button
               key={l}
               onClick={() => setLang(l)}

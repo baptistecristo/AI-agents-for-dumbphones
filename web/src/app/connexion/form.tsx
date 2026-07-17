@@ -14,12 +14,16 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Language } from "@/lib/language";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { LangSwitcher } from "../lang-switcher";
+import { CONNEXION } from "./copy";
 import { displayedProviders, PROVIDERS, type OAuthId } from "./providers";
 
 const NEXT = "/onboarding";
 
-export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
+export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lang: Language }) {
+  const tr = CONNEXION[lang];
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -46,7 +50,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
     // En cas de succès, la page est déjà redirigée vers le fournisseur.
     if (error) {
       setOauthBusy(null);
-      setError("La connexion n'a pas pu démarrer. Réessaie dans un instant.");
+      setError(tr.oauthStartFailed);
     }
   }
 
@@ -63,7 +67,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
       },
     });
     setSending(false);
-    if (error) setError("L'envoi a échoué. Vérifie l'adresse et réessaie.");
+    if (error) setError(tr.sendFailed);
     else setSent(true);
   }
 
@@ -79,7 +83,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
     });
     if (error) {
       setVerifying(false);
-      setError("Code incorrect ou expiré. Vérifie les 6 chiffres, ou demande un nouvel envoi.");
+      setError(tr.wrongCode);
       return;
     }
     // Session posée : rechargement complet pour que le serveur voie le cookie.
@@ -88,15 +92,15 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-      <h1 className="font-display text-4xl tracking-tight text-ink dark:text-neutral-50">Se connecter</h1>
-      <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-        Choisis ta méthode. Première visite ? Ton compte se crée tout seul.
-      </p>
+      <div className="mb-6 self-start">
+        <LangSwitcher current={lang} />
+      </div>
+      <h1 className="font-display text-4xl tracking-tight text-ink dark:text-neutral-50">{tr.title}</h1>
+      <p className="mt-2 text-neutral-600 dark:text-neutral-400">{tr.subtitle}</p>
 
       {linkExpired && !sent && (
         <p className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          La connexion précédente n&apos;a pas abouti (lien expiré, déjà utilisé, ou refusée par le
-          fournisseur). Réessaie ci-dessous.
+          {tr.previousFailed}
         </p>
       )}
 
@@ -109,7 +113,8 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
       {(providers.length > 0 || !emailCode) && (
         <div className="mt-8 space-y-3">
           {providers.map(({ id, status }) => {
-            const { label, Icon } = PROVIDERS[id];
+            const { name, Icon } = PROVIDERS[id];
+            const label = tr.continueWith.replace("%s", name);
             if (status === "soon") {
               // Bouton visible mais pas encore câblé : on renvoie vers une page
               // d'attente plutôt que de lancer une connexion qui échouerait.
@@ -124,7 +129,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
                   </span>
                   {label}
                   <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
-                    à fixer
+                    {tr.comingSoonBadge}
                   </span>
                 </Link>
               );
@@ -138,7 +143,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
                 className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white px-4 py-3 text-base font-semibold text-ink shadow-sm transition hover:bg-neutral-50 disabled:opacity-50 dark:border-white/15 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800"
               >
                 <Icon />
-                {oauthBusy === id ? "Redirection…" : label}
+                {oauthBusy === id ? tr.redirecting : label}
               </button>
             );
           })}
@@ -155,9 +160,9 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
               <span className="opacity-60" aria-hidden="true">
                 🔢
               </span>
-              Connexion par code à 6 chiffres
+              {tr.codeSignIn}
               <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
-                à fixer
+                {tr.comingSoonBadge}
               </span>
             </Link>
           )}
@@ -167,7 +172,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
       {(providers.length > 0 || !emailCode) && (
         <div className="my-8 flex items-center gap-4" aria-hidden="true">
           <span className="h-px flex-1 bg-black/10 dark:bg-white/15" />
-          <span className="text-sm text-neutral-500">ou par e-mail</span>
+          <span className="text-sm text-neutral-500">{tr.orByEmail}</span>
           <span className="h-px flex-1 bg-black/10 dark:bg-white/15" />
         </div>
       )}
@@ -175,17 +180,15 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
       {sent ? (
         <div className="space-y-6">
           <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-            <p className="font-bold">C&apos;est envoyé 📬</p>
+            <p className="font-bold">{tr.sentTitle}</p>
             <p className="mt-1 text-sm">
               {emailCode ? (
                 <>
-                  Ouvre l&apos;e-mail reçu à <strong>{email}</strong>. Saisis le code à 6 chiffres
-                  ci-dessous, ou clique simplement le lien.
+                  {tr.sentCodeBefore}<strong>{email}</strong>{tr.sentCodeAfter}
                 </>
               ) : (
                 <>
-                  Ouvre l&apos;e-mail reçu à <strong>{email}</strong> et clique sur le lien pour
-                  continuer.
+                  {tr.sentLinkBefore}<strong>{email}</strong>{tr.sentLinkAfter}
                 </>
               )}
             </p>
@@ -194,7 +197,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
           {emailCode && (
             <form onSubmit={verifyCode} className="space-y-4">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium">Code à 6 chiffres</span>
+                <span className="mb-1 block text-sm font-medium">{tr.codeLabel}</span>
                 <input
                   inputMode="numeric"
                   autoComplete="one-time-code"
@@ -212,7 +215,7 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
                 disabled={verifying || code.length < 6}
                 className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
               >
-                {verifying ? "Vérification…" : "Valider le code"}
+                {verifying ? tr.verifying : tr.validateCode}
               </button>
             </form>
           )}
@@ -226,19 +229,19 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
             }}
             className="text-sm text-neutral-500 underline-offset-2 hover:underline"
           >
-            Changer d&apos;adresse ou renvoyer
+            {tr.changeAddress}
           </button>
         </div>
       ) : (
         <form onSubmit={sendEmail} className="space-y-4">
           <label className="block">
-            <span className="mb-1 block text-sm font-medium">Adresse e-mail</span>
+            <span className="mb-1 block text-sm font-medium">{tr.emailLabel}</span>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="prenom@exemple.fr"
+              placeholder={tr.emailPlaceholder}
               className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-lg outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
             />
           </label>
@@ -247,15 +250,14 @@ export function ConnexionForm({ linkExpired }: { linkExpired: boolean }) {
             disabled={sending}
             className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
           >
-            {sending ? "Envoi…" : emailCode ? "Recevoir mon lien et mon code" : "Recevoir mon lien de connexion"}
+            {sending ? tr.sending : emailCode ? tr.submitWithCode : tr.submitLinkOnly}
           </button>
         </form>
       )}
 
       {hasLive && (
         <p className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
-          L&apos;e-mail n&apos;arrive pas, ou le lien ne s&apos;ouvre pas ? Certains services
-          (Outlook…) bloquent les liens de connexion. Essaie plutôt un des boutons plus haut.
+          {tr.outlookNote}
         </p>
       )}
     </main>

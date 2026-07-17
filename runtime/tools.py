@@ -200,7 +200,7 @@ def inbound_tools() -> ToolsSchema:
                 {
                     "request_summary": {"type": "string"},
                     "caller_words": {"type": "string"},
-                    "language": {"type": "string", "enum": ["en", "fr"]},
+                    "language": {"type": "string", "enum": ["en", "fr", "es"]},
                     "notify_caller": {"type": "boolean"},
                 },
                 ["request_summary"],

@@ -13,13 +13,19 @@ export type CallSession = {
 // Chaque skill renvoie un texte (dans la langue de l'appel) que l'agent lira/paraphrasera.
 export type SkillResult = string;
 
-// Sélection FR/EN d'une chaîne destinée à l'appelant.
-export function t(session: Pick<CallSession, "language">, s: { fr: string; en: string }): string {
-  return session.language === "en" ? s.en : s.fr;
+// Sélection FR/EN/ES d'une chaîne destinée à l'appelant. Les trois clés sont
+// obligatoires : une langue ajoutée sans ses chaînes ne compile pas.
+export function t(
+  session: Pick<CallSession, "language">,
+  s: { fr: string; en: string; es: string },
+): string {
+  return s[session.language] ?? s.fr;
 }
 
+const DATE_LOCALES: Record<Language, string> = { fr: "fr-FR", en: "en-GB", es: "es-ES" };
+
 export function formatDate(iso: string | Date, language: Language): string {
-  return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "fr-FR", {
+  return new Intl.DateTimeFormat(DATE_LOCALES[language] ?? "fr-FR", {
     weekday: "long",
     day: "numeric",
     month: "long",

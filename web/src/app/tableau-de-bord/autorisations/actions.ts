@@ -6,8 +6,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { DASHBOARD } from "../copy";
 
 // Les six sources du registre. Une valeur hors liste (input hidden trafiqué)
 // est simplement ignorée : on n'insère rien d'inconnu.
@@ -25,11 +27,13 @@ export async function toggleConsent(formData: FormData): Promise<void> {
 
   // La valeur reçue est DÉJÀ l'état voulu (l'opposé de l'état affiché). On
   // l'ajoute au registre ; on ne modifie ni ne supprime aucune ligne existante.
+  // scope_note : la note dans la langue du site au moment du choix (même
+  // précédent que l'onboarding — le registre garde ce que la personne a vu).
   await supabaseAdmin().from("consents").insert({
     user_id: user.id,
     source,
     granted: formData.get("granted") === "true",
-    scope_note: "Modifié depuis l'espace personnel",
+    scope_note: DASHBOARD[await siteLanguage()].autorisations.scopeNote,
   });
 
   revalidatePath("/tableau-de-bord/autorisations");

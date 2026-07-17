@@ -16,9 +16,13 @@ demo number is silent. **Getting off it — onto the self-hosted Pipecat pipelin
 `runtime/` — is the project's number one open problem**, and it's
 [Discussion #9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 
-> **Bilingue EN/FR** — appelez un numéro depuis un téléphone à clapet et demandez ce
+> **Trilingue FR/EN/ES** — appelez un numéro depuis un téléphone à clapet et demandez ce
 > dont vous avez besoin (météo, itinéraire, rappel). Vous gardez l'utile, vous perdez
 > l'addiction. Open-source, et la communauté ajoute les compétences.
+>
+> **Trilingüe FR/EN/ES** — llama a un número desde un teléfono de tapa y pide lo que
+> necesites (el tiempo, una ruta, un recordatorio). Te quedas con lo útil, pierdes la
+> adicción. Open-source, y la comunidad añade las habilidades.
 
 **Know [Sift](https://github.com/edleeman17/sift)?** Sift is a beloved dumbphone
 companion you *text* — `WEATHER`, `REMIND 18:30 …` — and it texts back. This project is
@@ -58,15 +62,17 @@ contribution.
 
 Those gaps *are* the invitation. The fun open problems:
 
-- 🎙️ **Bilingual EN/FR works.** Each caller has a preferred language
+- 🎙️ **Trilingual FR/EN/ES.** Each caller has a preferred language
   (`profiles.preferred_language`), the session hands it to the runtime, and skills answer
-  in the caller's language. That is the part that answered a real call, on Vapi. Both
-  runtimes pin speech-to-text to the session's language at call setup (Deepgram on Vapi,
-  Whisper self-hosted), so a caller who *switches* language mid-call gets a model still
-  listening for the other one: the prompt tells the agent to follow, but the transcript
-  degrades. Fixing that is an open issue.
+  in the caller's language. EN and FR are the pair that answered a real call, on Vapi;
+  Spanish is wired end to end (prompt, skills, SMS commands, voices) but has not carried
+  a live call yet — the demo number is out of credit. Both runtimes pin speech-to-text to
+  the session's language at call setup (Deepgram on Vapi, Whisper self-hosted), so a
+  caller who *switches* language mid-call gets a model still listening for the other one:
+  the prompt tells the agent to follow, but the transcript degrades. Fixing that is an
+  open issue.
 - 🧩 **Skills are a plugin surface.** Adding a **new skill** (a thing the agent can do on
-  a call) is a small, self-contained PR. This is one of the two best on-ramps; a **third
+  a call) is a small, self-contained PR. This is one of the two best on-ramps; a **fourth
   language** is the other.
 - 🔌 **Getting off Vapi** — the biggest one, and now the loudest. `runtime/` has the
   shape of a Pipecat pipeline (Silero VAD → faster-whisper → local LLM → Piper) but has
@@ -117,13 +123,13 @@ is drawn the way it is.
 | Voice runtime | **Vapi** (`RUNTIME=vapi`) — the only one that has ever carried a call, and it's out of credit. Self-hosted Pipecat + faster-whisper + Piper + Ollama is scaffolded but has never placed one ([#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9)) | `web/src/lib/vapi.ts` + `runtime/` |
 | Telephony | Vapi's number today. A **Twilio**/Telnyx trunk is what the self-hosted path needs — a phone number is the one thing you can't self-host | `runtime/server.py` |
 | SMS + OTP | **Twilio** (Messages + Verify) — coded, but **no Twilio account is connected**, so nothing actually sends yet | `web/src/lib/twilio.ts` |
-| Inbound agent | Bilingual (EN/FR) system prompt + greeting, one-time-SMS-code gate before sensitive actions, two-step voice confirmation, per-caller speaking rate. On Vapi the voice/STT/LLM are **ElevenLabs + Deepgram + Anthropic** — managed, and none of them EU | `web/src/lib/agents/inbound.ts` |
+| Inbound agent | Trilingual (FR/EN/ES) system prompt + greeting, one-time-SMS-code gate before sensitive actions, two-step voice confirmation, per-caller speaking rate. On Vapi the voice/STT/LLM are **ElevenLabs + Deepgram + Anthropic** — managed, and none of them EU | `web/src/lib/agents/inbound.ts` |
 | Public-number guard | 180s per call, plus three limits that stack: **5 calls per caller per hour** and **20 per caller per day** stop one person redialling in a loop, and **60 calls a day across everyone** caps the bill even if the abuse comes from fifty different numbers. Over any of them, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
 | Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, call auth (`request_code` / `verify_code`) | `web/src/lib/skills/` |
-| SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `REMINDERS`, `ALREADY`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift). `DONE` is phone-only — marking a reminder done needs the call | `web/src/lib/sms-commands.ts` |
+| SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `REMINDERS`, `ALREADY`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift), with French and Spanish aliases (`METEO`/`TIEMPO`, `RECUERDA`, `AYUDA`…). `DONE` is phone-only — marking a reminder done needs the call | `web/src/lib/sms-commands.ts` |
 | Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`, `voice_speed`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
-| Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent), dashboard with language and speaking-rate settings | `web/src/app/` |
+| Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent), dashboard with language and speaking-rate settings — the site itself is FR/EN/ES (cookie-backed switcher) | `web/src/app/` |
 
 ## Two ways to help in an afternoon
 

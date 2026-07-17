@@ -5,7 +5,7 @@
 > [What's implemented](README.md#whats-implemented) in the README, which is the source of
 > truth. The original **spoken PIN** for sensitive actions is now a **one-time code texted to
 > the caller's registered number** (`skills/auth.ts`), and the rules below reflect that. Two
-> other things were also decided differently: the product is **bilingual EN/FR**, not
+> other things were also decided differently: the product is **trilingual FR/EN/ES**, not
 > French-first, and **email/Outlook are not built**.
 
 **Product:** A voice-first AI agent reachable by phone from a *dumbphone*. The user calls a number, speaks a natural request, and the agent acts on their behalf (calendar, email, contacts, navigation, reminders, outbound calls) and replies by **voice + SMS**. All intelligence lives on the server; the phone is a minimalist voice terminal.
@@ -251,4 +251,4 @@ user: "réserve chez X pour 2 à 20h"
 
 ---
 
-*This is the original architecture spec. For where the project is headed (open source, young-dumbphone mission, bilingual EN/FR), see the [README](README.md).*
+*This is the original architecture spec. For where the project is headed (open source, young-dumbphone mission, trilingual FR/EN/ES), see the [README](README.md).*

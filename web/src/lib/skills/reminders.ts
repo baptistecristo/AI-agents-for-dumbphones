@@ -9,6 +9,7 @@ const noUser = (session: CallSession) =>
   t(session, {
     fr: "Je ne peux pas gérer de rappels pour un appelant non identifié.",
     en: "I can't manage reminders for an unidentified caller.",
+    es: "No puedo gestionar recordatorios para una persona no identificada.",
   });
 
 export async function setReminder(
@@ -27,6 +28,7 @@ export async function setReminder(
     return t(session, {
       fr: "Désolé, je n'ai pas réussi à enregistrer ce rappel.",
       en: "Sorry, I couldn't save that reminder.",
+      es: "Lo siento, no he podido guardar ese recordatorio.",
     });
   // Le rappel est bien enregistré ; c'est sa LIVRAISON qui dépend du cron, donc
   // d'un fournisseur SMS. Sans fournisseur, « il arrivera par SMS » est une
@@ -34,14 +36,16 @@ export async function setReminder(
   // vérifie pas soi-même. On dit ce qui existe : la trace, relisible par
   // list_reminders.
   const delivery = smsProviderConfigured("send")
-    ? { fr: " Il arrivera par SMS.", en: " It will arrive by SMS." }
+    ? { fr: " Il arrivera par SMS.", en: " It will arrive by SMS.", es: " Llegará por SMS." }
     : {
         fr: " Mais aucun fournisseur SMS n'est branché ici : ce rappel ne partira PAS par SMS. Dis-le honnêtement — il est gardé, et relisible si on te le redemande.",
         en: " But no SMS provider is connected here: this reminder will NOT be texted. Say so honestly — it is kept, and can be read back if asked.",
+        es: " Pero aquí no hay proveedor de SMS conectado: este recordatorio NO llegará por SMS. Dilo honestamente — queda guardado, y se puede releer si te lo piden.",
       };
   return t(session, {
     fr: `Rappel enregistré : « ${args.text} », ${formatDate(args.due_at, session.language)}${recurrence ? `, répété (${recurrence})` : ""}.${delivery.fr}`,
     en: `Reminder saved: "${args.text}", ${formatDate(args.due_at, session.language)}${recurrence ? `, repeating (${recurrence})` : ""}.${delivery.en}`,
+    es: `Recordatorio guardado: «${args.text}», ${formatDate(args.due_at, session.language)}${recurrence ? `, repetido (${recurrence})` : ""}.${delivery.es}`,
   });
 }
 
@@ -55,14 +59,15 @@ export async function listReminders(session: CallSession): Promise<SkillResult> 
     .order("due_at", { ascending: true })
     .limit(8);
   if (!data || data.length === 0)
-    return t(session, { fr: "Aucun rappel à venir.", en: "No upcoming reminders." });
+    return t(session, { fr: "Aucun rappel à venir.", en: "No upcoming reminders.", es: "Ningún recordatorio pendiente." });
   const lines = data.map(
     (r) =>
-      `- ${r.text} : ${r.due_at ? formatDate(r.due_at, session.language) : t(session, { fr: "sans date", en: "no date" })}`,
+      `- ${r.text} : ${r.due_at ? formatDate(r.due_at, session.language) : t(session, { fr: "sans date", en: "no date", es: "sin fecha" })}`,
   );
   return t(session, {
     fr: `Rappels à venir :\n${lines.join("\n")}`,
     en: `Upcoming reminders:\n${lines.join("\n")}`,
+    es: `Recordatorios pendientes:\n${lines.join("\n")}`,
   });
 }
 
@@ -83,11 +88,13 @@ export async function didIAlready(session: CallSession, args: { what: string }):
     return t(session, {
       fr: `Oui : « ${data[0].text} » a été marqué fait ${formatDate(data[0].done_at!, session.language)}.`,
       en: `Yes: "${data[0].text}" was marked done ${formatDate(data[0].done_at!, session.language)}.`,
+      es: `Sí: «${data[0].text}» se marcó como hecho ${formatDate(data[0].done_at!, session.language)}.`,
     });
   }
   return t(session, {
     fr: `Je n'ai aucune trace que « ${args.what} » ait été fait ces dernières 24 heures. (Ce n'est fiable que si la personne me le signale à chaque fois.)`,
     en: `I have no record of "${args.what}" being done in the last 24 hours. (This is only reliable if the person tells me each time.)`,
+    es: `No tengo constancia de que «${args.what}» se haya hecho en las últimas 24 horas. (Solo es fiable si la persona me lo dice cada vez.)`,
   });
 }
 
@@ -107,6 +114,7 @@ export async function markDone(session: CallSession, args: { what: string }): Pr
     return t(session, {
       fr: `Noté : « ${data[0].text} » est fait.`,
       en: `Noted: "${data[0].text}" is done.`,
+      es: `Anotado: «${data[0].text}» está hecho.`,
     });
   }
   await supabaseAdmin().from("reminders").insert({
@@ -118,5 +126,6 @@ export async function markDone(session: CallSession, args: { what: string }): Pr
   return t(session, {
     fr: `Noté : « ${args.what} » est fait. Je m'en souviendrai si on me repose la question.`,
     en: `Noted: "${args.what}" is done. I'll remember it if you ask me again.`,
+    es: `Anotado: «${args.what}» está hecho. Lo recordaré si me lo vuelves a preguntar.`,
   });
 }

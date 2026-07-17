@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { DASHBOARD } from "../copy";
 
 // Détache Google côté application : on retire la connexion locale (et donc le
 // jeton chiffré qui vit dans la même ligne). On ne révoque rien chez Google —
@@ -33,8 +34,12 @@ export async function deleteAccount(formData: FormData): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
+  // La phrase attendue est celle que la page a montrée, dans la langue du site.
+  // On accepte celle de chaque langue : si l'onglet a changé de langue entre
+  // l'affichage et l'envoi, une phrase recopiée à l'identique reste valable.
   const confirm = String(formData.get("confirm") ?? "");
-  if (confirm !== "SUPPRIMER MON COMPTE") {
+  const accepted = Object.values(DASHBOARD).map((d) => d.compte.danger.confirmPhrase);
+  if (!accepted.includes(confirm)) {
     redirect("/tableau-de-bord/compte?erreur=confirmation");
   }
 

@@ -46,8 +46,16 @@ export function outboundSystemPrompt(job: OutboundJob): string {
   const openingLine =
     job.user_language === "en"
       ? `« Hello, I'm the automated assistant of ${clientName}, I'm calling on their behalf. » Si l'interlocuteur parle français, poursuis en français.`
-      : `« Bonjour, je suis l'assistant automatique de ${clientName}, je vous appelle de sa part. »`;
-  return `Tu es un assistant téléphonique qui appelle POUR LE COMPTE de ${clientName}. Tu parles ${job.user_language === "en" ? "anglais (bascule en français si l'interlocuteur parle français)" : "français"}, poliment et efficacement.
+      : job.user_language === "es"
+        ? `« Hola, soy el asistente automático de ${clientName}, le llamo de su parte. » Si l'interlocuteur parle français, poursuis en français.`
+        : `« Bonjour, je suis l'assistant automatique de ${clientName}, je vous appelle de sa part. »`;
+  const spokenLanguage =
+    job.user_language === "en"
+      ? "anglais (bascule en français si l'interlocuteur parle français)"
+      : job.user_language === "es"
+        ? "espagnol (bascule en français si l'interlocuteur parle français)"
+        : "français";
+  return `Tu es un assistant téléphonique qui appelle POUR LE COMPTE de ${clientName}. Tu parles ${spokenLanguage}, poliment et efficacement.
 
 # Transparence (obligation légale)
 Dès le début : ${openingLine} Ne te fais JAMAIS passer pour un humain si on te pose la question.
@@ -70,7 +78,7 @@ ${KIND_GUIDANCE[job.kind]}
 
 # Ce que tu rapportes (report_outcome)
 - status: success | failed | voicemail | needs_user
-- details: tout ce que le client doit savoir, ${job.user_language === "en" ? "en anglais clair" : "en français clair"} (date, heure, nom, prix, consignes). C'est ce texte qui lui sera envoyé par SMS : rédige-le pour lui, dans sa langue.`;
+- details: tout ce que le client doit savoir, ${job.user_language === "en" ? "en anglais clair" : job.user_language === "es" ? "en espagnol clair" : "en français clair"} (date, heure, nom, prix, consignes). C'est ce texte qui lui sera envoyé par SMS : rédige-le pour lui, dans sa langue.`;
 }
 
 export function buildOutboundAssistant(job: OutboundJob) {

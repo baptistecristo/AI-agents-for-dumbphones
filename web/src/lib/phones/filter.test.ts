@@ -8,7 +8,7 @@ const base: Omit<Phone, "id" | "regions" | "nav" | "trueDumbphone"> = {
   formFactor: "candybar",
   os: "kaios",
   googleMaps: false,
-  blurb: { fr: "", en: "" },
+  blurb: { fr: "", en: "", es: "" },
   shops: [],
 };
 

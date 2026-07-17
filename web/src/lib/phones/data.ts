@@ -34,10 +34,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Le vrai téléphone simple le moins cher qui fait tourner Google Maps. Barre classique, clavier, KaiOS.",
       en: "The cheapest genuine dumbphone that runs Google Maps. Classic candybar, keypad, KaiOS.",
+      es: "El teléfono básico de verdad más barato que mueve Google Maps. Barra clásica, teclado, KaiOS.",
     },
     caveat: {
       fr: "Maps sur KaiOS est lent et basique, et son avenir n'est pas garanti (version figée).",
       en: "Google Maps on KaiOS is sluggish and basic, and its long-term support isn't guaranteed.",
+      es: "Google Maps en KaiOS es lento y básico, y su futuro no está garantizado (versión congelada).",
     },
     shops: [
       { region: "europe", label: "Amazon.fr", url: amzFr("Nokia 6300 4G") },
@@ -59,10 +61,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Le grand frère mieux fini du 6300 4G : même KaiOS + Google Maps, plus bel écran et finitions.",
       en: "The nicer-built sibling of the 6300 4G: same KaiOS + Google Maps, better screen and finish.",
+      es: "El hermano mayor mejor rematado del 6300 4G: mismo KaiOS + Google Maps, mejor pantalla y acabados.",
     },
     caveat: {
       fr: "Comme tous les KaiOS : navigation lente, avenir de l'appli Maps incertain.",
       en: "Like all KaiOS phones: sluggish navigation, uncertain future for the Maps app.",
+      es: "Como todos los KaiOS: navegación lenta y futuro incierto para la app de Maps.",
     },
     shops: [
       { region: "europe", label: "Amazon.fr", url: amzFr("Nokia 8000 4G") },
@@ -83,10 +87,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet KaiOS avec Google Maps, très répandu en Amérique du Nord.",
       en: "KaiOS flip with Google Maps, widely available in North America.",
+      es: "Teléfono de tapa KaiOS con Google Maps, muy extendido en Norteamérica.",
     },
     caveat: {
       fr: "Variante US (TA-1420) : ses bandes ne couvrent PAS la France/l'UE (pas de B20/B28). À éviter en Europe.",
       en: "US variant (TA-1420): its bands do NOT cover France/EU (no B20/B28). Avoid in Europe.",
+      es: "Variante de EE. UU. (TA-1420): sus bandas NO cubren Francia/UE (sin B20/B28). Evítalo en Europa.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Nokia 2780 Flip") }],
   },
@@ -104,10 +110,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Version plus abordable du 2780 Flip : KaiOS 3.1, Google Maps, sans radio FM ni carte SD.",
       en: "The more affordable 2780 Flip: KaiOS 3.1, Google Maps, but no FM radio or SD card.",
+      es: "La versión más asequible del 2780 Flip: KaiOS 3.1, Google Maps, pero sin radio FM ni tarjeta SD.",
     },
     caveat: {
       fr: "Variante nord-américaine : vérifier les bandes hors USA/Canada.",
       en: "North-American variant: check bands outside the US/Canada.",
+      es: "Variante norteamericana: comprueba las bandas fuera de EE. UU./Canadá.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Nokia 2760 Flip") }],
   },
@@ -125,6 +133,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "L'un des clapets KaiOS + Google Maps les moins chers du marché nord-américain.",
       en: "One of the cheapest KaiOS + Google Maps flips on the North-American market.",
+      es: "Uno de los teléfonos de tapa KaiOS + Google Maps más baratos del mercado norteamericano.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("TCL Flip 2") }],
   },
@@ -142,6 +151,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet KaiOS simple et bon marché avec Google Maps, courant chez les opérateurs US.",
       en: "Simple, cheap KaiOS flip with Google Maps, common on US carriers.",
+      es: "Teléfono de tapa KaiOS sencillo y barato con Google Maps, habitual en los operadores de EE. UU.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Alcatel Go Flip 4") }],
   },
@@ -162,10 +172,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Le téléphone minimaliste emblématique : appli d'itinéraire maison, pas de navigateur, pas de réseaux sociaux.",
       en: "The flagship intentional phone: own Directions app, no browser, no social media.",
+      es: "El teléfono minimalista por excelencia: app de rutas propia, sin navegador, sin redes sociales.",
     },
     caveat: {
       fr: "Cher, et les nouvelles précommandes n'arrivent qu'à partir de septembre 2026.",
       en: "Expensive, and new pre-orders only ship from September 2026.",
+      es: "Caro, y las nuevas reservas no llegan hasta septiembre de 2026.",
     },
     shops: [{ region: "global", label: "Light Phone", url: "https://www.thelightphone.com/" }],
   },
@@ -184,10 +196,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Écran E-Ink apaisant, cartes hors ligne intégrées, plusieurs jours d'autonomie. Marque européenne (Pologne).",
       en: "Calm E-Ink screen, built-in offline maps, multi-day battery. EU (Polish) company.",
+      es: "Pantalla E-Ink relajante, mapas sin conexión integrados, varios días de autonomía. Marca europea (Polonia).",
     },
     caveat: {
       fr: "Les cartes hors ligne suffisent pour se repérer, mais sans trafic en temps réel.",
       en: "Offline maps are enough to find your way, but there's no live traffic.",
+      es: "Los mapas sin conexión bastan para orientarse, pero sin tráfico en tiempo real.",
     },
     shops: [{ region: "global", label: "Mudita", url: "https://mudita.com/products/phones/mudita-kompakt/" }],
   },
@@ -206,6 +220,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "E-Ink ultra-minimaliste, pensé pour le calme numérique. Appels, SMS, l'essentiel — pas de cartes.",
       en: "Ultra-minimalist E-Ink phone built for digital calm. Calls, texts, essentials — no maps.",
+      es: "E-Ink ultraminimalista, pensado para la calma digital. Llamadas, SMS, lo esencial — sin mapas.",
     },
     shops: [{ region: "global", label: "Mudita", url: "https://mudita.com/products/phones/mudita-pure/" }],
   },
@@ -226,10 +241,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Design suisse épuré, 4G, messagerie chiffrée Signal. Conçu pour l'UE (bandes françaises couvertes).",
       en: "Clean Swiss design, 4G, encrypted Signal messaging. Built for the EU (French bands covered).",
+      es: "Diseño suizo depurado, 4G, mensajería cifrada con Signal. Pensado para la UE (bandas francesas cubiertas).",
     },
     caveat: {
       fr: "A une puce GPS mais AUCUNE carte ni navigation — inutile si vous voulez vous guider.",
       en: "Has a GPS chip but NO maps or navigation — useless if you want turn-by-turn directions.",
+      es: "Tiene chip GPS pero NINGÚN mapa ni navegación — inútil si quieres que te guíe.",
     },
     shops: [{ region: "global", label: "Punkt", url: "https://www.punkt.ch/en/products/mp02-4g-mobile-phone/" }],
   },
@@ -247,10 +264,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Téléphone simple pour seniors, marque suédoise (UE). Bouton d'assistance qui envoie ta position GPS à des proches.",
       en: "Senior-friendly dumbphone, Swedish (EU) brand. Assistance button sends your GPS location to trusted contacts.",
+      es: "Teléfono básico para mayores, de marca sueca (UE). Botón de asistencia que envía tu posición GPS a tus contactos de confianza.",
     },
     caveat: {
       fr: "Le GPS sert à la localisation d'urgence, pas à naviguer : aucune carte à bord.",
       en: "GPS is for emergency location, not navigation: no maps on board.",
+      es: "El GPS es para localizarte en una emergencia, no para navegar: no lleva ningún mapa.",
     },
     shops: [{ region: "europe", label: "Doro", url: "https://www.doro.com/" }],
   },
@@ -268,6 +287,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet seniors avec grandes touches et bouton d'assistance géolocalisé. Clavier vocal.",
       en: "Senior flip phone with big keys and a location-aware assistance button. Spoken keypad.",
+      es: "Teléfono de tapa para mayores con teclas grandes y botón de asistencia con geolocalización. Teclado parlante.",
     },
     shops: [{ region: "europe", label: "Doro", url: "https://www.doro.com/" }],
   },
@@ -287,6 +307,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Le clapet Nokia natif UE : bandes correctes, grand écran, très simple. Mais pas d'appli cartes.",
       en: "The EU-native Nokia flip: correct bands, big display, dead simple. But no maps app.",
+      es: "El teléfono de tapa de Nokia nativo de la UE: bandas correctas, pantalla grande, sencillísimo. Pero sin app de mapas.",
     },
     shops: [
       { region: "europe", label: "Amazon.fr", url: amzFr("Nokia 2660 Flip") },
@@ -307,6 +328,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "La réédition culte de 2024 : 4G, Snake, autonomie énorme. Nostalgie assumée, sans cartes.",
       en: "The cult 2024 reissue: 4G, Snake, huge battery life. Pure nostalgia, no maps.",
+      es: "La reedición de culto de 2024: 4G, Snake, autonomía enorme. Nostalgia sin complejos, y sin mapas.",
     },
     shops: [
       { region: "europe", label: "Amazon.fr", url: amzFr("Nokia 3210 4G") },
@@ -327,6 +349,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Réédition de la barre légendaire, 4G. Robuste, sobre, longue autonomie — pas de navigation.",
       en: "Reissue of the legendary candybar, 4G. Rugged, plain, long battery — no navigation.",
+      es: "Reedición de la barra legendaria, con 4G. Robusta, sobria, mucha autonomía — sin navegación.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 8210 4G") }],
   },
@@ -344,6 +367,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Grand écran incurvé, très lisible, boutons francs. Le classique « ça appelle et ça dure ».",
       en: "Large curved, very readable screen, firm buttons. The classic 'it calls and it lasts'.",
+      es: "Pantalla grande curvada y muy legible, botones firmes. El clásico «llama y dura».",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 6310 2024") }],
   },
@@ -361,6 +385,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Barre 4G d'entrée de gamme, sobre et fiable. Appels, SMS, radio — rien de plus.",
       en: "Entry-level 4G candybar, plain and reliable. Calls, texts, radio — nothing more.",
+      es: "Barra 4G de gama de entrada, sobria y fiable. Llamadas, SMS, radio — nada más.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 235 4G") }],
   },
@@ -378,6 +403,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Le minimum vital, très bon marché : appels et SMS 4G, lampe torche, radio FM.",
       en: "The bare essentials, very cheap: 4G calls and texts, flashlight, FM radio.",
+      es: "Lo mínimo imprescindible, baratísimo: llamadas y SMS por 4G, linterna, radio FM.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 110 4G") }],
   },
@@ -395,6 +421,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Marque autrichienne (UE) pour seniors : très grandes touches, son fort, bouton d'urgence.",
       en: "Austrian (EU) senior brand: extra-large keys, loud sound, emergency button.",
+      es: "Marca austriaca (UE) para mayores: teclas muy grandes, sonido potente, botón de emergencia.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Emporia Simplicity") }],
   },
@@ -412,6 +439,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Barre allemande (UE) simple et robuste, grandes touches, bouton SOS. Assemblée en Allemagne.",
       en: "Simple, rugged German (EU) candybar, big keys, SOS button. Assembled in Germany.",
+      es: "Barra alemana (UE) sencilla y robusta, teclas grandes, botón SOS. Ensamblada en Alemania.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Gigaset GL590") }],
   },
@@ -429,10 +457,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "L'un des téléphones simples neufs les moins chers. Double SIM, radio, lampe. 2G/3G — vérifier la 4G.",
       en: "One of the cheapest new dumbphones. Dual SIM, radio, torch. 2G/3G — check for 4G.",
+      es: "Uno de los teléfonos básicos nuevos más baratos. Doble SIM, radio, linterna. 2G/3G — comprueba si hay 4G.",
     },
     caveat: {
       fr: "Modèle 2G/3G : la 2G ferme en France (mars 2026) — préférez une variante 4G.",
       en: "2G/3G model: 2G is shutting down in France (March 2026) — prefer a 4G variant.",
+      es: "Modelo 2G/3G: la 2G se apaga en Francia (marzo de 2026) — mejor una variante 4G.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Alcatel 2057") }],
   },
@@ -452,6 +482,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet ultra-robuste (chantier, extérieur), KaiOS avec Google Maps. Étanche, antichoc.",
       en: "Ultra-rugged flip (worksite, outdoors), KaiOS with Google Maps. Waterproof, shockproof.",
+      es: "Teléfono de tapa ultrarresistente (obra, exteriores), KaiOS con Google Maps. Aguanta agua y golpes.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Sonim XP3plus") }],
   },
@@ -469,10 +500,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet américain très bon marché, KaiOS, avec cartes basiques. Bon budget pour tester.",
       en: "Very cheap US flip, KaiOS, with basic maps. A good budget pick to test the water.",
+      es: "Teléfono de tapa estadounidense muy barato, KaiOS, con mapas básicos. Buena opción económica para probar.",
     },
     caveat: {
       fr: "Support cartes basique et variable selon l'opérateur ; vérifier avant l'achat.",
       en: "Map support is basic and carrier-dependent; verify before buying.",
+      es: "El soporte de mapas es básico y depende del operador; compruébalo antes de comprar.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Schok Classic Flip") }],
   },
@@ -493,10 +526,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Android simplifié (interface EVA) avec Google Maps préinstallé + Play Store + bouton d'assistance GPS. Version FR sur Amazon.fr.",
       en: "Simplified Android (EVA interface) with Google Maps pre-installed + Play Store + GPS assistance button. FR version on Amazon.fr.",
+      es: "Android simplificado (interfaz EVA) con Google Maps preinstalado + Play Store + botón de asistencia GPS. Versión francesa en Amazon.fr.",
     },
     caveat: {
       fr: "C'est un smartphone simplifié, pas un vrai téléphone simple : l'écran et les applis restent là.",
       en: "It's a simplified smartphone, not a true dumbphone: the screen and apps are still there.",
+      es: "Es un smartphone simplificado, no un teléfono básico de verdad: la pantalla y las apps siguen ahí.",
     },
     shops: [
       { region: "europe", label: "Amazon.fr", url: amzFr("Doro 8100") },
@@ -518,10 +553,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Écran E-Ink + clavier physique QWERTY, sous Android complet avec Play Store. Maps oui, distractions au choix.",
       en: "E-Ink screen + physical QWERTY, running full Android with the Play Store. Maps yes, distractions optional.",
+      es: "Pantalla E-Ink + teclado físico QWERTY, con Android completo y Play Store. Maps sí, distracciones a elegir.",
     },
     caveat: {
       fr: "Android complet : la discipline dépend de vous, pas du matériel.",
       en: "Full Android: the discipline is on you, not the hardware.",
+      es: "Android completo: la disciplina depende de ti, no del aparato.",
     },
     shops: [{ region: "global", label: "Minimal", url: "https://www.minimalcompany.com/" }],
   },
@@ -539,10 +576,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "« Le smartphone le plus bête » : matériel Galaxy A15 sous WiseOS verrouillé. Cartes et musique, sans les applis addictives.",
       en: "'The smartest dumb phone': Galaxy A15 hardware under locked-down WiseOS. Maps and music, minus the addictive apps.",
+      es: "«El smartphone más tonto»: hardware de Galaxy A15 con WiseOS capado. Mapas y música, sin las apps adictivas.",
     },
     caveat: {
       fr: "Vendu aux USA ; disponibilité et bandes hors Amérique à vérifier.",
       en: "Sold in the US; availability and bands outside America need checking.",
+      es: "Se vende en EE. UU.; toca comprobar disponibilidad y bandas fuera de América.",
     },
     shops: [{ region: "america", label: "Wisephone", url: "https://www.wisephone.com/" }],
   },
@@ -560,10 +599,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet à logiciel sur-mesure : tu ajoutes Waze, musique, météo — pas de navigateur ni de réseaux sociaux.",
       en: "Flip with purpose-built software: you add Waze, music, weather — no browser or social media.",
+      es: "Teléfono de tapa con software a medida: tú añades Waze, música, el tiempo — sin navegador ni redes sociales.",
     },
     caveat: {
       fr: "Marché américain (opérateurs US) ; ne convient pas à l'Europe.",
       en: "US market (US carriers); not suitable for Europe.",
+      es: "Mercado estadounidense (operadores de EE. UU.); no sirve para Europa.",
     },
     shops: [{ region: "america", label: "Sunbeam", url: "https://www.sunbeamwireless.com/" }],
   },
@@ -581,10 +622,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet robuste sous Android (écran tactile, Play Store, Google Maps complet). Étanche, antichoc.",
       en: "Rugged flip running Android (touchscreen, Play Store, full Google Maps). Waterproof, shockproof.",
+      es: "Teléfono de tapa robusto con Android (pantalla táctil, Play Store, Google Maps completo). Aguanta agua y golpes.",
     },
     caveat: {
       fr: "Sous Android : c'est un smartphone déguisé en clapet, pas un vrai téléphone simple.",
       en: "It's Android: a smartphone dressed as a flip, not a true dumbphone.",
+      es: "Lleva Android: es un smartphone disfrazado de teléfono de tapa, no un teléfono básico de verdad.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Cat S22 Flip") }],
   },
@@ -605,10 +648,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Mini téléphone tactile sous Android allégé, GPS/A-GPS, applis possibles. Import (global), bandes à vérifier.",
       en: "Tiny touchscreen phone on lightweight Android, GPS/A-GPS, apps possible. Import (global), check bands.",
+      es: "Miniteléfono táctil con Android ligero, GPS/A-GPS, apps posibles. De importación (global), comprueba las bandas.",
     },
     caveat: {
       fr: "Import : la compatibilité des bandes 4G FR/UE n'est pas garantie — à vérifier avant d'acheter.",
       en: "Import: FR/EU 4G band compatibility isn't guaranteed — verify before buying.",
+      es: "Importación: la compatibilidad de las bandas 4G de Francia/UE no está garantizada — compruébala antes de comprar.",
     },
     shops: [{ region: "global", label: "AliExpress", url: "https://www.aliexpress.com/w/wholesale-Qin-F21-Pro.html" }],
   },
@@ -629,10 +674,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Barre KaiOS ultra-robuste (IP68, antichoc) avec Google Maps. Pensée pour l'extérieur et le chantier.",
       en: "Ultra-rugged KaiOS candybar (IP68, shockproof) with Google Maps. Built for the outdoors and worksites.",
+      es: "Barra KaiOS ultrarresistente (IP68, a prueba de golpes) con Google Maps. Pensada para exteriores y obra.",
     },
     caveat: {
       fr: "Maps sur KaiOS reste lent ; l'avenir de l'appli n'est pas garanti.",
       en: "Google Maps on KaiOS stays sluggish; the app's future isn't guaranteed.",
+      es: "Google Maps en KaiOS sigue siendo lento; el futuro de la app no está garantizado.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 800 Tough") }],
   },
@@ -650,6 +697,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet KaiOS récent avec Google Maps, écran externe et USB-C. Successeur du Flip 2.",
       en: "Recent KaiOS flip with Google Maps, an outer screen and USB-C. Successor to the Flip 2.",
+      es: "Teléfono de tapa KaiOS reciente con Google Maps, pantalla exterior y USB-C. Sucesor del Flip 2.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("TCL Flip 3") }],
   },
@@ -667,10 +715,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet KaiOS distribué par Verizon, avec Google Maps et Assistant. Grandes touches.",
       en: "KaiOS flip sold by Verizon, with Google Maps and Assistant. Big keys.",
+      es: "Teléfono de tapa KaiOS distribuido por Verizon, con Google Maps y Assistant. Teclas grandes.",
     },
     caveat: {
       fr: "Variante US Verizon : bandes à vérifier hors Amérique du Nord.",
       en: "US Verizon variant: check bands outside North America.",
+      es: "Variante de Verizon para EE. UU.: comprueba las bandas fuera de Norteamérica.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Nokia 2720 V Flip") }],
   },
@@ -691,10 +741,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "La génération précédente, bien moins chère : écran E-Ink, outil d'itinéraire, pas de navigateur.",
       en: "The previous generation, far cheaper: E-Ink screen, a directions tool, no browser.",
+      es: "La generación anterior, mucho más barata: pantalla E-Ink, herramienta de rutas, sin navegador.",
     },
     caveat: {
       fr: "L'itinéraire est basique et l'E-Ink lent ; c'est le compromis du prix.",
       en: "Directions are basic and the E-Ink is slow; that's the price trade-off.",
+      es: "Las rutas son básicas y el E-Ink va lento; es la contrapartida del precio.",
     },
     shops: [{ region: "global", label: "Light Phone", url: "https://www.thelightphone.com/shop" }],
   },
@@ -713,10 +765,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Mini téléphone tactile sous Android allégé, Google Maps et applis possibles. Import (global).",
       en: "Tiny touchscreen phone on lightweight Android, Google Maps and apps possible. Import (global).",
+      es: "Miniteléfono táctil con Android ligero, Google Maps y apps posibles. De importación (global).",
     },
     caveat: {
       fr: "Import et smartphone simplifié : bandes 4G FR/UE à vérifier avant d'acheter.",
       en: "Import and a simplified smartphone: verify FR/EU 4G bands before buying.",
+      es: "De importación y smartphone simplificado: comprueba las bandas 4G de Francia/UE antes de comprar.",
     },
     shops: [{ region: "global", label: "AliExpress", url: "https://www.aliexpress.com/w/wholesale-Duoqin-F22-Pro.html" }],
   },
@@ -736,6 +790,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet militaire (MIL-STD, étanche) très courant aux USA. GPS de localisation, pas de cartes.",
       en: "Military-grade flip (MIL-STD, waterproof) common in the US. Location GPS, no maps.",
+      es: "Teléfono de tapa de grado militar (MIL-STD, resistente al agua) muy común en EE. UU. GPS de localización, sin mapas.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Kyocera DuraXV Extreme") }],
   },
@@ -753,10 +808,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet seniors le plus connu aux USA : très grandes touches, bouton Urgent Response géolocalisé.",
       en: "The best-known US senior flip: extra-large keys, a location-aware Urgent Response button.",
+      es: "El teléfono de tapa para mayores más conocido de EE. UU.: teclas muy grandes y botón Urgent Response con geolocalización.",
     },
     caveat: {
       fr: "Le GPS sert à la localisation d'urgence, pas à naviguer.",
       en: "GPS is for emergency location, not navigation.",
+      es: "El GPS es para localizarte en una emergencia, no para navegar.",
     },
     shops: [{ region: "america", label: "Amazon.com", url: amzCom("Jitterbug Flip2") }],
   },
@@ -774,6 +831,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet seniors 4G (UE), WhatsApp intégré, bouton d'assistance géolocalisé. Son fort et clair.",
       en: "4G senior flip (EU), built-in WhatsApp, location-aware assistance button. Loud, clear sound.",
+      es: "Teléfono de tapa 4G para mayores (UE), WhatsApp integrado, botón de asistencia con geolocalización. Sonido fuerte y claro.",
     },
     shops: [{ region: "europe", label: "Doro", url: "https://www.doro.com/" }],
   },
@@ -793,6 +851,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Barre 4G sobre et endurante, double SIM. Appels, SMS, radio — l'essentiel, pas de cartes.",
       en: "Plain, long-lasting 4G candybar, dual SIM. Calls, texts, radio — the essentials, no maps.",
+      es: "Barra 4G sobria y de mucha autonomía, doble SIM. Llamadas, SMS, radio — lo esencial, sin mapas.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 225 4G") }],
   },
@@ -810,10 +869,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Barre 2G/4G minimaliste, lampe torche, radio FM sans écouteurs. Très bon marché.",
       en: "Minimalist 2G/4G candybar, flashlight, wireless FM radio. Very cheap.",
+      es: "Barra 2G/4G minimalista, linterna, radio FM sin auriculares. Muy barata.",
     },
     caveat: {
       fr: "Selon la variante, vérifier la 4G : la 2G ferme en France (mars 2026).",
       en: "Depending on the variant, check for 4G: 2G is shutting down in France (March 2026).",
+      es: "Según la variante, comprueba que tenga 4G: la 2G se apaga en Francia (marzo de 2026).",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 150 2023") }],
   },
@@ -831,6 +892,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Le plus abordable : barre 4G nue, appels et SMS, radio FM. Le téléphone de secours idéal.",
       en: "The cheapest: bare 4G candybar, calls and texts, FM radio. The ideal backup phone.",
+      es: "El más asequible: barra 4G pelada, llamadas y SMS, radio FM. El teléfono de repuesto ideal.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 105 4G") }],
   },
@@ -848,6 +910,7 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Barre 4G blindée (IP68, antichoc, batterie costaude). Pour le chantier et l'extérieur, sans cartes.",
       en: "Armoured 4G candybar (IP68, shockproof, big battery). For worksites and outdoors, no maps.",
+      es: "Barra 4G blindada (IP68, a prueba de golpes, batería grande). Para la obra y los exteriores, sin mapas.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Cat B40") }],
   },
@@ -865,10 +928,12 @@ export const PHONES: Phone[] = [
     blurb: {
       fr: "Clapet KaiOS (UE) avec WhatsApp et Assistant Google, grandes touches. Pratique mais sans vraie navigation.",
       en: "KaiOS flip (EU) with WhatsApp and Google Assistant, big keys. Handy, but no real navigation.",
+      es: "Teléfono de tapa KaiOS (UE) con WhatsApp y Google Assistant, teclas grandes. Práctico, pero sin navegación de verdad.",
     },
     caveat: {
       fr: "KaiOS ancien : pas d'appli cartes fiable, ne comptez pas dessus pour vous guider.",
       en: "Older KaiOS: no reliable maps app, don't count on it for directions.",
+      es: "KaiOS antiguo: no hay app de mapas fiable, no cuentes con él para guiarte.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 2720 Flip") }],
   },

@@ -3,6 +3,7 @@
 // Le formulaire reste client (il envoie l'OTP), mais l'état d'erreur vient du
 // serveur — pas d'effet qui relit l'URL après coup.
 
+import { siteLanguage } from "@/lib/site-i18n";
 import { ConnexionForm } from "./form";
 
 export default async function ConnexionPage({
@@ -11,5 +12,5 @@ export default async function ConnexionPage({
   searchParams: Promise<{ erreur?: string }>;
 }) {
   const linkExpired = (await searchParams).erreur === "lien";
-  return <ConnexionForm linkExpired={linkExpired} />;
+  return <ConnexionForm linkExpired={linkExpired} lang={await siteLanguage()} />;
 }

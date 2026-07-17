@@ -31,14 +31,16 @@ const ALIASES: Record<string, OAuthId> = {
   github: "github",
 };
 
+// Le libellé du bouton (« Continuer avec %s ») vit dans copy.ts, par langue :
+// ici, seulement le nom propre du fournisseur, identique partout.
 export const PROVIDERS: Record<
   OAuthId,
-  { label: string; name: string; provider: Provider; Icon: () => React.ReactElement }
+  { name: string; provider: Provider; Icon: () => React.ReactElement }
 > = {
-  google: { label: "Continuer avec Google", name: "Google", provider: "google", Icon: GoogleIcon },
-  apple: { label: "Continuer avec Apple", name: "Apple", provider: "apple", Icon: AppleIcon },
-  azure: { label: "Continuer avec Microsoft", name: "Microsoft", provider: "azure", Icon: MicrosoftIcon },
-  github: { label: "Continuer avec GitHub", name: "GitHub", provider: "github", Icon: GitHubIcon },
+  google: { name: "Google", provider: "google", Icon: GoogleIcon },
+  apple: { name: "Apple", provider: "apple", Icon: AppleIcon },
+  azure: { name: "Microsoft", provider: "azure", Icon: MicrosoftIcon },
+  github: { name: "GitHub", provider: "github", Icon: GitHubIcon },
 };
 
 function parseList(raw: string | undefined, fallback: OAuthId[]): OAuthId[] {

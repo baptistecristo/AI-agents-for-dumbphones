@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import twilio from "twilio";
 import { APP_URL, envOr } from "@/lib/env";
-import { normalizeLanguage } from "@/lib/language";
+import { Language, normalizeLanguage } from "@/lib/language";
 import { handleSmsCommand } from "@/lib/sms-commands";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     .not("verified_at", "is", null)
     .maybeSingle();
 
-  let language: "en" | "fr" = "fr";
+  let language: Language = "fr";
   if (phone?.user_id) {
     const { data: profile } = await db
       .from("profiles")

@@ -71,6 +71,11 @@ export function rateLimitMessage(scope: "caller" | "global", language: string): 
       ? "You've reached the call limit for now. Please try again later."
       : "The service has reached its limit for today. Please try again tomorrow.";
   }
+  if (language === "es") {
+    return scope === "caller"
+      ? "Has alcanzado el límite de llamadas por ahora. Inténtalo un poco más tarde."
+      : "El servicio ha alcanzado su límite por hoy. Inténtalo mañana.";
+  }
   return scope === "caller"
     ? "Tu as atteint la limite d'appels pour le moment. Réessaie un peu plus tard."
     : "Le service a atteint sa limite pour aujourd'hui. Réessaie demain.";

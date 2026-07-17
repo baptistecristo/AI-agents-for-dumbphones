@@ -37,11 +37,12 @@ WHISPER_DEVICE = env("WHISPER_DEVICE", "auto")  # cpu | cuda | auto
 # Rétro-compat : l'ancienne variable PIPER_VOICE, si définie, sert de voix FR.
 PIPER_VOICE_FR = env("PIPER_VOICE_FR", os.getenv("PIPER_VOICE") or "fr_FR-siwis-medium")
 PIPER_VOICE_EN = env("PIPER_VOICE_EN", "en_US-lessac-medium")
+PIPER_VOICE_ES = env("PIPER_VOICE_ES", "es_ES-davefx-medium")
 
 
 def piper_voice_for(language: str) -> str:
     """Voix Piper correspondant à la langue de session ("fr" par défaut)."""
-    return PIPER_VOICE_EN if language == "en" else PIPER_VOICE_FR
+    return {"en": PIPER_VOICE_EN, "es": PIPER_VOICE_ES}.get(language, PIPER_VOICE_FR)
 
 # Cerveau : ollama (100 % local) | mistral (API EU) | anthropic (qualité max)
 LLM_PROVIDER = env("LLM_PROVIDER", "ollama")
