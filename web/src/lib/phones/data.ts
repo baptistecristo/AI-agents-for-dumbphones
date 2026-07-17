@@ -21,6 +21,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Vrais téléphones simples + Google Maps (KaiOS)
   {
     id: "nokia-6300-4g",
+    image: "/phones/nokia-6300-4g.webp",
     brand: "Nokia",
     name: "6300 4G",
     regions: ["europe", "america"],
@@ -48,6 +49,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-8000-4g",
+    image: "/phones/nokia-8000-4g.webp",
     brand: "Nokia",
     name: "8000 4G",
     regions: ["europe", "america"],
@@ -75,6 +77,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-2780-flip",
+    image: "/phones/nokia-2780-flip.webp",
     brand: "Nokia",
     name: "2780 Flip",
     regions: ["america"],
@@ -98,6 +101,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-2760-flip",
+    image: "/phones/nokia-2760-flip.webp",
     brand: "Nokia",
     name: "2760 Flip",
     regions: ["america"],
@@ -121,6 +125,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "tcl-flip-2",
+    image: "/phones/tcl-flip-2.webp",
     brand: "TCL",
     name: "Flip 2",
     regions: ["america"],
@@ -139,6 +144,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "alcatel-go-flip-4",
+    image: "/phones/alcatel-go-flip-4.webp",
     brand: "Alcatel",
     name: "Go Flip 4",
     regions: ["america"],
@@ -159,6 +165,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Vrais téléphones simples + navigation maison
   {
     id: "light-phone-iii",
+    image: "/phones/light-phone-iii.webp",
     brand: "Light",
     name: "Phone III",
     regions: ["global", "america", "europe"],
@@ -183,6 +190,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "mudita-kompakt",
+    image: "/phones/mudita-kompakt.webp",
     brand: "Mudita",
     name: "Kompakt",
     regions: ["europe", "global"],
@@ -207,6 +215,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "mudita-pure",
+    image: "/phones/mudita-pure.webp",
     brand: "Mudita",
     name: "Pure",
     regions: ["europe", "global"],
@@ -228,6 +237,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Vrais téléphones simples : GPS localisation seule
   {
     id: "punkt-mp02",
+    image: "/phones/punkt-mp02.webp",
     brand: "Punkt",
     name: "MP02",
     regions: ["europe", "global"],
@@ -252,6 +262,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "doro-leva-l10",
+    image: "/phones/doro-leva-l10.webp",
     brand: "Doro",
     name: "Leva L10",
     regions: ["europe"],
@@ -275,6 +286,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "doro-6880",
+    image: "/phones/doro-6880.webp",
     brand: "Doro",
     name: "6880",
     regions: ["europe"],
@@ -295,6 +307,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Vrais téléphones simples : sans GPS (rappel/UE)
   {
     id: "nokia-2660-flip",
+    image: "/phones/nokia-2660-flip.webp",
     brand: "Nokia",
     name: "2660 Flip",
     regions: ["europe", "global"],
@@ -316,6 +329,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-3210-4g",
+    image: "/phones/nokia-3210-4g.webp",
     brand: "Nokia",
     name: "3210 4G (2024)",
     regions: ["europe", "global"],
@@ -337,6 +351,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-8210-4g",
+    image: "/phones/nokia-8210-4g.webp",
     brand: "Nokia",
     name: "8210 4G",
     regions: ["europe", "global"],
@@ -355,6 +370,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-6310",
+    image: "/phones/nokia-6310.webp",
     brand: "Nokia",
     name: "6310 (2024)",
     regions: ["europe", "global"],
@@ -373,6 +389,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-235-4g",
+    image: "/phones/nokia-235-4g.webp",
     brand: "Nokia",
     name: "235 4G",
     regions: ["europe", "global"],
@@ -391,6 +408,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-110-4g",
+    image: "/phones/nokia-110-4g.webp",
     brand: "Nokia",
     name: "110 4G",
     regions: ["europe", "global"],
@@ -409,6 +427,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "emporia-simplicity",
+    image: "/phones/emporia-simplicity.webp",
     brand: "Emporia",
     name: "Simplicity",
     regions: ["europe"],
@@ -427,6 +446,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "gigaset-gl590",
+    image: "/phones/gigaset-gl590.webp",
     brand: "Gigaset",
     name: "GL590",
     regions: ["europe"],
@@ -470,6 +490,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Clapets/robustes nord-américains sans maps
   {
     id: "sonim-xp3plus",
+    image: "/phones/sonim-xp3plus.webp",
     brand: "Sonim",
     name: "XP3plus",
     regions: ["america"],
@@ -488,6 +509,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "schok-classic-flip",
+    image: "/phones/schok-classic-flip.webp",
     brand: "Schok",
     name: "Classic Flip",
     regions: ["america"],
@@ -513,6 +535,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Smartphones simplifiés (Google Maps complet)
   {
     id: "doro-8100",
+    image: "/phones/doro-8100.webp",
     brand: "Doro",
     name: "8100",
     regions: ["europe", "america"],
@@ -540,6 +563,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "minimal-phone",
+    image: "/phones/minimal-phone.webp",
     brand: "Minimal",
     name: "Phone",
     regions: ["global", "america"],
@@ -564,6 +588,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "wisephone-ii",
+    image: "/phones/wisephone-ii.webp",
     brand: "Wisephone",
     name: "II",
     regions: ["america"],
@@ -587,6 +612,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "sunbeam-f1",
+    image: "/phones/sunbeam-f1.webp",
     brand: "Sunbeam",
     name: "F1",
     regions: ["america"],
@@ -610,6 +636,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "cat-s22-flip",
+    image: "/phones/cat-s22-flip.webp",
     brand: "Cat",
     name: "S22 Flip",
     regions: ["america"],
@@ -635,6 +662,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Feature phone tactile (Asie/global)
   {
     id: "xiaomi-qin-f21-pro",
+    image: "/phones/xiaomi-qin-f21-pro.webp",
     brand: "Xiaomi (Qin)",
     name: "F21 Pro",
     regions: ["global"],
@@ -661,6 +689,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Ajouts : KaiOS + Google Maps (UE / US)
   {
     id: "nokia-800-tough",
+    image: "/phones/nokia-800-tough.webp",
     brand: "Nokia",
     name: "800 Tough",
     regions: ["europe", "global"],
@@ -685,6 +714,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "tcl-flip-3",
+    image: "/phones/tcl-flip-3.webp",
     brand: "TCL",
     name: "Flip 3",
     regions: ["america"],
@@ -703,6 +733,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-2720-v-flip",
+    image: "/phones/nokia-2720-v-flip.webp",
     brand: "Nokia",
     name: "2720 V Flip",
     regions: ["america"],
@@ -728,6 +759,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Ajouts : navigation maison (global)
   {
     id: "light-phone-ii",
+    image: "/phones/light-phone-ii.webp",
     brand: "Light",
     name: "Phone II",
     regions: ["global", "america", "europe"],
@@ -752,6 +784,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "duoqin-f22-pro",
+    image: "/phones/duoqin-f22-pro.webp",
     brand: "Duoqin",
     name: "F22 Pro",
     regions: ["global"],
@@ -796,6 +829,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "jitterbug-flip2",
+    image: "/phones/jitterbug-flip2.webp",
     brand: "Lively",
     name: "Jitterbug Flip2",
     regions: ["america"],
@@ -819,6 +853,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "doro-7080",
+    image: "/phones/doro-7080.webp",
     brand: "Doro",
     name: "7080",
     regions: ["europe"],
@@ -839,6 +874,7 @@ export const PHONES: Phone[] = [
   // ————————————————————————— Ajouts : barres UE d'entrée de gamme (sans GPS)
   {
     id: "nokia-225-4g",
+    image: "/phones/nokia-225-4g.webp",
     brand: "Nokia",
     name: "225 4G",
     regions: ["europe", "global"],
@@ -857,6 +893,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-150-2023",
+    image: "/phones/nokia-150-2023.webp",
     brand: "Nokia",
     name: "150 (2023)",
     regions: ["europe", "global"],
@@ -880,6 +917,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-105-4g",
+    image: "/phones/nokia-105-4g.webp",
     brand: "Nokia",
     name: "105 4G",
     regions: ["europe", "global"],
@@ -898,6 +936,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "cat-b40",
+    image: "/phones/cat-b40.webp",
     brand: "Cat",
     name: "B40",
     regions: ["europe", "global"],
@@ -916,6 +955,7 @@ export const PHONES: Phone[] = [
   },
   {
     id: "nokia-2720-flip",
+    image: "/phones/nokia-2720-flip.webp",
     brand: "Nokia",
     name: "2720 Flip",
     regions: ["europe", "global"],

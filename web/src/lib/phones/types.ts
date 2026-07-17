@@ -51,6 +51,11 @@ export type Phone = {
   /** Réserve honnête, ex. « Maps sur KaiOS est lent ; avenir non garanti ». */
   caveat?: LangText;
   shops: Shop[];
+  /**
+   * Photo du téléphone. Chemin local sous `/public` (ex. « /phones/nokia-6300-4g.webp »)
+   * ou URL. Absent = une silhouette selon le format s'affiche à la place.
+   */
+  image?: string;
 };
 
 /** Critères de filtrage, tous optionnels — absent = « peu importe ». */

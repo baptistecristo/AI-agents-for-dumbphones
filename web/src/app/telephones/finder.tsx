@@ -3,7 +3,8 @@
 // Le comparateur interactif : état des filtres, bascule FR/EN/ES, cartes.
 // Toute la logique de filtrage vit dans `lib/phones/filter.ts` (testée seule).
 
-import { useMemo, useState } from "react";
+import Image from "next/image";
+import { type ReactNode, useMemo, useState } from "react";
 import { PHONES } from "@/lib/phones/data";
 import { filterPhones, priceFor, sortByPrice } from "@/lib/phones/filter";
 import { t } from "@/lib/phones/i18n";
@@ -41,6 +42,9 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
     return sortByPrice(filterPhones(PHONES, criteria), region);
   }, [region, nav, trueOnly, form, maxPrice]);
 
+  // La région n'est pas un « filtre » qu'on remet à zéro : elle définit le contexte.
+  const anyActive = nav !== undefined || trueOnly !== undefined || form !== undefined || maxPrice !== undefined;
+
   function reset() {
     setNav(undefined);
     setTrueOnly(undefined);
@@ -49,15 +53,15 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
   }
 
   const selectClass =
-    "w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink focus:border-bleu focus:outline-none";
-  const labelClass = "block text-xs font-bold uppercase tracking-wide text-ink/50";
+    "w-full rounded-lg border border-ink/10 bg-paper px-3 py-2 text-sm text-ink transition focus:border-bleu focus:outline-none focus:ring-2 focus:ring-bleu/20";
+  const labelClass = "mb-1 block text-xs font-bold uppercase tracking-wide text-ink/50";
 
   return (
     <div>
       {/* Titre + bascule de langue */}
       <div className="mb-4 flex items-start justify-between gap-4">
-        <h1 className="font-display text-4xl leading-tight md:text-5xl">{tr.pageTitle}</h1>
-        <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-ink/15 text-sm font-bold">
+        <h1 className="text-3xl font-bold leading-tight tracking-tight md:text-4xl">{tr.pageTitle}</h1>
+        <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-ink/10 text-sm font-bold">
           {(["fr", "en", "es"] as Lang[]).map((l) => (
             <button
               key={l}
@@ -72,8 +76,8 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
       </div>
       <p className="mb-8 max-w-2xl leading-relaxed text-ink/75">{tr.intro}</p>
 
-      {/* Panneau de filtres */}
-      <div className="rounded-2xl border border-ink/10 bg-paper p-5">
+      {/* Panneau de filtres — surface blanche sur le papier, une seule hairline */}
+      <div className="rounded-2xl border border-ink/10 bg-white p-5 sm:p-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className={labelClass} htmlFor="f-region">
@@ -165,15 +169,6 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
               ))}
             </select>
           </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={reset}
-              className="rounded-lg border border-ink/15 bg-white px-4 py-2 text-sm font-bold text-ink/70 transition hover:bg-bulle"
-            >
-              {tr.reset}
-            </button>
-          </div>
         </div>
       </div>
 
@@ -183,15 +178,22 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
         <span>{tr.bandWarning}</span>
       </p>
 
-      {/* Compteur */}
-      <div className="mt-8 flex items-baseline justify-between">
-        <p className="font-display text-2xl">{tr.results(results.length)}</p>
-        <p className="text-xs text-ink/50">{tr.priceNote}</p>
+      {/* Compteur + réinitialisation (seulement quand un filtre est actif) */}
+      <div className="mt-10 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-xl font-bold">{tr.results(results.length)}</p>
+        <div className="flex items-center gap-4 text-xs text-ink/50">
+          {anyActive && (
+            <button onClick={reset} className="font-bold text-bleu underline-offset-2 hover:underline">
+              {tr.reset}
+            </button>
+          )}
+          <span>{tr.priceNote}</span>
+        </div>
       </div>
 
       {/* Résultats */}
       {results.length === 0 ? (
-        <p className="mt-8 rounded-2xl border border-dashed border-ink/20 bg-paper p-8 text-center text-ink/60">
+        <p className="mt-8 rounded-2xl border border-dashed border-ink/20 bg-white p-8 text-center text-ink/60">
           {tr.empty}
         </p>
       ) : (
@@ -214,7 +216,23 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
     phone.shops[0];
 
   return (
-    <li className="flex flex-col rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+    <li className="flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm transition hover:shadow-md">
+      {/* Photo — silhouette selon le format tant qu'aucune image n'est fournie */}
+      <div className="relative aspect-[4/3] border-b border-ink/10 bg-white">
+        {phone.image ? (
+          <Image
+            src={phone.image}
+            alt={`${phone.brand} ${phone.name}`}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-contain p-4"
+          />
+        ) : (
+          <PhoneGlyph formFactor={phone.formFactor} />
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold leading-tight">
@@ -225,12 +243,10 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
           </p>
         </div>
         {price != null && (
-          <p className="flex items-baseline gap-0.5 whitespace-nowrap">
-            <span className="text-xs text-ink/40">~</span>
-            <span className="text-lg font-bold tabular-nums text-ink">
-              {currency(region)}
-              {price}
-            </span>
+          <p className="whitespace-nowrap text-lg font-bold tabular-nums text-ink">
+            <span className="mr-0.5 font-normal text-ink/40">≈</span>
+            {currency(region)}
+            {price}
           </p>
         )}
       </div>
@@ -262,17 +278,72 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
           href={shop.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 block rounded-lg border border-bleu/20 bg-bleu/5 px-4 py-2.5 text-center transition hover:border-bleu/50 hover:bg-bleu/10"
+          className="mt-4 flex items-center justify-center gap-1.5 rounded-lg border border-bleu/15 bg-bleu/5 px-4 py-2.5 text-sm font-bold text-bleu transition hover:border-bleu/40 hover:bg-bleu/10"
         >
-          <span className="block text-[11px] font-bold uppercase tracking-wide text-ink/45">{tr.shopAt}:</span>
-          <span className="mt-0.5 inline-flex items-center gap-1 text-base font-bold text-bleu">
-            {shop.label}
-            <span aria-hidden className="text-xs">
-              ↗
-            </span>
+          {tr.shopAt} {shop.label}
+          <span aria-hidden className="text-xs">
+            ↗
           </span>
         </a>
       )}
+      </div>
     </li>
+  );
+}
+
+// Silhouette du téléphone selon son format, tant qu'aucune photo n'est fournie.
+// Un simple repère visuel, honnête : ce n'est pas une vraie photo du modèle.
+function PhoneGlyph({ formFactor }: { formFactor: FormFactor }) {
+  const paths: Record<FormFactor, ReactNode> = {
+    candybar: (
+      <>
+        <rect x="8" y="1.5" width="8" height="21" rx="2" />
+        <rect x="9.75" y="3.5" width="4.5" height="6" rx="0.5" />
+        <line x1="10" y1="12.5" x2="14" y2="12.5" />
+        <line x1="10" y1="15" x2="14" y2="15" />
+        <line x1="10" y1="17.5" x2="14" y2="17.5" />
+      </>
+    ),
+    flip: (
+      <>
+        <rect x="8" y="1.5" width="8" height="10" rx="1.5" />
+        <rect x="8" y="12.5" width="8" height="10" rx="1.5" />
+        <rect x="9.75" y="3" width="4.5" height="6" rx="0.5" />
+        <line x1="10.5" y1="15" x2="13.5" y2="15" />
+        <line x1="10.5" y1="17.5" x2="13.5" y2="17.5" />
+        <line x1="10.5" y1="20" x2="13.5" y2="20" />
+      </>
+    ),
+    touch: (
+      <>
+        <rect x="7.5" y="1.5" width="9" height="21" rx="2" />
+        <rect x="9" y="4" width="6" height="13" rx="0.5" />
+        <circle cx="12" cy="20" r="0.9" />
+      </>
+    ),
+    qwerty: (
+      <>
+        <rect x="5" y="4" width="14" height="16" rx="2" />
+        <rect x="7" y="6" width="10" height="5" rx="0.5" />
+        <line x1="7.5" y1="13.5" x2="16.5" y2="13.5" />
+        <line x1="7.5" y1="16" x2="16.5" y2="16" />
+        <line x1="7.5" y1="18.5" x2="16.5" y2="18.5" />
+      </>
+    ),
+  };
+  return (
+    <div className="absolute inset-0 flex items-center justify-center text-ink/25">
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className="h-16 w-16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      >
+        {paths[formFactor]}
+      </svg>
+    </div>
   );
 }
