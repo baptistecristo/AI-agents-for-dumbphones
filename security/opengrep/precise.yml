@@ -1,0 +1,87 @@
+# Static rulepack for the AI-agents-for-dumbphones repo (#53).
+#
+# Runs on every PR (see .github/workflows/security-scan.yml) with Semgrep or its
+# OpenGrep fork — the rule syntax is shared. Rules are deliberately PRECISE: they
+# must not fire on idiomatic clean code, so a red check means a real finding.
+# ERROR findings fail the build; WARNING findings surface but do not.
+#
+# Self-tested: security/opengrep/tests/ holds annotated fixtures checked by
+# `semgrep --test`. When you add a rule, add a `ruleid:` and an `ok:` case there.
+
+rules:
+  # 1. Hardcoded secrets — a secret-named binding assigned a secret-looking literal.
+  - id: hardcoded-secret
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Hardcoded secret. Read it from the validated config (web/src/lib/config.ts)
+      or the environment; never commit a literal credential.
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+    patterns:
+      - pattern-either:
+          - pattern: $KEY = "$VAL"
+          - pattern: { $KEY: "$VAL" }
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i).*(secret|token|passwd|password|api[_-]?key|apikey|auth)$
+      - metavariable-regex:
+          metavariable: $VAL
+          # sk-…, AWS AKIA…, a JWT (eyJ…), or ≥24 chars of base64 — i.e. a real key,
+          # not an ordinary string.
+          regex: ^(sk-[A-Za-z0-9]{8,}|AKIA[0-9A-Z]{12,}|eyJ[A-Za-z0-9_-]{10,}|[A-Za-z0-9+/]{24,}={0,2})$
+
+  # 2. Dynamic code execution.
+  - id: dangerous-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Dynamic code execution (eval / new Function). Remove it — it turns any
+      untrusted string into runnable code.
+    metadata:
+      category: security
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+
+  # 3. SSRF — a fetch URL interpolated from request-controlled input.
+  - id: ssrf-fetch-from-request
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Outbound URL built from request input — SSRF risk. Route skill/outbound
+      HTTP through the allow-list + SSRF guard (web/src/lib/net.ts, safeFetch).
+    metadata:
+      category: security
+      cwe: "CWE-918: Server-Side Request Forgery (SSRF)"
+    patterns:
+      - pattern-either:
+          - pattern: fetch(`...${$X}...`)
+          - pattern: fetch(`...${$X}...`, ...)
+      - metavariable-pattern:
+          metavariable: $X
+          patterns:
+            - pattern-either:
+                - pattern: $R.nextUrl.searchParams.get(...)
+                - pattern: $R.searchParams.get(...)
+                - pattern: $R.query.$Q
+
+  # 4. Tool/skill output flowing into an instruction/prompt string.
+  - id: tool-output-in-prompt
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Tool/skill output is being placed into an instruction/prompt. Keep tool
+      output as DATA the model reads, never as instructions it follows.
+    metadata:
+      category: security
+      cwe: "CWE-77: Improper Neutralization of Special Elements used in a Command"
+    patterns:
+      - pattern-either:
+          - pattern: '{ role: "system", content: `...${$OUT}...` }'
+          - pattern: '{ role: "system", content: $OUT }'
+      - metavariable-regex:
+          metavariable: $OUT
+          regex: (?i)(tool|skill).*(output|result|response|reply)
