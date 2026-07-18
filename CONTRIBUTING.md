@@ -238,7 +238,7 @@ Every PR runs a Semgrep static scan (`.github/workflows/security-scan.yml`) over
 small, precise rulepack in [`security/opengrep/`](security/opengrep/precise.yml).
 It fails the build on hardcoded secrets, `eval` / `new Function`, an outbound URL
 built from request input (SSRF), and flags tool output flowing into a prompt. The
-rules also run against `security/opengrep/tests/` via `semgrep --test`, so the
+rules also run against `security/opengrep/precise.js` via `semgrep --test`, so the
 seeded findings prove the rulepack still bites.
 
 To run it locally: `pipx install semgrep`, then

@@ -25,16 +25,19 @@ jobs:
         run: pipx install semgrep
 
       # 1. La finding de test semée doit toujours être détectée : garde-fou du rulepack.
+      #    precise.js est le fixture frère de precise.yml (même racine de nom),
+      #    la disposition attendue par `semgrep --test`.
       - name: Validate the rulepack catches its seeded findings
-        run: semgrep --test --config security/opengrep/precise.yml security/opengrep/tests/
+        run: semgrep --test --config security/opengrep/precise.yml security/opengrep/precise.js
 
-      # 2. Scan du dépôt. Échoue sur toute finding de sévérité ERROR (les fixtures
-      #    de test sont exclues ; node_modules et .gitignore le sont par défaut).
+      # 2. Scan du dépôt. Échoue sur toute finding de sévérité ERROR. On exclut le
+      #    dossier security/ (rulepack + fixture volontairement vulnérable) ;
+      #    node_modules et .gitignore le sont par défaut.
       - name: Scan the repository (fail on ERROR findings)
         run: >-
           semgrep scan
           --config security/opengrep/precise.yml
           --error
           --severity ERROR
-          --exclude security/opengrep/tests
+          --exclude security
           --metrics off
