@@ -25,10 +25,16 @@ export default async function OnboardingPage() {
     .select("onboarding_step, preferred_name")
     .eq("id", user.id)
     .single();
-  const step = profile?.onboarding_step ?? "phone";
+  const rawStep = profile?.onboarding_step ?? "phone";
   // "pin" est un état hérité (l'étape a été retirée) : on le traite comme terminé.
-  if (step === "done" || step === "pin") redirect("/tableau-de-bord");
-  const stepIndex = STEPS.indexOf(step as (typeof STEPS)[number]);
+  if (rawStep === "done" || rawStep === "pin") redirect("/tableau-de-bord");
+  // onboarding_step n'a pas de contrainte CHECK : une valeur inattendue (migration
+  // future, écriture manuelle) donnerait un stepIndex -1 et un écran vide sans
+  // issue. On retombe alors sur la première étape plutôt que sur rien.
+  const step = (STEPS as readonly string[]).includes(rawStep)
+    ? (rawStep as (typeof STEPS)[number])
+    : "phone";
+  const stepIndex = STEPS.indexOf(step);
   const lang = await siteLanguage();
   const tr = ONBOARDING[lang];
 
