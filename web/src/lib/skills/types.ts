@@ -3,7 +3,11 @@
 import { Language } from "../language";
 
 export type CallSession = {
-  callId: string; // id d'appel Vapi
+  callId: string; // id d'appel Vapi (ou id de fil, pour le canal texte)
+  // Canal d'où vient le tour. La couche skills est identique pour les deux ;
+  // seul le gate diffère (voix : code jetable ; texte : PIN, écritures seules
+  // — voir gate.ts). "voice" par défaut historique.
+  channel: "voice" | "text";
   userId: string | null;
   callerNumber: string | null;
   verified: boolean; // code SMS (Twilio Verify) validé sur cet appel

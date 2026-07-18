@@ -13,7 +13,7 @@ vi.mock("../twilio", () => ({
 import { reportGap } from "./gap";
 import { CallSession } from "./types";
 
-const base: CallSession = { callId: "c1", userId: null, callerNumber: "+33123456789", verified: false, language: "en" };
+const base: CallSession = { callId: "c1", channel: "voice", userId: null, callerNumber: "+33123456789", verified: false, language: "en" };
 
 beforeEach(() => {
   h.insert.mockReset();

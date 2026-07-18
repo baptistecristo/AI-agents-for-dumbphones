@@ -36,6 +36,7 @@ export async function POST(req: Request) {
 
   const result = await executeTool(body.name, body.arguments, {
     callId: body.call_id,
+    channel: "voice",
     userId: data?.user_id ?? null,
     callerNumber: data?.from_number ?? null,
     verified: data?.pin_verified ?? false,

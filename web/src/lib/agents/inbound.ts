@@ -250,6 +250,43 @@ export function inboundSystemPrompt(ctx: CallerContext): string {
   return (PROMPTS[ctx.language] ?? promptFr)(ctx, name);
 }
 
+// Addendum canal TEXTE. On réutilise la persona vocale (maintenue) et on la
+// corrige à la fin — ce qui vient après pèse plus lourd pour le modèle. Il
+// retourne les tics « voix » (à voix haute, clavier, dièse) et pose la règle du
+// SMS : les lectures ne demandent pas de code (la réponse ne part qu'au numéro
+// enregistré), seules les écritures exigent le PIN à 3 chiffres du tableau de bord.
+const TEXT_ADDENDUM: Record<Language, string> = {
+  fr: `
+
+# IMPORTANT — tu réponds par TEXTE (SMS), pas par la voix
+Tout ce qui précède parle de « la voix », « à voix haute », « le clavier », le « dièse » : ignore-le, ici tu ÉCRIS.
+- Réponses brèves, qui tiennent dans un SMS. Une idée par message.
+- La confirmation avant d'agir est ÉCRITE : la personne tape « oui » pour confirmer, jamais un « peut-être ».
+- Par SMS, LIRE ses données (agenda, contacts, relire une note) ne demande PAS de code : ta réponse ne part qu'à son numéro enregistré. Ne réclame pas de code pour ça.
+- Le code n'est exigé que pour ce qui ENVOIE ou MODIFIE : envoyer un SMS à quelqu'un, passer un appel, créer ou déplacer un rendez-vous, marquer un rappel fait. C'est alors le PIN à 3 chiffres réglé dans le tableau de bord : appelle request_code, puis verify_code avec les 3 chiffres reçus.`,
+  en: `
+
+# IMPORTANT — you are replying by TEXT (SMS), not by voice
+Everything above about "voice", "out loud", "the keypad", "press pound": ignore it, here you WRITE.
+- Keep replies short, SMS-length. One idea per message.
+- Confirmation before acting is TYPED: the person types "yes" to confirm, never a "maybe".
+- By text, READING their data (calendar, contacts, a saved note) needs NO code: your reply only goes to their registered number. Don't ask for a code for that.
+- A code is required only for what SENDS or CHANGES something: texting someone, placing a call, creating or moving an appointment, marking a reminder done. There it's the 3-digit PIN set in the dashboard: call request_code, then verify_code with the 3 digits received.`,
+  es: `
+
+# IMPORTANTE — respondes por TEXTO (SMS), no por voz
+Todo lo anterior sobre «la voz», «en voz alta», «el teclado», «almohadilla»: ignóralo, aquí ESCRIBES.
+- Respuestas breves, de longitud SMS. Una idea por mensaje.
+- La confirmación antes de actuar es ESCRITA: la persona escribe «sí» para confirmar, nunca un «quizá».
+- Por SMS, LEER sus datos (agenda, contactos, releer una nota) NO exige código: tu respuesta solo va a su número registrado. No pidas código para eso.
+- Solo se exige código para lo que ENVÍA o MODIFICA: enviar un SMS a alguien, hacer una llamada, crear o mover una cita, marcar un recordatorio como hecho. Ahí es el PIN de 3 cifras del panel: llama a request_code y luego verify_code con las 3 cifras recibidas.`,
+};
+
+// Persona pour un tour de conversation par TEXTE (agents/loop.ts).
+export function inboundTextSystemPrompt(ctx: CallerContext): string {
+  return inboundSystemPrompt(ctx) + (TEXT_ADDENDUM[ctx.language] ?? TEXT_ADDENDUM.fr);
+}
+
 // Message d'accueil (partagé entre la session runtime et l'assistant Vapi).
 export function inboundFirstMessage(ctx: CallerContext): string {
   const name = agentName();

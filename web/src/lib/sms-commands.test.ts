@@ -42,6 +42,7 @@ import { handleSmsCommand } from "./sms-commands";
 // numéro enregistré) et aucun code, ce que le canal SMS ne peut jamais fournir.
 const smsSession = (language: "fr" | "en" | "es" = "fr"): CallSession => ({
   callId: "sms",
+  channel: "text",
   userId: "user-1",
   callerNumber: "+33600000000",
   verified: false,
