@@ -255,11 +255,16 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
         </form>
       )}
 
-      {hasLive && (
-        <p className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
-          {tr.outlookNote}
-        </p>
-      )}
+      {/* Note SafeLinks : le lien magique est toujours proposé, donc on affiche
+          toujours l'avertissement. On adapte le recours à ce qui existe vraiment
+          (bouton OAuth actif > code à 6 chiffres > lien seul). */}
+      <p className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+        {hasLive
+          ? tr.outlookNote.buttons
+          : emailCode
+            ? tr.outlookNote.code
+            : tr.outlookNote.linkOnly}
+      </p>
     </main>
   );
 }

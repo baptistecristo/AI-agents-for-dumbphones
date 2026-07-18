@@ -29,7 +29,9 @@ export type ConnexionCopy = {
   sending: string;
   submitWithCode: string;
   submitLinkOnly: string;
-  outlookNote: string;
+  // Note SafeLinks : trois recours possibles selon la config déployée (bouton
+  // OAuth actif, code à 6 chiffres, ou lien magique seul).
+  outlookNote: { buttons: string; code: string; linkOnly: string };
   bientot: { fallbackName: string; codeName: string; body: string; back: string };
 };
 
@@ -61,8 +63,14 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
     sending: "Envoi…",
     submitWithCode: "Recevoir mon lien et mon code",
     submitLinkOnly: "Recevoir mon lien de connexion",
-    outlookNote:
-      "L'e-mail n'arrive pas, ou le lien ne s'ouvre pas ? Certains services (Outlook…) bloquent les liens de connexion. Essaie plutôt un des boutons plus haut.",
+    outlookNote: {
+      buttons:
+        "L'e-mail n'arrive pas, ou le lien ne s'ouvre pas ? Certains services (Outlook…) ouvrent les liens de connexion à ta place et les grillent. Essaie plutôt un des boutons plus haut.",
+      code:
+        "Le lien ne s'ouvre pas ? Certains services (Outlook…) ouvrent les liens à ta place et les grillent. Saisis plutôt le code à 6 chiffres reçu dans le même e-mail.",
+      linkOnly:
+        "L'e-mail n'arrive pas, ou le lien indique « expiré » ? Regarde dans les indésirables. Certaines messageries pro (Outlook…) ouvrent le lien à ta place et le grillent : essaie alors avec une adresse perso (Gmail…).",
+    },
     bientot: {
       fallbackName: "Cette connexion",
       codeName: "La connexion par code à 6 chiffres",
@@ -97,8 +105,14 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
     sending: "Sending…",
     submitWithCode: "Get my link and my code",
     submitLinkOnly: "Get my sign-in link",
-    outlookNote:
-      "Email not arriving, or the link won't open? Some services (Outlook…) block sign-in links. Try one of the buttons above instead.",
+    outlookNote: {
+      buttons:
+        "Email not arriving, or the link won't open? Some services (Outlook…) open sign-in links for you and burn them. Try one of the buttons above instead.",
+      code:
+        "Link won't open? Some services (Outlook…) open sign-in links for you and burn them. Enter the 6-digit code from the same email instead.",
+      linkOnly:
+        "Email not arriving, or the link says it expired? Check your spam folder. Some work mail services (Outlook…) open the link for you and burn it: if so, try a personal address (Gmail…) instead.",
+    },
     bientot: {
       fallbackName: "This sign-in method",
       codeName: "Signing in with a 6-digit code",
@@ -133,8 +147,14 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
     sending: "Enviando…",
     submitWithCode: "Recibir mi enlace y mi código",
     submitLinkOnly: "Recibir mi enlace de conexión",
-    outlookNote:
-      "¿No llega el correo, o el enlace no se abre? Algunos servicios (Outlook…) bloquean los enlaces de conexión. Prueba mejor uno de los botones de arriba.",
+    outlookNote: {
+      buttons:
+        "¿No llega el correo, o el enlace no se abre? Algunos servicios (Outlook…) abren los enlaces de conexión por ti y los inutilizan. Prueba mejor uno de los botones de arriba.",
+      code:
+        "¿El enlace no se abre? Algunos servicios (Outlook…) abren los enlaces por ti y los inutilizan. Escribe mejor el código de 6 cifras del mismo correo.",
+      linkOnly:
+        "¿No llega el correo, o el enlace dice « caducado »? Mira en la carpeta de spam. Algunas cuentas de correo profesionales (Outlook…) abren el enlace por ti y lo inutilizan: en ese caso, prueba con una dirección personal (Gmail…).",
+    },
     bientot: {
       fallbackName: "Este método de conexión",
       codeName: "La conexión con código de 6 cifras",
