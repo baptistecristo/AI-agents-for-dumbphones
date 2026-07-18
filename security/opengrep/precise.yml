@@ -22,7 +22,8 @@ rules:
     patterns:
       - pattern-either:
           - pattern: $KEY = "$VAL"
-          - pattern: { $KEY: "$VAL" }
+          # Quoté : sans les guillemets, YAML lirait `{…}` comme un mapping, pas un pattern.
+          - pattern: '{ $KEY: "$VAL" }'
       - metavariable-regex:
           metavariable: $KEY
           regex: (?i).*(secret|token|passwd|password|api[_-]?key|apikey|auth)$
