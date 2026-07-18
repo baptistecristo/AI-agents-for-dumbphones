@@ -20,9 +20,9 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       # pipx est préinstallé sur les runners GitHub ; évite le souci PEP 668 de pip.
-      # Version non figée pour cette PR draft ; épingler (semgrep==x.y.z) au merge.
+      # Version figée pour un CI reproductible ; remonter délibérément.
       - name: Install Semgrep
-        run: pipx install semgrep
+        run: pipx install semgrep==1.170.0
 
       # 1. La finding de test semée doit toujours être détectée : garde-fou du rulepack.
       #    precise.js est le fixture frère de precise.yml (même racine de nom),
