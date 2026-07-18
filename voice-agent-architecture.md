@@ -171,9 +171,11 @@ The paying customer's only screen. Stack: **Next.js** (Vercel/Netlify or EU host
 
 Caller ID **and** the sender number of a text are both **spoofable**, so:
 
-- **Baseline:** caller-ID / sender-number match → identifies the account for read/low-risk actions only.
-- **Sensitive actions** (send mail, place a call, reveal message contents, anything money): require a **one-time code texted to the registered number** (`skills/auth.ts`) — spoken back or keyed in during a call, **texted back** in a text conversation. The code always goes to the *registered* number, never to the caller-ID/sender, so spoofing the number you appear to come from gets an attacker nowhere: they never receive the code. Optionally add speaker-verification (voice) later.
+- **Baseline:** caller-ID / sender-number match → identifies the account for read/low-risk actions only. Over text this safely covers *reads*: a reply is only ever delivered to the *registered* number, so a read a spoofer triggers is answered to the real user, never the spoofer (§4, and the SMS gate in `skills/gate.ts`).
+- **Sensitive actions on a call** (send an SMS to a third party, place a call, reveal message contents, anything money): require a **one-time code texted to the registered number** (`skills/auth.ts`), spoken back or keyed in during the call. The code goes to the *registered* number, never the caller-ID, so spoofing the number you appear to call from gets an attacker nowhere.
+- **Sensitive actions by text:** a one-time code has nowhere to "live" over text (there's no call to bound it), so writes are gated instead by a **short PIN the user sets in the web dashboard** and texts in the conversation. This needs no SMS *sending* — it works even where outbound SMS isn't configured. A static PIN over a spoofable channel is weaker than an OTP-to-registered-number, so it is **strictly rate-limited** (lock after a few wrong tries) and the confirmation still only reaches the registered number.
 - **Rate-limit + anomaly flags** per number, on both channels.
+- **Future — speaker verification:** add **voice recognition of the caller** as an extra factor on calls, so the voice itself becomes part of the identity check (not just the number it comes from).
 
 ---
 
