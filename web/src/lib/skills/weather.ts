@@ -1,5 +1,6 @@
 // Skill Météo — Open-Meteo (gratuit, sans clé API : parfait pour le budget mini).
 
+import { safeFetch } from "../net";
 import { CallSession, SkillResult, t } from "./types";
 
 const WMO: Record<number, { fr: string; en: string; es: string }> = {
@@ -40,7 +41,7 @@ export async function getWeather(
     });
 
   const geo = (await (
-    await fetch(
+    await safeFetch(
       `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&language=${session.language}&count=1`,
     )
   ).json()) as { results?: { latitude: number; longitude: number; name: string }[] };
@@ -63,7 +64,7 @@ export async function getWeather(
     });
 
   const fc = (await (
-    await fetch(
+    await safeFetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}` +
         `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
         `&timezone=Europe%2FParis&forecast_days=2`,

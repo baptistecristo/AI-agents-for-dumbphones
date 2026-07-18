@@ -3,6 +3,7 @@
 // Fournisseur : OpenRouteService (gratuit jusqu'à 2000 req/j, EU-friendly).
 
 import { envOr } from "../env";
+import { safeFetch } from "../net";
 import { sendSms, smsProviderConfigured, warnSmsProviderMissing } from "../twilio";
 import { CallSession, SkillResult, t } from "./types";
 
@@ -14,7 +15,7 @@ type OrsFeature = {
 
 async function geocode(q: string, lang: string): Promise<[number, number] | null> {
   const key = envOr("ORS_API_KEY", "");
-  const res = await fetch(
+  const res = await safeFetch(
     `https://api.openrouteservice.org/geocode/search?api_key=${key}&text=${encodeURIComponent(q)}&boundary.country=FR&size=1&lang=${lang}`,
   );
   if (!res.ok) return null;
@@ -58,7 +59,7 @@ export async function getDirections(
 
   const profile =
     args.mode === "driving" ? "driving-car" : args.mode === "transit" ? "foot-walking" : "foot-walking";
-  const res = await fetch(`https://api.openrouteservice.org/v2/directions/${profile}/geojson`, {
+  const res = await safeFetch(`https://api.openrouteservice.org/v2/directions/${profile}/geojson`, {
     method: "POST",
     headers: {
       Authorization: envOr("ORS_API_KEY", ""),

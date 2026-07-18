@@ -2,6 +2,7 @@
 // gratuit et sans clé). On tente d'abord les unités ; si les deux côtés ne sont
 // pas des unités connues, on les traite comme des codes de devise ISO.
 
+import { safeFetch } from "../net";
 import { CallSession, SkillResult, t } from "./types";
 
 type Dim = "distance" | "weight" | "volume" | "speed" | "temp";
@@ -153,7 +154,7 @@ export async function convert(
       es: `${fmt(value, "es", 2)} ${currencyName(fc, "es")}, es lo mismo.`,
     });
 
-  const res = await fetch(`https://api.frankfurter.app/latest?amount=${value}&from=${fc}&to=${tc}`);
+  const res = await safeFetch(`https://api.frankfurter.app/latest?amount=${value}&from=${fc}&to=${tc}`);
   if (!res.ok)
     return t(session, {
       fr: `Je ne peux pas convertir « ${from} » en « ${to} » — vérifiez les devises.`,
