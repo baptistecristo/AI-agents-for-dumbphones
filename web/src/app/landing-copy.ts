@@ -81,9 +81,9 @@ export const LANDING: Record<Language, LandingCopy> = {
     trust: {
       title: "Conçu pour être sûr, pas pour te retenir",
       items: [
-        { title: "🔐 Un code secret, à l'oral", text: "Envoyer un message ou passer un appel à ta place exige ton code à quatre chiffres. Un numéro d'appelant peut être usurpé ; le code, non." },
-        { title: "✋ Rien ne part sans un « oui »", text: "Chaque action est relue à voix haute et attend une confirmation claire. Une hésitation vaut non." },
-        { title: "🇪🇺 Des données en Europe", text: "Consentements enregistrés et révocables, données hébergées en Europe, droit à l'effacement. Tu vois tout sur ton tableau de bord. Et le code est open-source." },
+        { title: "Un code secret, à l'oral", text: "Envoyer un message ou passer un appel à ta place exige ton code à quatre chiffres. Un numéro d'appelant peut être usurpé ; le code, non." },
+        { title: "Rien ne part sans un « oui »", text: "Chaque action est relue à voix haute et attend une confirmation claire. Une hésitation vaut non." },
+        { title: "Des données en Europe", text: "Consentements enregistrés et révocables, données hébergées en Europe, droit à l'effacement. Tu vois tout sur ton tableau de bord. Et le code est open-source." },
       ],
     },
     finalCta: {
@@ -144,9 +144,9 @@ export const LANDING: Record<Language, LandingCopy> = {
     trust: {
       title: "Built to be safe, not to keep you hooked",
       items: [
-        { title: "🔐 A secret code, spoken", text: "Sending a message or placing a call on your behalf requires your four-digit code. A caller ID can be spoofed; the code can't." },
-        { title: "✋ Nothing goes out without a \"yes\"", text: "Every action is read back out loud and waits for clear confirmation. Hesitation counts as no." },
-        { title: "🇪🇺 Data in Europe", text: "Recorded, revocable consents, data hosted in Europe, right to erasure. You see everything on your dashboard. And the code is open-source." },
+        { title: "A secret code, spoken", text: "Sending a message or placing a call on your behalf requires your four-digit code. A caller ID can be spoofed; the code can't." },
+        { title: "Nothing goes out without a \"yes\"", text: "Every action is read back out loud and waits for clear confirmation. Hesitation counts as no." },
+        { title: "Data in Europe", text: "Recorded, revocable consents, data hosted in Europe, right to erasure. You see everything on your dashboard. And the code is open-source." },
       ],
     },
     finalCta: {
@@ -207,9 +207,9 @@ export const LANDING: Record<Language, LandingCopy> = {
     trust: {
       title: "Diseñado para ser seguro, no para retenerte",
       items: [
-        { title: "🔐 Un código secreto, de viva voz", text: "Enviar un mensaje o hacer una llamada en tu nombre exige tu código de cuatro cifras. Un número de llamada puede suplantarse; el código, no." },
-        { title: "✋ Nada sale sin un «sí»", text: "Cada acción se relee en voz alta y espera una confirmación clara. Una duda cuenta como no." },
-        { title: "🇪🇺 Datos en Europa", text: "Consentimientos registrados y revocables, datos alojados en Europa, derecho al olvido. Lo ves todo en tu panel. Y el código es open-source." },
+        { title: "Un código secreto, de viva voz", text: "Enviar un mensaje o hacer una llamada en tu nombre exige tu código de cuatro cifras. Un número de llamada puede suplantarse; el código, no." },
+        { title: "Nada sale sin un «sí»", text: "Cada acción se relee en voz alta y espera una confirmación clara. Una duda cuenta como no." },
+        { title: "Datos en Europa", text: "Consentimientos registrados y revocables, datos alojados en Europa, derecho al olvido. Lo ves todo en tu panel. Y el código es open-source." },
       ],
     },
     finalCta: {

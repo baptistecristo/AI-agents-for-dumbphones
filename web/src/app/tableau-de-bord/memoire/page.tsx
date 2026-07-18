@@ -84,7 +84,7 @@ export default async function MemoirePage() {
         {notes.length === 0 ? (
           <EmptyState>{tr.notes.empty}</EmptyState>
         ) : (
-          <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
+          <Card className="divide-y divide-line !p-0">
             {notes.map((m) => (
               <NoteRow key={m.key} noteKey={m.key} value={m.value} lang={lang} />
             ))}
@@ -99,12 +99,12 @@ export default async function MemoirePage() {
         {pending.length === 0 ? (
           <EmptyState>{tr.reminders.empty}</EmptyState>
         ) : (
-          <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
+          <Card className="divide-y divide-line !p-0">
             {pending.map((r) => (
               <div key={r.id} className="flex items-start justify-between gap-4 p-4">
                 <div className="min-w-0">
-                  <p className="text-sm text-ink dark:text-neutral-100">{r.text}</p>
-                  <p className="mt-0.5 text-xs text-neutral-400">
+                  <p className="text-sm text-ink">{r.text}</p>
+                  <p className="mt-0.5 text-xs text-muted">
                     {fr(r.due_at, lang)}
                     {r.recurrence ? ` · ${tr.recurrence[r.recurrence as keyof typeof tr.recurrence] ?? r.recurrence}` : ""}
                   </p>

@@ -15,12 +15,12 @@ const NAV_NEEDS: NonNullable<FilterCriteria["nav"]>[] = ["full-maps", "any-nav",
 const FORMS: FormFactor[] = ["flip", "candybar", "touch", "qwerty"];
 const PRICE_STEPS = [50, 100, 200, 400, 800];
 
-// Couleur du badge de navigation : vert = vraie nav, ambre = partielle, gris = aucune.
+// Couleur du badge de navigation : argile = vraie nav, alerte douce = partielle, neutre = aucune.
 const NAV_TONE: Record<Nav, string> = {
-  "full-maps": "bg-emerald-100 text-emerald-900",
-  "basic-nav": "bg-emerald-100 text-emerald-900",
-  "location-only": "bg-amber-100 text-amber-900",
-  none: "bg-ink/10 text-ink/60",
+  "full-maps": "bg-clay-tint text-clay",
+  "basic-nav": "bg-clay-tint text-clay",
+  "location-only": "bg-cream-deep text-warn",
+  none: "bg-cream-deep text-muted",
 };
 
 function currency(region: Region) {
@@ -53,31 +53,33 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
   }
 
   const selectClass =
-    "w-full rounded-lg border border-ink/10 bg-paper px-3 py-2 text-sm text-ink transition focus:border-bleu focus:outline-none focus:ring-2 focus:ring-bleu/20";
-  const labelClass = "mb-1 block text-xs font-bold uppercase tracking-wide text-ink/50";
+    "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink transition-colors focus:border-clay";
+  const labelClass = "mb-1 block text-xs font-bold uppercase tracking-wide text-muted";
 
   return (
     <div>
       {/* Titre + bascule de langue */}
       <div className="mb-4 flex items-start justify-between gap-4">
-        <h1 className="text-3xl font-bold leading-tight tracking-tight md:text-4xl">{tr.pageTitle}</h1>
-        <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-ink/10 text-sm font-bold">
+        <h1 className="font-display text-3xl leading-tight text-ink md:text-4xl">{tr.pageTitle}</h1>
+        <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-line text-xs font-semibold">
           {(["fr", "en", "es"] as Lang[]).map((l) => (
             <button
               key={l}
               onClick={() => setLang(l)}
               aria-pressed={lang === l}
-              className={`px-3 py-1.5 transition ${lang === l ? "bg-bleu text-white" : "bg-white text-ink/60 hover:bg-bulle"}`}
+              className={`px-2.5 py-1.5 transition-colors ${
+                lang === l ? "bg-ink text-cream" : "bg-surface text-muted hover:bg-cream-deep hover:text-ink"
+              }`}
             >
               {l.toUpperCase()}
             </button>
           ))}
         </div>
       </div>
-      <p className="mb-8 max-w-2xl leading-relaxed text-ink/75">{tr.intro}</p>
+      <p className="mb-8 max-w-2xl leading-relaxed text-slate">{tr.intro}</p>
 
-      {/* Panneau de filtres — surface blanche sur le papier, une seule hairline */}
-      <div className="rounded-2xl border border-ink/10 bg-white p-5 sm:p-6">
+      {/* Panneau de filtres — surface claire sur le fond, une seule hairline */}
+      <div className="rounded-xl border border-line bg-surface p-5 sm:p-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className={labelClass} htmlFor="f-region">
@@ -173,17 +175,17 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
       </div>
 
       {/* Avertissement bandes */}
-      <p className="mt-4 flex items-start gap-2 text-sm text-ink/60">
-        <span aria-hidden>📶</span>
+      <p className="mt-4 flex items-start gap-2 text-sm text-warn">
+        <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-warn" aria-hidden />
         <span>{tr.bandWarning}</span>
       </p>
 
       {/* Compteur + réinitialisation (seulement quand un filtre est actif) */}
       <div className="mt-10 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="text-xl font-bold">{tr.results(results.length)}</p>
-        <div className="flex items-center gap-4 text-xs text-ink/50">
+        <p className="text-xl font-semibold text-ink">{tr.results(results.length)}</p>
+        <div className="flex items-center gap-4 text-xs text-muted">
           {anyActive && (
-            <button onClick={reset} className="font-bold text-bleu underline-offset-2 hover:underline">
+            <button onClick={reset} className="font-medium text-clay underline-offset-2 hover:underline">
               {tr.reset}
             </button>
           )}
@@ -193,7 +195,7 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
 
       {/* Résultats */}
       {results.length === 0 ? (
-        <p className="mt-8 rounded-2xl border border-dashed border-ink/20 bg-white p-8 text-center text-ink/60">
+        <p className="mt-8 rounded-xl border border-dashed border-line bg-surface p-8 text-center text-muted">
           {tr.empty}
         </p>
       ) : (
@@ -216,9 +218,9 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
     phone.shops[0];
 
   return (
-    <li className="flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm transition hover:shadow-md">
+    <li className="flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-clay/40">
       {/* Photo — silhouette selon le format tant qu'aucune image n'est fournie */}
-      <div className="relative aspect-[4/3] border-b border-ink/10 bg-white">
+      <div className="relative aspect-[4/3] border-b border-line bg-surface">
         {phone.image ? (
           <Image
             src={phone.image}
@@ -235,16 +237,16 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
       <div className="flex flex-1 flex-col p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold leading-tight">
+          <h3 className="font-display text-lg leading-tight text-ink">
             {phone.brand} {phone.name}
           </h3>
-          <p className="mt-0.5 text-sm text-ink/55">
+          <p className="mt-0.5 text-sm text-muted">
             {tr.forms[phone.formFactor]} · {tr.osLabels[phone.os]}
           </p>
         </div>
         {price != null && (
           <p className="whitespace-nowrap text-lg font-bold tabular-nums text-ink">
-            <span className="mr-0.5 font-normal text-ink/40">≈</span>
+            <span className="mr-0.5 font-normal text-muted">≈</span>
             {currency(region)}
             {price}
           </p>
@@ -257,18 +259,18 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
         </span>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-            phone.trueDumbphone ? "bg-bulle text-bleu" : "bg-jaune/30 text-ink/80"
+            phone.trueDumbphone ? "bg-clay-tint text-clay" : "bg-clay-tint text-ink"
           }`}
         >
           {phone.trueDumbphone ? tr.trueBadge : tr.smartBadge}
         </span>
       </div>
 
-      <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/75">{phone.blurb[lang]}</p>
+      <p className="mt-3 flex-1 text-sm leading-relaxed text-slate">{phone.blurb[lang]}</p>
 
       {phone.caveat && (
-        <p className="mt-2 flex items-start gap-1.5 text-sm leading-relaxed text-amber-800">
-          <span aria-hidden>⚠</span>
+        <p className="mt-2 flex items-start gap-1.5 text-sm leading-relaxed text-warn">
+          <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-warn" aria-hidden />
           <span>{phone.caveat[lang]}</span>
         </p>
       )}
@@ -278,7 +280,7 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
           href={shop.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 flex items-center justify-center gap-1.5 rounded-lg border border-bleu/15 bg-bleu/5 px-4 py-2.5 text-sm font-bold text-bleu transition hover:border-bleu/40 hover:bg-bleu/10"
+          className="mt-4 flex items-center justify-center gap-1.5 rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-clay transition-colors hover:bg-cream-deep"
         >
           {tr.shopAt} {shop.label}
           <span aria-hidden className="text-xs">
@@ -332,7 +334,7 @@ function PhoneGlyph({ formFactor }: { formFactor: FormFactor }) {
     ),
   };
   return (
-    <div className="absolute inset-0 flex items-center justify-center text-ink/25">
+    <div className="absolute inset-0 flex items-center justify-center text-line">
       <svg
         viewBox="0 0 24 24"
         aria-hidden

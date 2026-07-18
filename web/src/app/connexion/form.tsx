@@ -12,11 +12,12 @@
 // saisit, à son gré. Le code ne dépend d'aucune allowlist de redirection, donc
 // il fonctionne dès que le gabarit e-mail expose {{ .Token }}.
 
-import Link from "next/link";
 import { useState } from "react";
 import { Language } from "@/lib/language";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LangSwitcher } from "../lang-switcher";
+import { Button } from "@/components/button";
+import { field, fieldLabel } from "@/components/styles";
 import { CONNEXION } from "./copy";
 import { displayedProviders, PROVIDERS, type OAuthId } from "./providers";
 
@@ -95,17 +96,19 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
       <div className="mb-6 self-start">
         <LangSwitcher current={lang} />
       </div>
-      <h1 className="font-display text-4xl tracking-tight text-ink dark:text-neutral-50">{tr.title}</h1>
-      <p className="mt-2 text-neutral-600 dark:text-neutral-400">{tr.subtitle}</p>
+      <h1 className="font-display text-4xl text-ink">{tr.title}</h1>
+      <p className="mt-2 text-muted">{tr.subtitle}</p>
 
       {linkExpired && !sent && (
-        <p className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <p className="mt-6 rounded-xl border border-line bg-cream-deep p-3 text-sm text-slate">
+          <span className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-warn align-middle" aria-hidden />
           {tr.previousFailed}
         </p>
       )}
 
       {error && (
-        <p className="mt-6 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+        <p className="mt-6 rounded-xl border border-line bg-cream-deep p-3 text-sm text-slate">
+          <span className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-warn align-middle" aria-hidden />
           {error}
         </p>
       )}
@@ -119,32 +122,36 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
               // Bouton visible mais pas encore câblé : on renvoie vers une page
               // d'attente plutôt que de lancer une connexion qui échouerait.
               return (
-                <Link
+                <Button
                   key={id}
                   href={`/connexion/bientot?p=${id}`}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white/60 px-4 py-3 text-base font-semibold text-neutral-500 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900/50 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                  variant="ghost"
+                  size="lg"
+                  className="w-full"
                 >
                   <span className="opacity-60">
                     <Icon />
                   </span>
                   {label}
-                  <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
+                  <span className="rounded-full bg-clay-tint px-2 py-0.5 text-xs font-semibold text-ink">
                     {tr.comingSoonBadge}
                   </span>
-                </Link>
+                </Button>
               );
             }
             return (
-              <button
+              <Button
                 key={id}
                 type="button"
+                variant="ghost"
+                size="lg"
                 onClick={() => signInWith(id)}
                 disabled={oauthBusy !== null}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white px-4 py-3 text-base font-semibold text-ink shadow-sm transition hover:bg-neutral-50 disabled:opacity-50 dark:border-white/15 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800"
+                className="w-full"
               >
                 <Icon />
                 {oauthBusy === id ? tr.redirecting : label}
-              </button>
+              </Button>
             );
           })}
 
@@ -153,34 +160,31 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
             // gabarit. Tant que ce n'est pas en place, on l'affiche « à fixer »,
             // comme les fournisseurs OAuth pas encore câblés. Le lien magique,
             // lui, part par le service e-mail par défaut : il fonctionne.
-            <Link
-              href="/connexion/bientot?p=code"
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-black/10 bg-white/60 px-4 py-3 text-base font-semibold text-neutral-500 shadow-sm transition hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-900/50 dark:text-neutral-400 dark:hover:bg-neutral-800"
-            >
-              <span className="opacity-60" aria-hidden="true">
-                🔢
-              </span>
+            <Button href="/connexion/bientot?p=code" variant="ghost" size="lg" className="w-full">
               {tr.codeSignIn}
-              <span className="rounded-full bg-jaune/25 px-2 py-0.5 text-xs font-bold text-bleu dark:text-jaune">
+              <span className="rounded-full bg-clay-tint px-2 py-0.5 text-xs font-semibold text-ink">
                 {tr.comingSoonBadge}
               </span>
-            </Link>
+            </Button>
           )}
         </div>
       )}
 
       {(providers.length > 0 || !emailCode) && (
         <div className="my-8 flex items-center gap-4" aria-hidden="true">
-          <span className="h-px flex-1 bg-black/10 dark:bg-white/15" />
-          <span className="text-sm text-neutral-500">{tr.orByEmail}</span>
-          <span className="h-px flex-1 bg-black/10 dark:bg-white/15" />
+          <span className="h-px flex-1 bg-line" />
+          <span className="text-sm text-muted">{tr.orByEmail}</span>
+          <span className="h-px flex-1 bg-line" />
         </div>
       )}
 
       {sent ? (
         <div className="space-y-6">
-          <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-            <p className="font-bold">{tr.sentTitle}</p>
+          <div className="rounded-xl border border-line bg-cream-deep p-5 text-slate">
+            <p className="font-medium text-ink">
+              <span className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-ok align-middle" aria-hidden />
+              {tr.sentTitle}
+            </p>
             <p className="mt-1 text-sm">
               {emailCode ? (
                 <>
@@ -197,7 +201,7 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
           {emailCode && (
             <form onSubmit={verifyCode} className="space-y-4">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium">{tr.codeLabel}</span>
+                <span className={fieldLabel}>{tr.codeLabel}</span>
                 <input
                   inputMode="numeric"
                   autoComplete="one-time-code"
@@ -207,16 +211,12 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="123456"
-                  className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
+                  className={`${field} text-center text-2xl tracking-[0.5em]`}
                 />
               </label>
-              <button
-                type="submit"
-                disabled={verifying || code.length < 6}
-                className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
-              >
+              <Button type="submit" size="lg" disabled={verifying || code.length < 6} className="w-full">
                 {verifying ? tr.verifying : tr.validateCode}
-              </button>
+              </Button>
             </form>
           )}
 
@@ -227,7 +227,7 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
               setCode("");
               setError(null);
             }}
-            className="text-sm text-neutral-500 underline-offset-2 hover:underline"
+            className="text-sm text-muted underline-offset-2 transition-colors hover:text-clay hover:underline"
           >
             {tr.changeAddress}
           </button>
@@ -235,30 +235,26 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
       ) : (
         <form onSubmit={sendEmail} className="space-y-4">
           <label className="block">
-            <span className="mb-1 block text-sm font-medium">{tr.emailLabel}</span>
+            <span className={fieldLabel}>{tr.emailLabel}</span>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={tr.emailPlaceholder}
-              className="w-full rounded-xl border border-black/15 bg-white px-4 py-3 text-lg outline-none focus:border-bleu dark:border-white/20 dark:bg-neutral-900 dark:focus:border-bulle"
+              className={field}
             />
           </label>
-          <button
-            type="submit"
-            disabled={sending}
-            className="w-full rounded-xl bg-bleu px-4 py-3 text-base font-bold text-white transition hover:bg-bleu-fonce disabled:opacity-50"
-          >
+          <Button type="submit" size="lg" disabled={sending} className="w-full">
             {sending ? tr.sending : emailCode ? tr.submitWithCode : tr.submitLinkOnly}
-          </button>
+          </Button>
         </form>
       )}
 
       {/* Note SafeLinks : le lien magique est toujours proposé, donc on affiche
           toujours l'avertissement. On adapte le recours à ce qui existe vraiment
           (bouton OAuth actif > code à 6 chiffres > lien seul). */}
-      <p className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+      <p className="mt-8 text-center text-sm text-muted">
         {hasLive
           ? tr.outlookNote.buttons
           : emailCode

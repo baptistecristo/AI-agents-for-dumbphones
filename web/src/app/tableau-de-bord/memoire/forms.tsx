@@ -14,11 +14,11 @@ import { cancelReminder, deleteMemory, updateMemory } from "./actions";
 import { primaryBtn, secondaryBtn, textareaCls } from "../ui";
 
 // Boutons compacts pour les actions de ligne : plus calmes que les gros boutons
-// du kit, tout en gardant l'anneau de focus au clavier.
+// du kit. L'anneau de focus clay global (globals.css) s'applique tout seul.
 const rowBtn =
-  "rounded-md px-2 py-1 text-sm font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100";
+  "rounded-md px-2 py-1 text-sm font-medium text-muted transition-colors hover:bg-cream-deep hover:text-ink";
 const rowDangerBtn =
-  "rounded-md px-2 py-1 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu dark:text-red-400 dark:hover:bg-red-950/40";
+  "rounded-md px-2 py-1 text-sm font-medium text-danger transition-colors hover:bg-danger/5";
 
 export function NoteRow({ noteKey, value, lang }: { noteKey: string; value: string; lang: Language }) {
   const tr = DASHBOARD[lang].memoire.row;
@@ -55,7 +55,7 @@ export function NoteRow({ noteKey, value, lang }: { noteKey: string; value: stri
   if (editing) {
     return (
       <div className="p-4">
-        <p className="mb-1.5 text-sm font-bold text-ink dark:text-neutral-100">{noteKey}</p>
+        <p className="mb-1.5 text-sm font-medium text-ink">{noteKey}</p>
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -79,13 +79,13 @@ export function NoteRow({ noteKey, value, lang }: { noteKey: string; value: stri
   return (
     <div className="flex items-start justify-between gap-4 p-4">
       <div className="min-w-0">
-        <p className="text-sm font-bold text-ink dark:text-neutral-100">{noteKey}</p>
-        <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-neutral-600 dark:text-neutral-300">{value}</p>
+        <p className="text-sm font-medium text-ink">{noteKey}</p>
+        <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-slate">{value}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         {confirmDelete ? (
           <>
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">{tr.deleteQ}</span>
+            <span className="text-xs text-muted">{tr.deleteQ}</span>
             <button
               type="button"
               onClick={remove}
@@ -145,7 +145,7 @@ export function CancelReminderButton({ id, label, lang }: { id: string; label?: 
 
   return (
     <span className="flex shrink-0 items-center gap-1">
-      <span className="text-xs text-neutral-500 dark:text-neutral-400">{tr.cancelQ}</span>
+      <span className="text-xs text-muted">{tr.cancelQ}</span>
       <button type="button" onClick={cancel} disabled={pending} className={rowDangerBtn}>
         {tr.yes}
       </button>

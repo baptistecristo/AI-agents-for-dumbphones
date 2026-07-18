@@ -49,11 +49,11 @@ export default async function ComptePage({ searchParams }: { searchParams: Promi
       >
         {phones && phones.length > 0 ? (
           <Card>
-            <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            <ul className="divide-y divide-line">
               {phones.map((p) => (
                 <li key={p.e164} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
-                  <span className="font-medium text-ink dark:text-neutral-100">{p.e164}</span>
-                  <span className="text-sm text-neutral-500 dark:text-neutral-400">{p.label}</span>
+                  <span className="font-medium text-ink">{p.e164}</span>
+                  <span className="text-sm text-muted">{p.label}</span>
                 </li>
               ))}
             </ul>
@@ -70,10 +70,10 @@ export default async function ComptePage({ searchParams }: { searchParams: Promi
       >
         {google ? (
           <Card>
-            <p className="text-ink dark:text-neutral-100">
+            <p className="text-ink">
               {tr.google.connectedWith}<span className="font-medium">{google.google_email}</span>
             </p>
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{tr.google.connectedSince.replace("%s", fr(google.connected_at, lang))}</p>
+            <p className="mt-1 text-sm text-muted">{tr.google.connectedSince.replace("%s", fr(google.connected_at, lang))}</p>
             <form action={disconnectGoogle} className="mt-4">
               <button className={secondaryBtn}>{tr.google.disconnect}</button>
             </form>
@@ -81,8 +81,8 @@ export default async function ComptePage({ searchParams }: { searchParams: Promi
           </Card>
         ) : (
           <Card>
-            <p className="text-neutral-600 dark:text-neutral-400">{tr.google.notConnected}</p>
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            <p className="text-slate">{tr.google.notConnected}</p>
+            <p className="mt-1 text-sm text-muted">
               {tr.google.notConnectedBody}
             </p>
             <a href="/api/oauth/google" className={`${primaryBtn} mt-4`}>
@@ -97,7 +97,7 @@ export default async function ComptePage({ searchParams }: { searchParams: Promi
         description={tr.export.description}
       >
         <Card>
-          <p className="text-neutral-600 dark:text-neutral-400">
+          <p className="text-slate">
             {tr.export.body}
           </p>
           <a href="/api/account/export" className={`${secondaryBtn} mt-4`}>
@@ -114,7 +114,7 @@ export default async function ComptePage({ searchParams }: { searchParams: Promi
         description={tr.danger.description}
       >
         {confirmationError && (
-          <p className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-800 dark:bg-red-950/50 dark:text-red-200">
+          <p className="mb-4 rounded-lg border border-danger/40 px-4 py-2.5 text-sm text-danger">
             {tr.danger.confirmError}
           </p>
         )}

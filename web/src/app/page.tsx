@@ -6,6 +6,9 @@
 import { LANDING } from "./landing-copy";
 import { LangSwitcher } from "./lang-switcher";
 import { siteLanguage } from "@/lib/site-i18n";
+import { Wordmark } from "@/components/brand";
+import { Button } from "@/components/button";
+import { SiteFooter } from "@/components/site-footer";
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
 
@@ -13,51 +16,44 @@ export default async function Home() {
   const lang = await siteLanguage();
   const tr = LANDING[lang];
   return (
-    <main className="bg-paper text-ink">
+    <main className="text-slate">
       {/* ---------------------------------------------------------- header */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <p className="font-display text-2xl">
-          ☎ <span className="ml-1">{brand}</span>
-        </p>
-        <nav className="flex items-center gap-4">
+      <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-5">
+        <Wordmark />
+        <nav className="flex items-center gap-3 sm:gap-4">
           <LangSwitcher current={lang} />
-          <a href="/telephones" className="hidden rounded-lg px-4 py-2 text-sm font-bold text-bleu underline-offset-4 hover:underline sm:inline">
+          <a
+            href="/telephones"
+            className="hidden text-sm font-medium text-ink transition-colors hover:text-clay sm:inline"
+          >
             {tr.nav.findPhone}
-          </a>
-          <a href="/connexion" className="rounded-lg px-4 py-2 text-sm font-bold text-bleu underline-offset-4 hover:underline">
-            {tr.nav.signIn}
           </a>
           <a
             href="/connexion"
-            className="rounded-lg bg-bleu px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-bleu-fonce"
+            className="hidden text-sm font-medium text-ink transition-colors hover:text-clay sm:inline"
           >
-            {tr.nav.createAccount}
+            {tr.nav.signIn}
           </a>
+          <Button href="/connexion">{tr.nav.createAccount}</Button>
         </nav>
       </header>
 
       {/* ------------------------------------------------------------ héros */}
-      <section className="mx-auto grid max-w-6xl gap-12 px-6 pb-20 pt-12 md:grid-cols-2 md:items-center md:pt-20">
+      <section className="mx-auto grid max-w-6xl gap-12 px-6 pb-24 pt-10 md:grid-cols-2 md:items-center md:pt-16">
         <div>
-          <h1 className="font-display text-4xl leading-tight md:text-5xl">
+          <h1 className="font-display text-[2.6rem] leading-[1.04] text-ink md:text-6xl">
             {tr.hero.titleTop}
             <br />
-            <span className="relative inline-block">
-              {tr.hero.titleHighlight}
-              <span aria-hidden className="absolute inset-x-0 bottom-1 -z-10 h-3 bg-jaune/70" />
-            </span>
+            <span className="text-clay">{tr.hero.titleHighlight}</span>
           </h1>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-ink/80">
+          <p className="mt-7 max-w-md text-lg leading-relaxed text-slate">
             {tr.hero.lead.replace("%BRAND%", brand)}
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <a
-              href="/connexion"
-              className="rounded-xl bg-bleu px-6 py-4 text-lg font-bold text-white shadow-md transition hover:bg-bleu-fonce"
-            >
+          <div className="mt-9 flex flex-wrap items-center gap-5">
+            <Button href="/connexion" size="lg">
               {tr.hero.cta}
-            </a>
-            <p className="text-sm text-ink/60">
+            </Button>
+            <p className="text-sm leading-snug text-muted">
               {tr.hero.readyLine1}
               <br />
               {tr.hero.readyLine2}
@@ -66,19 +62,19 @@ export default async function Home() {
         </div>
 
         {/* Signature : l'appel qui se déroule en direct */}
-        <figure aria-label={tr.call.aria} className="rounded-2xl border border-ink/10 bg-white p-6 shadow-xl shadow-bleu/5">
-          <figcaption className="mb-5 flex items-center gap-2 border-b border-ink/10 pb-4 text-sm text-ink/60">
-            <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
+        <figure aria-label={tr.call.aria} className="rounded-2xl border border-line bg-surface p-6">
+          <figcaption className="mb-5 flex items-center gap-2 border-b border-line pb-4 text-sm text-muted">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-clay" />
             {tr.call.caption}
           </figcaption>
           <div className="space-y-3">
             {tr.call.lines.map((line, i) => (
               <p
                 key={i}
-                className={`call-line max-w-[85%] rounded-2xl px-4 py-2.5 leading-snug ${
+                className={`call-line max-w-[85%] rounded-2xl px-4 py-2.5 text-[0.95rem] leading-snug ${
                   line.who === "j"
-                    ? "bg-bulle text-ink"
-                    : "ml-auto bg-bleu text-white"
+                    ? "rounded-bl-md bg-cream-deep text-ink"
+                    : "ml-auto rounded-br-md border-l-2 border-clay bg-clay-tint text-ink"
                 }`}
                 style={{ animationDelay: `${0.6 + i * 0.9}s` }}
               >
@@ -89,101 +85,103 @@ export default async function Home() {
         </figure>
       </section>
 
-      {/* ----------------------------------------------------- bande jaune */}
-      <div className="bg-jaune">
-        <p className="mx-auto max-w-6xl px-6 py-4 text-center font-bold tracking-wide text-ink">
+      {/* ----------------------------------------------- bande d'affirmation */}
+      <div className="border-y border-line bg-cream-deep/50">
+        <p className="mx-auto max-w-3xl px-6 py-7 text-center font-display text-lg leading-snug text-ink md:text-xl">
           {tr.banner}
         </p>
       </div>
 
       {/* ---------------------------------------------------- comment ça marche */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="font-display text-3xl">{tr.how.title}</h2>
-        <div className="mt-10 grid gap-10 md:grid-cols-3">
+      <section className="mx-auto max-w-6xl px-6 py-24">
+        <h2 className="font-display text-3xl leading-tight text-ink md:text-4xl">{tr.how.title}</h2>
+        <div className="mt-12 grid gap-x-10 gap-y-12 md:grid-cols-3">
           {tr.how.steps.map((s) => (
-            <div key={s.n} className="relative rounded-2xl border border-ink/10 bg-white p-6">
-              <span className="font-display absolute -top-5 left-6 flex h-10 w-10 items-center justify-center rounded-full bg-jaune text-xl">
-                {s.n}
-              </span>
-              <h3 className="mt-4 text-xl font-bold">{s.title}</h3>
-              <p className="mt-2 leading-relaxed text-ink/75">{s.text}</p>
+            <div key={s.n} className="border-t border-line pt-5">
+              <span className="font-display text-2xl text-clay">{s.n.padStart(2, "0")}</span>
+              <h3 className="mt-3 font-display text-xl text-ink">{s.title}</h3>
+              <p className="mt-2 leading-relaxed text-slate">{s.text}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ---------------------------------------------------------- capacités */}
-      <section className="border-y border-ink/10 bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-20">
-          <h2 className="font-display text-3xl">{tr.capabilities.title}</h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="border-t border-line bg-cream-deep/40">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <h2 className="font-display text-3xl leading-tight text-ink md:text-4xl">
+            {tr.capabilities.title}
+          </h2>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {tr.capabilities.items.map((c) => (
-              <div key={c.title} className="rounded-2xl bg-paper p-6">
-                <p className="text-2xl" aria-hidden>
-                  {c.icon}
-                </p>
-                <h3 className="mt-3 text-lg font-bold">{c.title}</h3>
-                <p className="mt-1 leading-relaxed text-ink/75">{c.text}</p>
+              <div key={c.title} className="rounded-xl border border-line bg-surface p-6">
+                <h3 className="font-display text-lg text-ink">{c.title}</h3>
+                <p className="mt-2 leading-relaxed text-slate">{c.text}</p>
               </div>
             ))}
           </div>
-          <p className="mt-8 text-sm text-ink/60">
-            {tr.capabilities.sms.lead} <span className="font-mono font-bold">{tr.capabilities.sms.kw1}</span>,{" "}
-            <span className="font-mono font-bold">{tr.capabilities.sms.kw2}</span> {tr.capabilities.sms.or}{" "}
-            <span className="font-mono font-bold">{tr.capabilities.sms.kw3}</span> {tr.capabilities.sms.tail}
+          <p className="mt-10 text-sm leading-relaxed text-muted">
+            {tr.capabilities.sms.lead}{" "}
+            <span className="rounded bg-cream-deep px-1.5 py-0.5 font-mono text-xs font-semibold text-ink">
+              {tr.capabilities.sms.kw1}
+            </span>
+            ,{" "}
+            <span className="rounded bg-cream-deep px-1.5 py-0.5 font-mono text-xs font-semibold text-ink">
+              {tr.capabilities.sms.kw2}
+            </span>{" "}
+            {tr.capabilities.sms.or}{" "}
+            <span className="rounded bg-cream-deep px-1.5 py-0.5 font-mono text-xs font-semibold text-ink">
+              {tr.capabilities.sms.kw3}
+            </span>{" "}
+            {tr.capabilities.sms.tail}
           </p>
         </div>
       </section>
 
       {/* ------------------------------------------------- choisir un téléphone */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="flex flex-col items-start gap-6 rounded-2xl border border-ink/10 bg-bulle/50 p-8 md:flex-row md:items-center md:justify-between">
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="flex flex-col items-start gap-6 rounded-2xl border border-line bg-surface p-8 md:flex-row md:items-center md:justify-between">
           <div className="max-w-xl">
-            <h2 className="font-display text-2xl">{tr.phones.title}</h2>
-            <p className="mt-2 leading-relaxed text-ink/75">{tr.phones.text}</p>
+            <h2 className="font-display text-2xl text-ink">{tr.phones.title}</h2>
+            <p className="mt-2 leading-relaxed text-slate">{tr.phones.text}</p>
           </div>
-          <a
-            href="/telephones"
-            className="whitespace-nowrap rounded-xl bg-bleu px-6 py-4 text-lg font-bold text-white shadow-md transition hover:bg-bleu-fonce"
-          >
+          <Button href="/telephones" variant="ghost" size="lg" className="whitespace-nowrap">
             {tr.phones.cta}
-          </a>
+          </Button>
         </div>
       </section>
 
       {/* ----------------------------------------------------------- confiance */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="font-display text-3xl">{tr.trust.title}</h2>
-        <div className="mt-10 grid gap-8 md:grid-cols-3">
-          {tr.trust.items.map((item) => (
-            <div key={item.title}>
-              <h3 className="text-lg font-bold">{item.title}</h3>
-              <p className="mt-2 leading-relaxed text-ink/75">{item.text}</p>
-            </div>
-          ))}
+      <section className="border-t border-line">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <h2 className="font-display text-3xl leading-tight text-ink md:text-4xl">{tr.trust.title}</h2>
+          <div className="mt-12 grid gap-x-10 gap-y-10 md:grid-cols-3">
+            {tr.trust.items.map((item) => (
+              <div key={item.title} className="border-t border-line pt-5">
+                <h3 className="font-display text-lg text-ink">{item.title}</h3>
+                <p className="mt-2 leading-relaxed text-slate">{item.text}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ----------------------------------------------------------- CTA final */}
-      <section className="bg-bleu">
-        <div className="mx-auto max-w-6xl px-6 py-16 text-center">
-          <h2 className="font-display text-3xl text-white">{tr.finalCta.title}</h2>
-          <p className="mx-auto mt-3 max-w-xl text-white/80">{tr.finalCta.text}</p>
-          <a
-            href="/connexion"
-            className="mt-8 inline-block rounded-xl bg-jaune px-8 py-4 text-lg font-bold text-ink shadow-lg transition hover:brightness-105"
-          >
-            {tr.finalCta.button}
-          </a>
+      {/* --------------------------------------------------- CTA final (sombre) */}
+      <section className="bg-ink">
+        <div className="mx-auto max-w-6xl px-6 py-24 text-center">
+          <h2 className="font-display text-3xl leading-tight text-cream md:text-5xl">
+            {tr.finalCta.title}
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl leading-relaxed text-cream/70">{tr.finalCta.text}</p>
+          <div className="mt-9 flex justify-center">
+            <Button href="/connexion" variant="accent" size="lg">
+              {tr.finalCta.button}
+            </Button>
+          </div>
         </div>
       </section>
 
-      <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-ink/60">
-        <p>
-          ☎ {brand} — {tr.footer.tagline}
-        </p>
-        <p>{tr.footer.made}</p>
-      </footer>
+      <SiteFooter tagline={tr.footer.tagline} right={<p className="text-muted">{tr.footer.made}</p>} />
     </main>
   );
 }
