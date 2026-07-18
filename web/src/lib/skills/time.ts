@@ -1,5 +1,6 @@
 // Skill Heure locale — Open-Meteo geocoding + WorldTimeAPI (gratuits, sans clé API).
 
+import { safeFetch } from "../net";
 import { CallSession, SkillResult, t } from "./types";
 
 export async function getCurrentTime(
@@ -15,7 +16,7 @@ export async function getCurrentTime(
       es: "¿Para qué ciudad?",
     });
 
-  const geoRes = await fetch(
+  const geoRes = await safeFetch(
     `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&language=${session.language}&count=1`,
   );
 
@@ -39,7 +40,7 @@ export async function getCurrentTime(
       es: `No encuentro la ciudad «${city}».`,
     });
 
-  const timeRes = await fetch(
+  const timeRes = await safeFetch(
     `https://worldtimeapi.org/api/timezone/${place.timezone}`,
   );
 

@@ -1,5 +1,6 @@
 // Skill Définition — dictionaryapi.dev (gratuit, sans clé API). Anglais uniquement.
 
+import { safeFetch } from "../net";
 import { CallSession, SkillResult, t } from "./types";
 
 export async function define(session: CallSession, args: { word?: string }): Promise<SkillResult> {
@@ -15,7 +16,7 @@ export async function define(session: CallSession, args: { word?: string }): Pro
   const word = args.word?.trim();
   if (!word) return t(session, { fr: "Quel mot dois-je définir ?", en: "Which word should I define?", es: "¿Qué palabra debo definir?" });
 
-  const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+  const res = await safeFetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
   if (!res.ok)
     return t(session, {
       fr: `Je ne trouve pas de définition pour « ${word} ».`,
