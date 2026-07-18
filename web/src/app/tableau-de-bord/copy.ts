@@ -66,6 +66,18 @@ export type DashboardCopy = {
     speed: { label: string; hint: string };
     homeAddress: { label: string; placeholder: string; hint: string };
     instructions: { label: string; placeholder: string; hint: string };
+    pin: {
+      label: string;
+      hint: string;
+      set: string;
+      unset: string;
+      save: string;
+      remove: string;
+      saved: string;
+      cleared: string;
+      badFormat: string;
+      error: string;
+    };
     bubble: string;
     save: string;
   };
@@ -233,6 +245,18 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
         placeholder:
           "Ex. : Vouvoie-moi. Va droit au but. Je suis un peu dur d'oreille, parle lentement et répète les chiffres.",
         hint: "Le ton et tes préférences durables, dans tes mots. Garde ça court. N'y mets rien de secret : ce texte fait partie de ce que l'agent « sait » en décrochant.",
+      },
+      pin: {
+        label: "Code de sécurité par SMS",
+        hint: "Un code à 3 chiffres. Par SMS, il débloque les actions qui envoient ou modifient quelque chose (envoyer un message, passer un appel, changer un rendez-vous). Lire ton agenda ou tes contacts n'en a jamais besoin.",
+        set: "Un code est réglé.",
+        unset: "Aucun code réglé : par SMS, les actions qui envoient ou modifient resteront bloquées.",
+        save: "Enregistrer le code",
+        remove: "Retirer le code",
+        saved: "Code enregistré.",
+        cleared: "Code retiré.",
+        badFormat: "Le code doit faire exactement 3 chiffres.",
+        error: "Le code n'a pas pu être enregistré. Réessaie dans un instant.",
       },
       bubble:
         "Ces consignes guident mon ton, mais elles ne passent jamais avant tes règles de sécurité : je confirme toujours avant d'agir, et je demande ton code pour tes données personnelles.",
@@ -451,6 +475,18 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
           "E.g. Get to the point. I'm a bit hard of hearing, speak slowly and repeat numbers.",
         hint: "The tone and your lasting preferences, in your words. Keep it short. Put nothing secret here: this text is part of what the agent \"knows\" when picking up.",
       },
+      pin: {
+        label: "Security code by SMS",
+        hint: "A 3-digit code. By text, it unlocks actions that send or change something (texting someone, placing a call, moving an appointment). Reading your calendar or contacts never needs it.",
+        set: "A code is set.",
+        unset: "No code set: by text, actions that send or change something will stay blocked.",
+        save: "Save code",
+        remove: "Remove code",
+        saved: "Code saved.",
+        cleared: "Code removed.",
+        badFormat: "The code must be exactly 3 digits.",
+        error: "The code couldn't be saved. Try again in a moment.",
+      },
       bubble:
         "These instructions guide my tone, but they never come before your safety rules: I always confirm before acting, and I ask for your code for your personal data.",
       save: "Save",
@@ -666,6 +702,18 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
         placeholder:
           "Ej.: Háblame de usted. Ve al grano. Soy un poco duro de oído, habla despacio y repite las cifras.",
         hint: "El tono y tus preferencias duraderas, con tus palabras. Que sea corto. No pongas nada secreto: este texto forma parte de lo que el agente «sabe» al descolgar.",
+      },
+      pin: {
+        label: "Código de seguridad por SMS",
+        hint: "Un código de 3 cifras. Por SMS, desbloquea las acciones que envían o modifican algo (enviar un mensaje, hacer una llamada, cambiar una cita). Leer tu agenda o tus contactos nunca lo necesita.",
+        set: "Hay un código puesto.",
+        unset: "No hay código: por SMS, las acciones que envían o modifican algo seguirán bloqueadas.",
+        save: "Guardar código",
+        remove: "Quitar código",
+        saved: "Código guardado.",
+        cleared: "Código quitado.",
+        badFormat: "El código debe tener exactamente 3 cifras.",
+        error: "No se pudo guardar el código. Inténtalo en un momento.",
       },
       bubble:
         "Estas instrucciones guían mi tono, pero nunca pasan por delante de tus reglas de seguridad: siempre confirmo antes de actuar, y te pido tu código para tus datos personales.",
