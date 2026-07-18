@@ -1,14 +1,19 @@
 // Accès centralisé aux variables d'environnement.
 // Tout est optionnel au build ; les routes qui en dépendent vérifient à l'exécution.
+// La lecture passe par config.ts (source unique, schéma typé + garde de démarrage) :
+// ces accesseurs restent pour la compatibilité et gardent leur sémantique « lève
+// si absent ». Le schéma et les secrets vivent dans ./config.
+
+import { readEnvValue } from "./config";
 
 export function env(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Variable d'environnement manquante : ${name}`);
+  const v = readEnvValue(name);
+  if (v === undefined) throw new Error(`Variable d'environnement manquante : ${name}`);
   return v;
 }
 
 export function envOr(name: string, fallback: string): string {
-  return process.env[name] || fallback;
+  return readEnvValue(name) ?? fallback;
 }
 
 // URL publique de CETTE instance. Trois cas, dans cet ordre :
