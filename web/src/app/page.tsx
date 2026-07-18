@@ -8,6 +8,7 @@ import { LangSwitcher } from "./lang-switcher";
 import { siteLanguage } from "@/lib/site-i18n";
 import { Wordmark } from "@/components/brand";
 import { Button } from "@/components/button";
+import { CallScreen } from "@/components/call-screen";
 import { SiteFooter } from "@/components/site-footer";
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
@@ -61,28 +62,13 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Signature : l'appel qui se déroule en direct */}
-        <figure aria-label={tr.call.aria} className="rounded-2xl border border-line bg-surface p-6">
-          <figcaption className="mb-5 flex items-center gap-2 border-b border-line pb-4 text-sm text-muted">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-clay" />
-            {tr.call.caption}
-          </figcaption>
-          <div className="space-y-3">
-            {tr.call.lines.map((line, i) => (
-              <p
-                key={i}
-                className={`call-line max-w-[85%] rounded-2xl px-4 py-2.5 text-[0.95rem] leading-snug ${
-                  line.who === "j"
-                    ? "rounded-bl-md bg-cream-deep text-ink"
-                    : "ml-auto rounded-br-md border-l-2 border-clay bg-clay-tint text-ink"
-                }`}
-                style={{ animationDelay: `${0.6 + i * 0.9}s` }}
-              >
-                {line.text}
-              </p>
-            ))}
-          </div>
-        </figure>
+        {/* Signature : l'écran d'appel vocal, en direct */}
+        <CallScreen
+          caption={tr.call.caption}
+          lines={tr.call.lines}
+          brand={brand}
+          ariaLabel={tr.call.aria}
+        />
       </section>
 
       {/* ----------------------------------------------- bande d'affirmation */}
