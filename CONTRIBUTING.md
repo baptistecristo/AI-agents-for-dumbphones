@@ -232,6 +232,20 @@ itself in your language too, extend the site dictionaries (`web/src/app/*/copy.t
 
 ---
 
+## Security scanning
+
+Every PR runs a Semgrep static scan (`.github/workflows/security-scan.yml`) over a
+small, precise rulepack in [`security/opengrep/`](security/opengrep/precise.yml).
+It fails the build on hardcoded secrets, `eval` / `new Function`, an outbound URL
+built from request input (SSRF), and flags tool output flowing into a prompt. The
+rules also run against `security/opengrep/precise.js` via `semgrep --test`, so the
+seeded findings prove the rulepack still bites.
+
+To run it locally: `pipx install semgrep`, then
+`semgrep scan --config security/opengrep/precise.yml`. When you add a rule, add a
+`ruleid:` and an `ok:` case to the test fixtures. Semgrep and its OpenGrep fork
+share the rule syntax; either works.
+
 ## Pull requests
 
 - One skill / one language per PR keeps review fast.

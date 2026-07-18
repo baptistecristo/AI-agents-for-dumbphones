@@ -1,0 +1,43 @@
+name: Security scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Balayage complet de l'arbre chaque lundi (rattrape ce qu'une PR n'a pas touché).
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: semgrep — static rulepack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      # pipx est préinstallé sur les runners GitHub ; évite le souci PEP 668 de pip.
+      # Version non figée pour cette PR draft ; épingler (semgrep==x.y.z) au merge.
+      - name: Install Semgrep
+        run: pipx install semgrep
+
+      # 1. La finding de test semée doit toujours être détectée : garde-fou du rulepack.
+      #    precise.js est le fixture frère de precise.yml (même racine de nom),
+      #    la disposition attendue par `semgrep --test`.
+      - name: Validate the rulepack catches its seeded findings
+        run: semgrep --test --config security/opengrep/precise.yml security/opengrep/precise.js
+
+      # 2. Scan du dépôt. Échoue sur toute finding de sévérité ERROR. On exclut le
+      #    dossier security/ (rulepack + fixture volontairement vulnérable) ;
+      #    node_modules et .gitignore le sont par défaut.
+      - name: Scan the repository (fail on ERROR findings)
+        run: >-
+          semgrep scan
+          --config security/opengrep/precise.yml
+          --error
+          --severity ERROR
+          --exclude security
+          --metrics off
