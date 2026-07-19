@@ -1,43 +1,69 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Palette — warm ivory + clay. A calm, editorial system: near-black warm ink
+   on Anthropic-style ivory, terracotta as the single accent. No pure white,
+   no bright chroma; contrast comes from type and generous space, not colour.
+   --------------------------------------------------------------------------- */
 :root {
-  --paper: #faf8f3;
-  --ink: #1c2333;
-  --bleu: #22357e;
-  --bleu-fonce: #182456;
-  --jaune: #f5c518;
-  --bulle: #e8ecf7;
-  --background: #ffffff;
-  --foreground: #171717;
+  --cream: #f0eee6;        /* page ground */
+  --cream-deep: #e7e3d7;   /* alternate sections, quiet fills */
+  --surface: #faf9f5;      /* raised cards, inputs — a hair above the ground */
+  --ink: #14130f;          /* headings, primary text */
+  --slate: #46433b;        /* body copy */
+  --muted: #78736a;        /* captions, secondary */
+  --line: #d9d5c8;         /* hairline borders */
+  --clay: #bd5b3a;         /* accent: links, marks, focus */
+  --clay-soft: #cc785c;    /* the recognisable clay, for small tints */
+  --clay-tint: #ecdccf;    /* washes, the assistant's voice in the transcript */
+  --ok: #4f7a52;           /* sparing positive (verified, granted) */
+  --warn: #9a6a2f;         /* sparing caution */
+  --danger: #b0402f;       /* destructive only (delete account, hard errors) */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-paper: var(--paper);
+  --color-cream: var(--cream);
+  --color-cream-deep: var(--cream-deep);
+  --color-surface: var(--surface);
   --color-ink: var(--ink);
-  --color-bleu: var(--bleu);
-  --color-bleu-fonce: var(--bleu-fonce);
-  --color-jaune: var(--jaune);
-  --color-bulle: var(--bulle);
+  --color-slate: var(--slate);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --color-clay-tint: var(--clay-tint);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display), Georgia, serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--cream);
+  color: var(--slate);
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Landing : déroulé de l'appel, ligne par ligne */
+/* Fraunces reads best at display sizes with optical sizing left to the font. */
+.font-display {
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--clay-tint);
+  color: var(--ink);
+}
+
+/* One clay focus ring, everywhere, instead of per-element rings. */
+:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 2px;
+}
+
+/* Landing — the call transcript unfurls line by line, as if heard live. */
 @keyframes line-in {
   from {
     opacity: 0;
@@ -54,9 +80,30 @@ body {
   animation: line-in 0.5s ease-out forwards;
 }
 
+/* L'onde sonore de l'écran d'appel : des barres qui respirent, décalées. */
+@keyframes wave {
+  0%,
+  100% {
+    height: 18%;
+  }
+  50% {
+    height: 100%;
+  }
+}
+
+.wave-bar {
+  height: 32%;
+  animation: wave 0.9s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .call-line {
     opacity: 1;
+    animation: none;
+  }
+
+  .wave-bar {
+    height: 45%;
     animation: none;
   }
 }

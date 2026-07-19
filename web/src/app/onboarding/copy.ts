@@ -106,7 +106,7 @@ export const ONBOARDING: Record<Language, OnboardingCopy> = {
       codeSent: "Code envoyé par SMS.",
       wrongCode: "Code incorrect. Réessaie.",
       verifyFailed: "Vérification impossible. Redemande un code.",
-      verified: "Numéro vérifié ✅",
+      verified: "Numéro vérifié",
     },
   },
   en: {
@@ -154,7 +154,7 @@ export const ONBOARDING: Record<Language, OnboardingCopy> = {
       codeSent: "Code sent by SMS.",
       wrongCode: "Wrong code. Try again.",
       verifyFailed: "Verification impossible. Request a new code.",
-      verified: "Number verified ✅",
+      verified: "Number verified",
     },
   },
   es: {
@@ -202,7 +202,7 @@ export const ONBOARDING: Record<Language, OnboardingCopy> = {
       codeSent: "Código enviado por SMS.",
       wrongCode: "Código incorrecto. Inténtalo de nuevo.",
       verifyFailed: "Verificación imposible. Pide otro código.",
-      verified: "Número verificado ✅",
+      verified: "Número verificado",
     },
   },
 };

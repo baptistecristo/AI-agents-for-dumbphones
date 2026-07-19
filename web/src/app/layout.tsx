@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
-import { Atkinson_Hyperlegible, Young_Serif } from "next/font/google";
+import { Fraunces, Hanken_Grotesk } from "next/font/google";
 import { Language } from "@/lib/language";
 import { siteLanguage } from "@/lib/site-i18n";
 import "./globals.css";
 
-// Corps : Atkinson Hyperlegible — police conçue pour la basse vision
-// (Braille Institute). L'accessibilité est le produit, jusque dans la lettre.
-const body = Atkinson_Hyperlegible({
+// Corps : Hanken Grotesk — une grotesque nette et très lisible, dans l'esprit
+// des sans neutres et chaleureuses. Pensée pour rester claire à petite taille,
+// pour un public qui quitte l'écran (parfois âgé, parfois en basse vision).
+const body = Hanken_Grotesk({
   variable: "--font-body",
-  weight: ["400", "700"],
   subsets: ["latin"],
+  display: "swap",
 });
 
-const display = Young_Serif({
+// Titres : Fraunces — un serif éditorial à fort caractère, réservé aux grands
+// titres. L'optical sizing fait le gros du travail : posé, littéraire, calme.
+const display = Fraunces({
   variable: "--font-display",
-  weight: "400",
   subsets: ["latin"],
+  display: "swap",
+  axes: ["opsz"],
 });
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";

@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { Button } from "@/components/button";
 import { LangSwitcher } from "../lang-switcher";
 import { signOut } from "./actions";
 import { DASHBOARD } from "./copy";
@@ -40,15 +41,16 @@ export default async function PersonalAreaLayout({ children }: { children: React
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 sm:px-8">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-6 dark:border-neutral-800">
+      <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-6">
         <div>
-          <Link href="/" className="font-display text-xl text-ink hover:text-bleu dark:text-neutral-50 dark:hover:text-bulle">
+          <Link href="/" className="font-display text-xl text-ink transition-colors hover:text-clay">
             {brand}
           </Link>
-          <h1 className="mt-1 text-2xl font-bold text-ink dark:text-neutral-50">
-            {tr.greeting} {profile?.preferred_name || "👋"}
+          <h1 className="mt-1 font-display text-2xl text-ink">
+            {tr.greeting}
+            {profile?.preferred_name ? ` ${profile.preferred_name}` : ""}
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="mt-0.5 text-sm text-muted">
             {phone ? tr.phoneLinked.replace("%s", phone) : tr.noPhone}
             {google ? tr.googleConnected.replace("%s", google.google_email) : tr.googleNotConnected}
           </p>
@@ -56,9 +58,7 @@ export default async function PersonalAreaLayout({ children }: { children: React
         <div className="flex items-center gap-3">
           <LangSwitcher current={lang} />
           <form action={signOut}>
-            <button className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-ink hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-900">
-              {tr.signOut}
-            </button>
+            <Button variant="ghost">{tr.signOut}</Button>
           </form>
         </div>
       </header>
@@ -72,9 +72,9 @@ export default async function PersonalAreaLayout({ children }: { children: React
         <main className="min-w-0">{children}</main>
       </div>
 
-      <footer className="mt-14 border-t border-neutral-200 pt-6 text-xs text-neutral-400 dark:border-neutral-800">
+      <footer className="mt-14 border-t border-line pt-6 text-xs text-muted">
         {tr.footerBefore}
-        <Link href="/tableau-de-bord/compte" className="underline hover:text-bleu">{tr.footerLink}</Link>
+        <Link href="/tableau-de-bord/compte" className="underline transition-colors hover:text-clay">{tr.footerLink}</Link>
         {tr.footerAfter}
       </footer>
     </div>

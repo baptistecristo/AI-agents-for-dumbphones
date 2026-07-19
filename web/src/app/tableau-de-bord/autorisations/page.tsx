@@ -17,12 +17,12 @@ export const dynamic = "force-dynamic";
 // L'ordre d'affichage et les libellés (label + aide, sans surpromettre) vivent
 // dans copy.ts : la clé `source` est ce que connaît la base (consents.source).
 
-// Pastilles d'action. Vert « autorisé » (état franc, action = révoquer),
-// neutre « refusé » (action = autoriser). Anneau de focus visible au clavier.
+// Pastilles d'action. « Autorisé » en vert sobre (état franc, action = révoquer),
+// « refusé » en neutre (action = autoriser). L'anneau de focus clay global s'applique.
 const grantedPill =
-  "inline-flex shrink-0 items-center rounded-full bg-emerald-50 px-3.5 py-1.5 text-sm font-bold text-emerald-800 ring-1 ring-inset ring-emerald-200 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-emerald-950/50 dark:text-emerald-200 dark:ring-emerald-900 dark:hover:bg-emerald-950 dark:focus-visible:ring-offset-neutral-950";
+  "inline-flex shrink-0 items-center rounded-full bg-ok/10 px-3.5 py-1.5 text-sm font-medium text-ok ring-1 ring-inset ring-ok/25 transition-colors hover:bg-ok/15";
 const neutralPill =
-  "inline-flex shrink-0 items-center rounded-full bg-neutral-100 px-3.5 py-1.5 text-sm font-medium text-neutral-600 ring-1 ring-inset ring-neutral-200 transition-colors hover:bg-neutral-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-neutral-800 dark:text-neutral-300 dark:ring-neutral-700 dark:hover:bg-neutral-700 dark:focus-visible:ring-offset-neutral-950";
+  "inline-flex shrink-0 items-center rounded-full bg-cream-deep px-3.5 py-1.5 text-sm font-medium text-muted ring-1 ring-inset ring-line transition-colors hover:bg-line/60";
 
 export default async function AutorisationsPage() {
   const supabase = await supabaseServer();
@@ -54,15 +54,15 @@ export default async function AutorisationsPage() {
         <Bubble>{tr.bubble}</Bubble>
       </div>
 
-      <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
+      <Card className="divide-y divide-line !p-0">
         {CONSENT_SOURCES.map((source) => {
           const granted = state.get(source) ?? false;
           const next = granted ? "false" : "true";
           return (
             <div key={source} className="flex items-center justify-between gap-4 p-4 sm:p-5">
               <div className="min-w-0">
-                <p className="text-sm font-bold text-ink dark:text-neutral-100">{tr.consents[source].label}</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">{tr.consents[source].help}</p>
+                <p className="text-sm font-medium text-ink">{tr.consents[source].label}</p>
+                <p className="text-sm text-muted">{tr.consents[source].help}</p>
               </div>
               <form action={toggleConsent}>
                 <input type="hidden" name="source" value={source} />
@@ -76,7 +76,7 @@ export default async function AutorisationsPage() {
         })}
       </Card>
 
-      <p className="mt-4 max-w-prose text-sm text-neutral-500 dark:text-neutral-400">
+      <p className="mt-4 max-w-prose text-sm text-muted">
         {tr.footer}
       </p>
     </>

@@ -1,38 +1,37 @@
 // Kit visuel partagé de l'espace personnel. Server-safe (aucun hook client) :
-// chaque page de section l'importe pour rester cohérente. L'identité tient dans
-// trois choses — le serif Young Serif en surtitre, le bleu de la marque pour
-// l'action, et la bulle (« ce que ton agent saura / fera ») comme signature.
-// Tout est pensé pour être lisible : contrastes francs, focus visible au clavier.
+// chaque page de section l'importe pour rester cohérente. L'identité reprend
+// celle du site — le serif en surtitre, l'argile pour l'action et l'accent, et
+// la bulle (« ce que ton agent saura / fera ») comme voix de l'agent.
+// Pensé pour être lisible : contrastes francs, focus argile visible au clavier.
 
 import type { ReactNode } from "react";
+import { buttonClass } from "@/components/button";
+import { field } from "@/components/styles";
 
 // ——— Classes réutilisables (formulaires, boutons) ———
-// Anneau de focus visible partout : l'accessibilité est le produit, jusqu'au clavier.
-const focusRing =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bleu focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-950";
+// On s'appuie sur le kit partagé : mêmes champs, mêmes boutons que le reste du site.
+export const inputCls = field;
+export const selectCls = field;
+export const textareaCls = `${field} min-h-28 resize-y leading-relaxed`;
 
-export const inputCls = `w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base text-ink placeholder:text-neutral-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 ${focusRing}`;
-export const selectCls = inputCls;
-export const textareaCls = `${inputCls} min-h-28 resize-y leading-relaxed`;
-
-export const primaryBtn = `inline-flex items-center justify-center rounded-lg bg-bleu px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-bleu-fonce disabled:opacity-50 ${focusRing}`;
-export const secondaryBtn = `inline-flex items-center justify-center rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-900 ${focusRing}`;
-export const dangerBtn = `inline-flex items-center justify-center rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40 ${focusRing}`;
+export const primaryBtn = buttonClass({ variant: "primary" });
+export const secondaryBtn = buttonClass({ variant: "ghost" });
+// Action destructive : sobre, mais la brique « danger » signale qu'on ne revient pas en arrière.
+export const dangerBtn =
+  "inline-flex items-center justify-center gap-1.5 rounded-lg border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-50";
 
 export function fieldLabel(text: string): ReactNode {
-  return <span className="mb-1.5 block text-sm font-bold text-ink dark:text-neutral-100">{text}</span>;
+  return <span className="mb-1.5 block text-sm font-medium text-ink">{text}</span>;
 }
 
 export function Hint({ children }: { children: ReactNode }) {
-  return <span className="mt-1.5 block text-sm text-neutral-500 dark:text-neutral-400">{children}</span>;
+  return <span className="mt-1.5 block text-sm text-muted">{children}</span>;
 }
 
 // Carte de contenu. La surface reste sobre ; la couleur sert l'action, pas le fond.
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div
-      className={`rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900/50 sm:p-6 ${className}`}
-    >
+    <div className={`rounded-xl border border-line bg-surface p-5 sm:p-6 ${className}`}>
       {children}
     </div>
   );
@@ -42,9 +41,9 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
 export function PageIntro({ eyebrow, title, children }: { eyebrow: string; title: string; children?: ReactNode }) {
   return (
     <div className="mb-6">
-      <p className="font-display text-sm uppercase tracking-[0.2em] text-bleu dark:text-bulle">{eyebrow}</p>
-      <h1 className="mt-1 font-display text-3xl text-ink dark:text-neutral-50">{title}</h1>
-      {children && <p className="mt-2 max-w-prose text-neutral-600 dark:text-neutral-400">{children}</p>}
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-clay">{eyebrow}</p>
+      <h1 className="mt-2 font-display text-3xl text-ink md:text-4xl">{title}</h1>
+      {children && <p className="mt-2 max-w-prose text-slate">{children}</p>}
     </div>
   );
 }
@@ -53,8 +52,7 @@ export function PageIntro({ eyebrow, title, children }: { eyebrow: string; title
 // l'agent, ce que ce réglage lui apprend — le réglage vu depuis l'appel.
 export function Bubble({ children }: { children: ReactNode }) {
   return (
-    <div className="relative rounded-2xl rounded-bl-sm bg-bulle px-4 py-3 text-sm leading-relaxed text-bleu-fonce dark:bg-bleu-fonce/30 dark:text-bulle">
-      <span aria-hidden className="mr-1.5 select-none">💬</span>
+    <div className="rounded-xl border-l-2 border-clay bg-clay-tint px-4 py-3 text-sm leading-relaxed text-ink">
       {children}
     </div>
   );
@@ -62,15 +60,15 @@ export function Bubble({ children }: { children: ReactNode }) {
 
 // Écran vide : une invitation à agir, jamais un cul-de-sac.
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-dashed border-neutral-300 p-5 text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">{children}</p>;
+  return <p className="rounded-xl border border-dashed border-line p-5 text-sm text-muted">{children}</p>;
 }
 
 // Section d'une page (titre + contenu), pour rythmer les pages longues.
 export function Section({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
   return (
     <section className="mb-10">
-      <h2 className="mb-1 text-lg font-bold text-ink dark:text-neutral-100">{title}</h2>
-      {description && <p className="mb-3 max-w-prose text-sm text-neutral-500 dark:text-neutral-400">{description}</p>}
+      <h2 className="mb-1 font-display text-lg text-ink">{title}</h2>
+      {description && <p className="mb-3 max-w-prose text-sm text-muted">{description}</p>}
       <div className={description ? "" : "mt-3"}>{children}</div>
     </section>
   );

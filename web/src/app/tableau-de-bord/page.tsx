@@ -13,6 +13,16 @@ import { Card, EmptyState, PageIntro, Section } from "./ui";
 
 export const dynamic = "force-dynamic";
 
+// Puce d'état : la couleur remplace l'émoji. ok = fait, argile = en cours,
+// ambre = à voir/échec, muet = en attente/neutre.
+const STATUS_DOT: Record<string, string> = {
+  done: "bg-ok",
+  failed: "bg-warn",
+  calling: "bg-clay",
+  needs_user: "bg-warn",
+  pending: "bg-muted",
+};
+
 export default async function OverviewPage() {
   const supabase = await supabaseServer();
   const {
@@ -47,11 +57,11 @@ export default async function OverviewPage() {
             <Glance label={tr.homeAddress} value={profile?.home_address ? tr.homeSet : "—"} />
             <Glance label={tr.memoryNotes} value={String(memoryCount ?? 0)} />
           </dl>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Link href="/tableau-de-bord/agent" className="text-sm font-bold text-bleu underline-offset-2 hover:underline dark:text-bulle">
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+            <Link href="/tableau-de-bord/agent" className="text-sm font-medium text-clay underline-offset-2 hover:underline">
               {tr.tuneAgent}
             </Link>
-            <Link href="/tableau-de-bord/memoire" className="text-sm font-bold text-bleu underline-offset-2 hover:underline dark:text-bulle">
+            <Link href="/tableau-de-bord/memoire" className="text-sm font-medium text-clay underline-offset-2 hover:underline">
               {tr.manageMemory}
             </Link>
           </div>
@@ -62,16 +72,26 @@ export default async function OverviewPage() {
         {(calls ?? []).length === 0 ? (
           <EmptyState>{tr.callsEmpty}</EmptyState>
         ) : (
-          <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
+          <Card className="divide-y divide-line !p-0">
             {(calls ?? []).map((c, i) => (
               <div key={i} className="flex items-baseline justify-between gap-4 p-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-ink dark:text-neutral-100">
-                    {c.direction === "inbound" ? tr.inboundCall : tr.mission.replace("%s", c.agent)}
+                  <p className="text-sm font-medium text-ink">
+                    {c.direction === "inbound" ? (
+                      <>
+                        <Dot className="bg-ok" />
+                        {tr.inboundCall}
+                      </>
+                    ) : (
+                      <>
+                        <Dot className="bg-clay" />
+                        {tr.mission.replace("%s", c.agent)}
+                      </>
+                    )}
                   </p>
-                  <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">{c.summary ?? tr.noSummary}</p>
+                  <p className="truncate text-sm text-muted">{c.summary ?? tr.noSummary}</p>
                 </div>
-                <span className="shrink-0 text-xs text-neutral-400">{fr(c.started_at, lang)}</span>
+                <span className="shrink-0 text-xs text-muted">{fr(c.started_at, lang)}</span>
               </div>
             ))}
           </Card>
@@ -80,14 +100,16 @@ export default async function OverviewPage() {
 
       {(jobs ?? []).length > 0 && (
         <Section title={tr.jobsTitle}>
-          <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
+          <Card className="divide-y divide-line !p-0">
             {(jobs ?? []).map((j, i) => (
               <div key={i} className="p-4">
-                <p className="text-sm font-bold text-ink dark:text-neutral-100">
-                  {j.kind} — {tr.jobStatus[j.status as keyof typeof tr.jobStatus] ?? j.status}
+                <p className="text-sm font-medium text-ink">
+                  {j.kind} —{" "}
+                  <Dot className={STATUS_DOT[j.status] ?? "bg-muted"} />
+                  {tr.jobStatus[j.status as keyof typeof tr.jobStatus] ?? j.status}
                 </p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">{j.goal}</p>
-                {j.result && <p className="mt-1 text-sm text-ink dark:text-neutral-200">{j.result}</p>}
+                <p className="text-sm text-muted">{j.goal}</p>
+                {j.result && <p className="mt-1 text-sm text-ink">{j.result}</p>}
               </div>
             ))}
           </Card>
@@ -97,17 +119,17 @@ export default async function OverviewPage() {
       <Section title={tr.remindersTitle}>
         {(reminders ?? []).length === 0 ? (
           <EmptyState>
-            {tr.remindersEmpty}<Link href="/tableau-de-bord/memoire" className="font-bold text-bleu underline dark:text-bulle">{tr.remindersEmptyLink}</Link>
+            {tr.remindersEmpty}<Link href="/tableau-de-bord/memoire" className="font-medium text-clay underline">{tr.remindersEmptyLink}</Link>
           </EmptyState>
         ) : (
-          <Card className="divide-y divide-neutral-100 !p-0 dark:divide-neutral-800">
+          <Card className="divide-y divide-line !p-0">
             {(reminders ?? []).map((r, i) => (
               <div key={i} className="flex items-baseline justify-between gap-4 p-4">
-                <p className="text-sm text-ink dark:text-neutral-100">
+                <p className="text-sm text-ink">
                   {r.text}
-                  {r.recurrence ? <span className="text-neutral-400"> · {r.recurrence}</span> : ""}
+                  {r.recurrence ? <span className="text-muted"> · {r.recurrence}</span> : ""}
                 </p>
-                <span className="shrink-0 text-xs text-neutral-400">{fr(r.due_at, lang)}</span>
+                <span className="shrink-0 text-xs text-muted">{fr(r.due_at, lang)}</span>
               </div>
             ))}
           </Card>
@@ -117,11 +139,21 @@ export default async function OverviewPage() {
   );
 }
 
+// Petite puce colorée : remplace l'émoji d'état par un point discret + le texte.
+function Dot({ className }: { className: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full align-middle ${className}`}
+    />
+  );
+}
+
 function Glance({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-neutral-400">{label}</dt>
-      <dd className="mt-0.5 text-base font-bold text-ink dark:text-neutral-100">{value}</dd>
+      <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
+      <dd className="mt-0.5 text-base font-semibold text-ink">{value}</dd>
     </div>
   );
 }

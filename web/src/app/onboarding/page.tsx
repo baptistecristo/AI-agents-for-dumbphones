@@ -10,6 +10,7 @@ import { LangSwitcher } from "../lang-switcher";
 import { saveConsents, skipGoogle } from "./actions";
 import { CONSENT_SOURCES, ONBOARDING } from "./copy";
 import { PhoneStep } from "./steps";
+import { Button } from "@/components/button";
 
 const STEPS = ["phone", "google", "consents"] as const;
 
@@ -47,7 +48,7 @@ export default async function OnboardingPage() {
         {STEPS.map((s, i) => (
           <div
             key={s}
-            className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? "bg-neutral-900 dark:bg-white" : "bg-neutral-200 dark:bg-neutral-800"}`}
+            className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? "bg-ink" : "bg-line"}`}
           />
         ))}
       </div>
@@ -56,19 +57,16 @@ export default async function OnboardingPage() {
 
       {step === "google" && (
         <section>
-          <h1 className="text-2xl font-semibold">{tr.google.title}</h1>
-          <p className="mt-2 text-neutral-600 dark:text-neutral-400">{tr.google.body}</p>
+          <h1 className="font-display text-2xl text-ink">{tr.google.title}</h1>
+          <p className="mt-2 text-slate">{tr.google.body}</p>
           <div className="mt-8 space-y-3">
-            <a
-              href="/api/oauth/google"
-              className="block w-full rounded-lg bg-neutral-900 px-4 py-3 text-center text-lg font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-            >
+            <Button href="/api/oauth/google" size="lg" className="w-full">
               {tr.google.connect}
-            </a>
+            </Button>
             <form action={skipGoogle}>
-              <button className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900">
+              <Button variant="ghost" size="lg" className="w-full">
                 {tr.google.skip}
-              </button>
+              </Button>
             </form>
           </div>
         </section>
@@ -76,21 +74,21 @@ export default async function OnboardingPage() {
 
       {step === "consents" && (
         <section>
-          <h1 className="text-2xl font-semibold">{tr.consents.title}</h1>
-          <p className="mt-2 text-neutral-600 dark:text-neutral-400">{tr.consents.body}</p>
+          <h1 className="font-display text-2xl text-ink">{tr.consents.title}</h1>
+          <p className="mt-2 text-slate">{tr.consents.body}</p>
           <form action={saveConsents} className="mt-8 space-y-3">
             {CONSENT_SOURCES.map((source) => (
               <label
                 key={source}
-                className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+                className="flex items-start gap-3 rounded-xl border border-line p-4 hover:bg-cream-deep"
               >
-                <input type="checkbox" name={source} defaultChecked={tr.consents.defaults[source]} className="mt-1 h-5 w-5" />
-                <span>{tr.consents.labels[source]}</span>
+                <input type="checkbox" name={source} defaultChecked={tr.consents.defaults[source]} className="mt-1 h-5 w-5 accent-clay" />
+                <span className="text-slate">{tr.consents.labels[source]}</span>
               </label>
             ))}
-            <button className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-lg font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200">
+            <Button type="submit" size="lg" className="w-full">
               {tr.consents.save}
-            </button>
+            </Button>
           </form>
         </section>
       )}

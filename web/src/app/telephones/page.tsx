@@ -7,6 +7,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Language } from "@/lib/language";
 import { siteLanguage } from "@/lib/site-i18n";
+import { Wordmark } from "@/components/brand";
+import { SiteFooter } from "@/components/site-footer";
 import Finder from "./finder";
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
@@ -43,12 +45,13 @@ export default async function TelephonesPage() {
   const lang = await siteLanguage();
   const tr = SHELL[lang];
   return (
-    <main className="bg-paper text-ink">
+    <main className="text-slate">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link href="/" className="font-display text-2xl">
-          ☎ <span className="ml-1">{brand}</span>
-        </Link>
-        <a href="/connexion" className="rounded-lg px-4 py-2 text-sm font-bold text-bleu underline-offset-4 hover:underline">
+        <Wordmark />
+        <a
+          href="/connexion"
+          className="text-sm font-medium text-ink transition-colors hover:text-clay"
+        >
           {tr.signIn}
         </a>
       </header>
@@ -57,12 +60,14 @@ export default async function TelephonesPage() {
         <Finder initialLang={lang} />
       </section>
 
-      <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-ink/60">
-        <p>☎ {brand} — {tr.tagline}</p>
-        <Link href="/" className="font-bold text-bleu underline-offset-4 hover:underline">
-          {tr.back}
-        </Link>
-      </footer>
+      <SiteFooter
+        tagline={tr.tagline}
+        right={
+          <Link href="/" className="font-medium text-clay transition-colors hover:text-ink">
+            {tr.back}
+          </Link>
+        }
+      />
     </main>
   );
 }

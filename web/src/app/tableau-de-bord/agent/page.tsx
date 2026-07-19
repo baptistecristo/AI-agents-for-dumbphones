@@ -46,7 +46,8 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
       </PageIntro>
 
       {saved && (
-        <p className="mb-6 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
+        <p className="mb-6 flex items-center rounded-lg border border-ok/30 bg-ok/5 px-4 py-2.5 text-sm text-ok">
+          <span className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-ok align-middle" aria-hidden />
           {tr.saved}
         </p>
       )}
@@ -96,7 +97,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
             <Hint>{tr.homeAddress.hint}</Hint>
           </label>
 
-          <div className="border-t border-neutral-200 pt-6 dark:border-neutral-800">
+          <div className="border-t border-line pt-6">
             <label className="block">
               {fieldLabel(tr.instructions.label)}
               <textarea
