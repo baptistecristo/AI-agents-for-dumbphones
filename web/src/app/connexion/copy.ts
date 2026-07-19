@@ -6,6 +6,11 @@ import { Language } from "@/lib/language";
 export type ConnexionCopy = {
   title: string;
   subtitle: string;
+  // Quand aucun fournisseur OAuth n'est réellement actif, il ne reste qu'une
+  // méthode : inutile de dire « choisis ta méthode ».
+  subtitleLinkOnly: string;
+  // Intertitre du bloc des méthodes pas encore câblées, relégué sous l'e-mail.
+  notYetLabel: string;
   previousFailed: string;
   oauthStartFailed: string;
   sendFailed: string;
@@ -39,6 +44,9 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
   fr: {
     title: "Se connecter",
     subtitle: "Choisis ta méthode. Première visite ? Ton compte se crée tout seul.",
+    subtitleLinkOnly:
+      "Entre ton adresse : tu recevras un lien de connexion. Première visite ? Ton compte se crée tout seul.",
+    notYetLabel: "pas encore en service",
     previousFailed:
       "La connexion précédente n'a pas abouti (lien expiré, déjà utilisé, ou refusée par le fournisseur). Réessaie ci-dessous.",
     oauthStartFailed: "La connexion n'a pas pu démarrer. Réessaie dans un instant.",
@@ -81,6 +89,9 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
   en: {
     title: "Sign in",
     subtitle: "Pick your method. First visit? Your account creates itself.",
+    subtitleLinkOnly:
+      "Enter your address: you'll get a sign-in link. First visit? Your account creates itself.",
+    notYetLabel: "not in service yet",
     previousFailed:
       "The previous sign-in didn't go through (link expired, already used, or refused by the provider). Try again below.",
     oauthStartFailed: "The sign-in couldn't start. Try again in a moment.",
@@ -123,6 +134,9 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
   es: {
     title: "Iniciar sesión",
     subtitle: "Elige tu método. ¿Primera visita? Tu cuenta se crea sola.",
+    subtitleLinkOnly:
+      "Escribe tu dirección: recibirás un enlace de conexión. ¿Primera visita? Tu cuenta se crea sola.",
+    notYetLabel: "aún no está en servicio",
     previousFailed:
       "La conexión anterior no llegó a completarse (enlace caducado, ya usado, o rechazada por el proveedor). Inténtalo de nuevo abajo.",
     oauthStartFailed: "La conexión no pudo empezar. Inténtalo en un momento.",
