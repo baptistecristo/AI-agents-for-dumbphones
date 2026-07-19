@@ -3,8 +3,10 @@
 // quitté son smartphone, ou y pense) comprend le produit en écoutant l'appel.
 // Les textes vivent dans landing-copy.ts (FR/EN/ES), la langue dans un cookie.
 
+import { redirect } from "next/navigation";
 import { LANDING } from "./landing-copy";
 import { LangSwitcher } from "./lang-switcher";
+import { authHandoff } from "@/lib/auth/handoff";
 import { siteLanguage } from "@/lib/site-i18n";
 import { Wordmark } from "@/components/brand";
 import { Button } from "@/components/button";
@@ -13,7 +15,18 @@ import { SiteFooter } from "@/components/site-footer";
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  // Un lien magique dont le redirect_to a été rabattu sur la Site URL atterrit
+  // ici : on le rend à /auth/callback plutôt que d'afficher la vitrine comme si
+  // rien ne s'était passé. Lire searchParams ne coûte rien de plus, la page est
+  // déjà dynamique (cookie de langue).
+  const handoff = authHandoff(await searchParams);
+  if (handoff) redirect(handoff);
+
   const lang = await siteLanguage();
   const tr = LANDING[lang];
   return (
