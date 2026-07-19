@@ -72,10 +72,12 @@ export function CallScreen({
           </div>
         </div>
 
+        {/* Espaces insécables : sans elles, le guillemet fermant se retrouve
+            seul sur sa ligne dès que la phrase tombe mal (vu sur mobile). */}
         <p key={i} className="call-line mt-5 min-h-[5.5rem] text-lg leading-snug text-ink">
-          <span className="text-muted">« </span>
+          <span className="text-muted">{"« "}</span>
           {line.text}
-          <span className="text-muted"> »</span>
+          <span className="text-muted">{" »"}</span>
         </p>
       </div>
 
