@@ -54,7 +54,7 @@ export function PhoneStep({ lang }: { lang: Language }) {
       ) : (
         <form action={confirmAction} className="mt-8 space-y-4">
           <input type="hidden" name="e164" value={sendState.e164} />
-          <p className="rounded-lg border-l-2 border-ok bg-cream-deep p-3 text-sm text-ink">
+          <p className="rounded-control border-l-2 border-ok bg-cream-deep p-3 text-sm text-ink">
             {tr.codeSentTo.replace("%s", sendState.e164 ?? "")}
           </p>
           <label className="block">

@@ -40,7 +40,7 @@ function Divider({ label }: { label: string }) {
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-6 rounded-xl border border-line bg-cream-deep p-3 text-sm text-slate">
+    <p className="mt-6 rounded-card border border-line bg-cream-deep p-3 text-sm text-slate">
       <span
         className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-warn align-middle"
         aria-hidden
@@ -180,7 +180,7 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
   // Le lien magique : la porte qui reste ouverte en toutes circonstances.
   const emailBlock = sent ? (
     <div className="space-y-6">
-      <div className="rounded-xl border border-line bg-cream-deep p-5 text-slate">
+      <div className="rounded-card border border-line bg-cream-deep p-5 text-slate">
         <p className="font-medium text-ink">
           <span
             className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-ok align-middle"
@@ -218,7 +218,7 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
               placeholder="123456"
-              className={`${field} text-center text-2xl tracking-[0.5em]`}
+              className={`${field} text-center text-2xl tracking-code`}
             />
           </label>
           <Button type="submit" size="lg" disabled={verifying || code.length < 6} className="w-full">

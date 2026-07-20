@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
+/* La détection de sources de Tailwind lit tous les fichiers non ignorés par
+   git, Markdown compris : la doc du design system cite des noms de classes en
+   prose, et chacun se retrouvait compilé en CSS mort. La doc n'est pas une
+   source. */
+@source not "../../**/*.md";
+
 /* ---------------------------------------------------------------------------
-   Palette — warm ivory + clay. A calm, editorial system: near-black warm ink
-   on Anthropic-style ivory, terracotta as the single accent. No pure white,
-   no bright chroma; contrast comes from type and generous space, not colour.
+   Palette : ivoire chaud et argile. Un système calme, éditorial. Une encre
+   presque noire et chaude sur un ivoire clair, l'argile comme unique accent.
+   Pas de blanc pur, pas de chroma vif ; le contraste vient du texte et de
+   l'espace, pas de la couleur.
+
+   Le système tient sur deux couches, et l'ordre compte :
+
+     1. les PRIMITIVES ci-dessous, les valeurs brutes, rangées en rampes.
+        Repeindre le site, c'est changer ces lignes-là, et elles seules ;
+     2. les RÔLES, plus bas : ce à quoi sert chaque couleur. Un composant ne
+        cite jamais une primitive : il demande `--surface`, pas `--ivory-50`,
+        parce qu'un rôle survit à un changement de palette et pas une valeur.
+
+   Doc : web/docs/design-system.md.
    --------------------------------------------------------------------------- */
+
+/* Couche 1, les primitives. Trois rampes, plus trois teintes de statut. */
 :root {
-  --cream: #f0eee6;        /* page ground */
-  --cream-deep: #e7e3d7;   /* alternate sections, quiet fills */
-  --surface: #faf9f5;      /* raised cards, inputs — a hair above the ground */
-  --ink: #14130f;          /* headings, primary text */
-  --slate: #46433b;        /* body copy */
-  --muted: #78736a;        /* captions, secondary */
-  --line: #d9d5c8;         /* hairline borders */
-  --clay: #bd5b3a;         /* accent: links, marks, focus */
-  --clay-soft: #cc785c;    /* the recognisable clay, for small tints */
-  --clay-tint: #ecdccf;    /* washes, the assistant's voice in the transcript */
-  --ok: #4f7a52;           /* sparing positive (verified, granted) */
-  --warn: #9a6a2f;         /* sparing caution */
-  --danger: #b0402f;       /* destructive only (delete account, hard errors) */
+  /* Ivoire : le côté clair de l'axe chaud, de la surface levée au filet. */
+  --ivory-50: #faf9f5;
+  --ivory-100: #f0eee6;
+  --ivory-200: #e7e3d7;
+  --ivory-300: #d9d5c8;
+
+  /* Encre : le même axe chaud, côté sombre. Le filet ivoire-300 et l'encre
+     appartiennent au même dégradé, d'où l'absence de gris froid nulle part. */
+  --ink-500: #78736a;
+  --ink-700: #46433b;
+  --ink-900: #14130f;
+
+  /* Argile : le seul accent chromatique du site. */
+  --clay-100: #ecdccf;
+  --clay-400: #cc785c;
+  --clay-600: #bd5b3a;
+
+  /* Statuts : trois teintes sourdes, jamais décoratives. */
+  --moss: #4f7a52;
+  --ochre: #9a6a2f;
+  --rust: #b0402f;
 }
 
+/* Couche 2, les rôles. C'est le vocabulaire que le code écrit. */
+:root {
+  --cream: var(--ivory-100); /* fond de page */
+  --cream-deep: var(--ivory-200); /* sections alternées, remplissages discrets */
+  --surface: var(--ivory-50); /* cartes et champs, d'un cheveu au-dessus du fond */
+  --ink: var(--ink-900); /* titres, texte principal */
+  --slate: var(--ink-700); /* texte courant */
+  --muted: var(--ink-500); /* légendes, secondaire */
+  --line: var(--ivory-300); /* filets et bordures */
+  --clay: var(--clay-600); /* accent : liens, marques, focus */
+  --clay-soft: var(--clay-400); /* l'argile reconnaissable, en petites touches */
+  --clay-tint: var(--clay-100); /* lavis, la voix de l'agent dans la transcription */
+  --ok: var(--moss); /* positif, avec parcimonie (vérifié, accordé) */
+  --warn: var(--ochre); /* prudence, avec parcimonie */
+  --danger: var(--rust); /* destructif seulement (suppression, erreur dure) */
+
+  /* Mouvement. Trois durées, pas plus : ce site ne s'anime presque pas. */
+  --motion-quick: 150ms; /* survol, changement de couleur */
+  --motion-entrance: 500ms; /* une réplique de la transcription qui arrive */
+  --motion-breath: 900ms; /* la respiration de l'onde sonore */
+}
+
+/* Les rôles deviennent des utilitaires Tailwind. `inline` parce que la valeur
+   est déjà une variable à nous : sans lui, Tailwind ajouterait une indirection
+   de plus entre l'utilitaire et la primitive. Un rôle absent d'ici n'a pas
+   d'utilitaire : c'est ce qui manquait à --color-danger avant le correctif. */
 @theme inline {
   --color-cream: var(--cream);
   --color-cream-deep: var(--cream-deep);
@@ -37,6 +90,33 @@
   --color-danger: var(--danger);
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+
+  /* Toute transition sans durée explicite prend la durée « survol ». */
+  --default-transition-duration: var(--motion-quick);
+}
+
+/* ---------------------------------------------------------------------------
+   Rayons et typographie. Valeurs littérales, donc un `@theme` simple : il les
+   publie d'un coup comme variables CSS et comme utilitaires Tailwind.
+
+   Les rayons sont nommés par pièce, pas par taille. `rounded-card` reste juste
+   le jour où une carte s'arrondit davantage ; `rounded-xl` devient un mensonge.
+   Quatre marches suffisent au site, plus `rounded-full` de Tailwind pour les
+   pastilles et les points d'état, qui dit déjà son rôle.
+   --------------------------------------------------------------------------- */
+@theme {
+  --radius-chip: 0.375rem; /* puces en ligne : mots-clés SMS, boutons de ligne */
+  --radius-control: 0.5rem; /* boutons et champs */
+  --radius-card: 0.75rem; /* cartes, bulles, encadrés */
+  --radius-panel: 1rem; /* grands panneaux : écran d'appel, bandeau final */
+
+  /* Le titre de la landing tombe entre deux marches de l'échelle Tailwind.
+     Nommé ici plutôt que réécrit en dur à chaque fois. */
+  --text-hero: 2.6rem;
+  --text-hero--line-height: 1.04;
+
+  --tracking-eyebrow: 0.14em; /* le surtitre en capitales */
+  --tracking-code: 0.5em; /* le code à six chiffres, chiffre par chiffre */
 }
 
 body {
@@ -78,7 +158,7 @@ body {
 
 .call-line {
   opacity: 0;
-  animation: line-in 0.5s ease-out forwards;
+  animation: line-in var(--motion-entrance) ease-out forwards;
 }
 
 /* L'onde sonore de l'écran d'appel : des barres qui respirent, décalées. */
@@ -94,7 +174,7 @@ body {
 
 .wave-bar {
   height: 32%;
-  animation: wave 0.9s ease-in-out infinite;
+  animation: wave var(--motion-breath) ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

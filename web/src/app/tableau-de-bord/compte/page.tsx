@@ -114,7 +114,7 @@ export default async function ComptePage({ searchParams }: { searchParams: Promi
         description={tr.danger.description}
       >
         {confirmationError && (
-          <p className="mb-4 rounded-lg border border-danger/40 px-4 py-2.5 text-sm text-danger">
+          <p className="mb-4 rounded-control border border-danger/40 px-4 py-2.5 text-sm text-danger">
             {tr.danger.confirmError}
           </p>
         )}

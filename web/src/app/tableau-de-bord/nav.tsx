@@ -32,7 +32,7 @@ export function PersonalAreaNav({ lang }: { lang: Language }) {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`flex shrink-0 items-center rounded-lg px-3 py-2 text-sm transition-colors md:shrink ${
+            className={`flex shrink-0 items-center rounded-control px-3 py-2 text-sm transition-colors md:shrink ${
               active
                 ? "bg-clay-tint font-medium text-clay"
                 : "text-muted hover:bg-cream-deep hover:text-ink"

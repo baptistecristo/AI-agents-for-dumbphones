@@ -10,6 +10,7 @@ import { Wordmark } from "@/components/brand";
 import { Button } from "@/components/button";
 import { CallScreen } from "@/components/call-screen";
 import { SiteFooter } from "@/components/site-footer";
+import { card, chip, sectionTitle } from "@/components/styles";
 
 const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
 
@@ -42,7 +43,7 @@ export default async function Home() {
       {/* ------------------------------------------------------------ héros */}
       <section className="mx-auto grid max-w-6xl gap-12 px-6 pb-24 pt-10 md:grid-cols-2 md:items-center md:pt-16">
         <div>
-          <h1 className="font-display text-[2.6rem] leading-[1.04] text-ink md:text-6xl">
+          <h1 className="font-display text-hero text-ink md:text-6xl">
             {tr.hero.titleTop}
             <br />
             <span className="text-clay">{tr.hero.titleHighlight}</span>
@@ -80,7 +81,7 @@ export default async function Home() {
 
       {/* ---------------------------------------------------- comment ça marche */}
       <section className="mx-auto max-w-6xl px-6 py-24">
-        <h2 className="font-display text-3xl leading-tight text-ink md:text-4xl">{tr.how.title}</h2>
+        <h2 className={sectionTitle}>{tr.how.title}</h2>
         <div className="mt-12 grid gap-x-10 gap-y-12 md:grid-cols-3">
           {tr.how.steps.map((s) => (
             <div key={s.n} className="border-t border-line pt-5">
@@ -95,12 +96,12 @@ export default async function Home() {
       {/* ---------------------------------------------------------- capacités */}
       <section className="border-t border-line bg-cream-deep/40">
         <div className="mx-auto max-w-6xl px-6 py-24">
-          <h2 className="font-display text-3xl leading-tight text-ink md:text-4xl">
+          <h2 className={sectionTitle}>
             {tr.capabilities.title}
           </h2>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {tr.capabilities.items.map((c) => (
-              <div key={c.title} className="rounded-xl border border-line bg-surface p-6">
+              <div key={c.title} className={`${card} p-6`}>
                 <h3 className="font-display text-lg text-ink">{c.title}</h3>
                 <p className="mt-2 leading-relaxed text-slate">{c.text}</p>
               </div>
@@ -108,15 +109,15 @@ export default async function Home() {
           </div>
           <p className="mt-10 text-sm leading-relaxed text-muted">
             {tr.capabilities.sms.lead}{" "}
-            <span className="rounded bg-cream-deep px-1.5 py-0.5 font-mono text-xs font-semibold text-ink">
+            <span className={chip}>
               {tr.capabilities.sms.kw1}
             </span>
             ,{" "}
-            <span className="rounded bg-cream-deep px-1.5 py-0.5 font-mono text-xs font-semibold text-ink">
+            <span className={chip}>
               {tr.capabilities.sms.kw2}
             </span>{" "}
             {tr.capabilities.sms.or}{" "}
-            <span className="rounded bg-cream-deep px-1.5 py-0.5 font-mono text-xs font-semibold text-ink">
+            <span className={chip}>
               {tr.capabilities.sms.kw3}
             </span>{" "}
             {tr.capabilities.sms.tail}
@@ -126,7 +127,7 @@ export default async function Home() {
 
       {/* ------------------------------------------------- choisir un téléphone */}
       <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="flex flex-col items-start gap-6 rounded-2xl border border-line bg-surface p-8 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col items-start gap-6 rounded-panel border border-line bg-surface p-8 md:flex-row md:items-center md:justify-between">
           <div className="max-w-xl">
             <h2 className="font-display text-2xl text-ink">{tr.phones.title}</h2>
             <p className="mt-2 leading-relaxed text-slate">{tr.phones.text}</p>
@@ -140,7 +141,7 @@ export default async function Home() {
       {/* ----------------------------------------------------------- confiance */}
       <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-6 py-24">
-          <h2 className="font-display text-3xl leading-tight text-ink md:text-4xl">{tr.trust.title}</h2>
+          <h2 className={sectionTitle}>{tr.trust.title}</h2>
           <div className="mt-12 grid gap-x-10 gap-y-10 md:grid-cols-3">
             {tr.trust.items.map((item) => (
               <div key={item.title} className="border-t border-line pt-5">

@@ -16,9 +16,9 @@ import { primaryBtn, secondaryBtn, textareaCls } from "../ui";
 // Boutons compacts pour les actions de ligne : plus calmes que les gros boutons
 // du kit. L'anneau de focus clay global (globals.css) s'applique tout seul.
 const rowBtn =
-  "rounded-md px-2 py-1 text-sm font-medium text-muted transition-colors hover:bg-cream-deep hover:text-ink";
+  "rounded-chip px-2 py-1 text-sm font-medium text-muted transition-colors hover:bg-cream-deep hover:text-ink";
 const rowDangerBtn =
-  "rounded-md px-2 py-1 text-sm font-medium text-danger transition-colors hover:bg-danger/5";
+  "rounded-chip px-2 py-1 text-sm font-medium text-danger transition-colors hover:bg-danger/5";
 
 export function NoteRow({ noteKey, value, lang }: { noteKey: string; value: string; lang: Language }) {
   const tr = DASHBOARD[lang].memoire.row;
