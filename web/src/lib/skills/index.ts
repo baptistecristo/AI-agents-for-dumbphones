@@ -3,7 +3,7 @@
 // telles quelles à l'agent, jamais dans le canal d'instructions.
 
 import { supabaseAdmin } from "../supabase/admin";
-import { userHasTextPin } from "../text-pin";
+import { PIN_LENGTH, userHasTextPin } from "../text-pin";
 import { smsProviderConfigured } from "../twilio";
 import { createEvent, listEvents, moveEvent } from "./agenda";
 import { requestCode, verifyCode } from "./auth";
@@ -77,15 +77,15 @@ export async function executeTool(name: string, args: any, session: CallSession)
       if (session.channel === "text") {
         if (!session.userId || !(await userHasTextPin(session.userId))) {
           return t(session, {
-            fr: `Pour « ${name} » (une action qui modifie ou envoie), il me faut ton code de sécurité, et tu n'en as pas encore réglé. Choisis un code à 3 chiffres dans ton espace « Mon agent », puis envoie-le-moi. En attendant, météo, agenda, rappels et itinéraires marchent sans code.`,
-            en: `For "${name}" (an action that changes or sends something), I need your security code, and you haven't set one yet. Pick a 3-digit code in your "My agent" settings, then text it to me. Meanwhile, weather, calendar, reminders and directions work without a code.`,
-            es: `Para «${name}» (una acción que modifica o envía algo), necesito tu código de seguridad, y aún no has puesto ninguno. Elige un código de 3 cifras en tu espacio «Mi agente» y envíamelo. Mientras tanto, el tiempo, la agenda, los recordatorios y las rutas funcionan sin código.`,
+            fr: `Pour « ${name} » (une action qui modifie ou envoie), il me faut ton code de sécurité, et tu n'en as pas encore réglé. Choisis un code à ${PIN_LENGTH} chiffres dans ton espace « Mon agent », puis envoie-le-moi. En attendant, météo, agenda, rappels et itinéraires marchent sans code.`,
+            en: `For "${name}" (an action that changes or sends something), I need your security code, and you haven't set one yet. Pick a ${PIN_LENGTH}-digit code in your "My agent" settings, then text it to me. Meanwhile, weather, calendar, reminders and directions work without a code.`,
+            es: `Para «${name}» (una acción que modifica o envía algo), necesito tu código de seguridad, y aún no has puesto ninguno. Elige un código de ${PIN_LENGTH} cifras en tu espacio «Mi agente» y envíamelo. Mientras tanto, el tiempo, la agenda, los recordatorios y las rutas funcionan sin código.`,
           });
         }
         return t(session, {
-          fr: "REFUS : cette action exige le PIN. Appelle request_code, puis verify_code avec les 3 chiffres que la personne envoie.",
-          en: "REFUSED: this action needs the PIN. Call request_code, then verify_code with the 3 digits the person texts.",
-          es: "RECHAZADO: esta acción exige el PIN. Llama a request_code y luego verify_code con las 3 cifras que envíe la persona.",
+          fr: `REFUS : cette action exige le PIN. Appelle request_code, puis verify_code avec les ${PIN_LENGTH} chiffres que la personne envoie.`,
+          en: `REFUSED: this action needs the PIN. Call request_code, then verify_code with the ${PIN_LENGTH} digits the person texts.`,
+          es: `RECHAZADO: esta acción exige el PIN. Llama a request_code y luego verify_code con las ${PIN_LENGTH} cifras que envíe la persona.`,
         });
       }
       // Sans fournisseur SMS branché, le code ne peut PAS arriver. Renvoyer le

@@ -138,12 +138,14 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
 
       {pinNotice && (
         <p
-          className={`mt-6 rounded-lg px-4 py-2.5 text-sm ${
-            pinNotice.ok
-              ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
-              : "bg-red-50 text-red-800 dark:bg-red-950/50 dark:text-red-200"
+          className={`mt-6 flex items-center rounded-lg border px-4 py-2.5 text-sm ${
+            pinNotice.ok ? "border-ok/30 bg-ok/5 text-ok" : "border-danger/30 bg-danger/5 text-danger"
           }`}
         >
+          <span
+            className={`mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full align-middle ${pinNotice.ok ? "bg-ok" : "bg-danger"}`}
+            aria-hidden
+          />
           {pinNotice.text}
         </p>
       )}
@@ -163,7 +165,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
             />
             <Hint>{tr.pin.hint}</Hint>
           </label>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">{hasPin ? tr.pin.set : tr.pin.unset}</p>
+          <p className="text-sm text-muted">{hasPin ? tr.pin.set : tr.pin.unset}</p>
           <div className="flex flex-wrap gap-3">
             <button className={primaryBtn}>{tr.pin.save}</button>
             {hasPin && (
