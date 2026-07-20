@@ -4,12 +4,181 @@
   "description": "Two-way SMS over an OVHcloud dedicated long number, for reaching a basic phone.",
   "activation": {
     "onStartup": false,
-    "onChannels": ["sms-ovh"]
+    "onChannels": [
+      "sms-ovh"
+    ]
   },
-  "channels": ["sms-ovh"],
+  "channels": [
+    "sms-ovh"
+  ],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {}
+  },
+  "channelConfigs": {
+    "sms-ovh": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "applicationKey": {
+            "type": "string"
+          },
+          "applicationSecret": {
+            "type": "string"
+          },
+          "consumerKey": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "virtualNumber": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "eu",
+              "ca",
+              "us"
+            ]
+          },
+          "pollIntervalSeconds": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "textChunkLimit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "maxReplySegments": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "allowFrom": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dmPolicy": {
+            "type": "string",
+            "enum": [
+              "open",
+              "pairing",
+              "closed"
+            ]
+          },
+          "accounts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "applicationKey": {
+                  "type": "string"
+                },
+                "applicationSecret": {
+                  "type": "string"
+                },
+                "consumerKey": {
+                  "type": "string"
+                },
+                "serviceName": {
+                  "type": "string"
+                },
+                "virtualNumber": {
+                  "type": "string"
+                },
+                "region": {
+                  "type": "string",
+                  "enum": [
+                    "eu",
+                    "ca",
+                    "us"
+                  ]
+                },
+                "pollIntervalSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "textChunkLimit": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "maxReplySegments": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "allowFrom": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "dmPolicy": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "pairing",
+                    "closed"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "uiHints": {
+        "applicationKey": {
+          "label": "OVH application key"
+        },
+        "applicationSecret": {
+          "label": "OVH application secret",
+          "sensitive": true
+        },
+        "consumerKey": {
+          "label": "OVH consumer key",
+          "sensitive": true
+        },
+        "serviceName": {
+          "label": "OVH SMS service name",
+          "placeholder": "sms-ab12345-1"
+        },
+        "virtualNumber": {
+          "label": "Dedicated number replies come from",
+          "placeholder": "+33937000000"
+        },
+        "allowFrom": {
+          "label": "Phone numbers allowed to reach the agent"
+        },
+        "textChunkLimit": {
+          "label": "Characters per SMS part"
+        },
+        "maxReplySegments": {
+          "label": "Most segments one reply may spend"
+        },
+        "pollIntervalSeconds": {
+          "label": "Seconds between inbox polls"
+        }
+      }
+    }
   }
 }

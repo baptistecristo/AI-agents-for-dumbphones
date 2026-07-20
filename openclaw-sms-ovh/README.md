@@ -82,7 +82,7 @@ yet.
 
 Verified:
 
-- 212 tests pass
+- 217 tests pass
 - typechecks against the real `openclaw` SDK with no casts or `any`
 - builds, and the built module loads with a working `register` function, a
   `gateway.startAccount` hook and the segment-aligned chunk limit
@@ -106,11 +106,19 @@ Not verified, and needing a real account:
   a fake runtime that calls the adapter the way OpenClaw does. No live gateway
   has run it.
 
-Known gap:
+Known gaps:
 
 - **`dmPolicy: "pairing"` behaves as `closed`.** The allow-list is the whole
   gate, with no pairing-code exchange. Real pairing needs the SDK's ingress
   resolver and pairing adapter.
+- **No setup wizard**, so the channel cannot be configured through
+  `openclaw channels add`.
+- **The notification filter is a library nothing calls yet.** It is built and
+  tested, but no code subscribes to OpenClaw's other channels and feeds them
+  through it. Texting the agent works; the agent pushing you a filtered
+  WhatsApp notification does not, because nothing is watching WhatsApp. That is
+  the next piece of work, and it is larger than it sounds: OpenClaw has no
+  generic "notify me about inbound on other channels" event to hook.
 
 ## Blockers outside the code
 
@@ -122,6 +130,38 @@ Known gap:
   account. Ordering may therefore mean a second SMS account.
 - **Time2Chat bills two credits per SMS sent**, not one. Any budget built on the
   standard rate is out by half. The cost model here already accounts for it.
+
+## Installing it
+
+Assumes OpenClaw is already installed and you run its gateway.
+
+```bash
+openclaw plugins install --link ./openclaw-sms-ovh
+openclaw plugins enable sms-ovh
+```
+
+`--link` points at a local checkout instead of copying. That is the only route
+today: this package sets `private: true` and is not on npm, so
+`openclaw plugins install npm:...` has nothing to fetch. Git installs
+(`openclaw plugins install git:github.com/<owner>/<repo>`) would need the
+package at a repository root.
+
+Then put an account in `~/.openclaw/openclaw.json` (see Configuration below) and
+restart:
+
+```bash
+openclaw gateway restart
+openclaw plugins inspect sms-ovh --runtime --json
+```
+
+The gateway starts every channel with a `gateway.startAccount` hook on boot, so
+polling begins on its own once the account is configured. Two things to know:
+
+- **There is no setup wizard.** `openclaw channels add --channel sms-ovh` runs a
+  guided flow for channels that ship a `setupWizard` adapter. This one does not,
+  so write the config by hand.
+- **If `plugins.allow` is set in your config, `sms-ovh` has to be in it**, or the
+  plugin will not load however installed it is.
 
 ## Configuration
 
