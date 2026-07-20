@@ -143,6 +143,16 @@ def inbound_tools() -> ToolsSchema:
                 ["query"],
             ),
             _schema(
+                "get_last_call_summary",
+                "Relit le résumé de l'appel ENTRANT précédent de la personne. À appeler seulement "
+                "si elle le demande, jamais de ta propre initiative. Aucun argument : renvoie "
+                "toujours son dernier appel entrant terminé, jamais un appel passé en son nom. "
+                "Action protégée : il faut le code d'abord (request_code puis verify_code). Ne "
+                "renvoie rien tant que la personne n'a pas activé le résumé des appels.",
+                {},
+                [],
+            ),
+            _schema(
                 "request_code",
                 "Envoie un code à 4 chiffres par SMS au numéro enregistré. À appeler la première fois "
                 "que l'utilisateur demande quelque chose de protégé (lire agenda/contacts/rappels/notes, "

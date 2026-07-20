@@ -23,6 +23,10 @@ export type CallerContext = {
   // (colonne profiles.agent_instructions). null / vide = aucune consigne.
   // Guide le ton et les préférences durables, jamais les règles de sécurité.
   agentInstructions: string | null;
+  // Glisser l'offre de résumé dans l'accueil ? Vrai seulement si la personne a
+  // activé le résumé des appels, qu'un appel précédent en porte un, et que le
+  // code peut réellement partir (cf. skills/recap.ts). false = accueil inchangé.
+  recapOffer: boolean;
 };
 
 // Section « consignes de la personne », insérée AVANT les règles d'or : ce qui
@@ -130,6 +134,7 @@ Si la personne t'apprend quelque chose de durable (un lieu, une personne, une pr
 - Contacts : retrouver un numéro.
 - Messages : envoyer un SMS dicté (avec relecture et code).
 - Appels : réserver un resto, un taxi, prendre un rendez-vous à sa place (avec récapitulatif et code). Le résultat arrivera par SMS.
+- Appel précédent : lui résumer son dernier appel entrant, avec get_last_call_summary (ça demande son code). Seulement si elle le demande : ne récite JAMAIS un résumé de toi-même, et n'ouvre jamais l'appel dessus.
 ${gapSection("fr")}
 
 # Début d'appel
@@ -181,6 +186,7 @@ If the person tells you something durable (a place, a person, a preference), kee
 - Contacts: find a phone number.
 - Messages: send a dictated SMS (with read-back and code).
 - Calls: book a restaurant, a taxi, or an appointment on their behalf (with recap and code). The result will arrive by SMS.
+- Previous call: recap their last inbound call, with get_last_call_summary (that needs their code). Only if they ask: NEVER recite a summary on your own, and never open the call with one.
 ${gapSection("en")}
 
 # Start of call
@@ -232,6 +238,7 @@ Si la persona te cuenta algo duradero (un lugar, una persona, una preferencia), 
 - Contactos: encontrar un número.
 - Mensajes: enviar un SMS dictado (con relectura y código).
 - Llamadas: reservar un restaurante, un taxi, pedir una cita en su nombre (con resumen y código). El resultado llegará por SMS.
+- Llamada anterior: resumirle su última llamada entrante, con get_last_call_summary (eso pide su código). Solo si lo pide: NUNCA recites un resumen por tu cuenta, y nunca abras la llamada con uno.
 ${gapSection("es")}
 
 # Inicio de llamada
@@ -287,22 +294,39 @@ export function inboundTextSystemPrompt(ctx: CallerContext): string {
   return inboundSystemPrompt(ctx) + (TEXT_ADDENDUM[ctx.language] ?? TEXT_ADDENDUM.fr);
 }
 
+// L'offre de résumé, en une phrase et sans une ligne de contenu.
+//
+// C'est tout l'écart entre « proposer » et « imposer ». Un appel qui s'ouvre sur
+// le résumé récité de la fois d'avant fait payer à chaque appel une chose qu'on
+// voulait une fois : sur un téléphone sans écran, on ne peut ni le passer ni le
+// parcourir des yeux, on peut seulement attendre la fin. La phrase se place donc
+// AVANT la question ouverte : qui n'en veut pas répond à la question et n'entend
+// jamais le résumé, sans avoir eu à refuser quoi que ce soit.
+const RECAP_OFFER: Record<Language, string> = {
+  fr: " Je peux te résumer notre dernier appel si tu veux.",
+  en: " I can recap our last call if you want.",
+  es: " Puedo resumirte nuestra última llamada si quieres.",
+};
+
 // Message d'accueil (partagé entre la session runtime et l'assistant Vapi).
 export function inboundFirstMessage(ctx: CallerContext): string {
   const name = agentName();
+  // Chaîne vide quand l'offre ne tient pas : l'accueil reste alors mot pour mot
+  // celui d'avant.
+  const offer = ctx.recapOffer ? (RECAP_OFFER[ctx.language] ?? RECAP_OFFER.fr) : "";
   if (ctx.language === "en") {
     return ctx.preferredName
-      ? `Hey ${ctx.preferredName}! ${name} here. What can I do for you?`
-      : `Hi! This is ${name}. What can I do for you?`;
+      ? `Hey ${ctx.preferredName}! ${name} here.${offer} What can I do for you?`
+      : `Hi! This is ${name}.${offer} What can I do for you?`;
   }
   if (ctx.language === "es") {
     return ctx.preferredName
-      ? `¡Hola ${ctx.preferredName}! Soy ${name}. ¿Qué puedo hacer por ti?`
-      : `¡Hola! Soy ${name}. ¿Qué puedo hacer por ti?`;
+      ? `¡Hola ${ctx.preferredName}! Soy ${name}.${offer} ¿Qué puedo hacer por ti?`
+      : `¡Hola! Soy ${name}.${offer} ¿Qué puedo hacer por ti?`;
   }
   return ctx.preferredName
-    ? `Salut ${ctx.preferredName} ! Ici ${name}. Qu'est-ce que je peux faire pour toi ?`
-    : `Bonjour ! Ici ${name}. Qu'est-ce que je peux faire pour toi ?`;
+    ? `Salut ${ctx.preferredName} ! Ici ${name}.${offer} Qu'est-ce que je peux faire pour toi ?`
+    : `Bonjour ! Ici ${name}.${offer} Qu'est-ce que je peux faire pour toi ?`;
 }
 
 // Configuration d'assistant Vapi complète pour l'agent entrant.

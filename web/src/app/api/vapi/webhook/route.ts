@@ -9,6 +9,7 @@ import { agentInstructionsOf } from "@/lib/profile";
 import { inboundRateVerdict, rateLimitMessage } from "@/lib/rate-limit";
 import { executeTool } from "@/lib/skills";
 import { closeJobWithoutReport, handleReportOutcome } from "@/lib/skills/outbound-report";
+import { recapOfferAvailable } from "@/lib/skills/recap";
 import { CallSession } from "@/lib/skills/types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isValidVapiRequest } from "@/lib/vapi";
@@ -28,6 +29,7 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
     language: defaultLanguage(), // appelant inconnu -> env DEFAULT_LANGUAGE
     voiceSpeed: null, // appelant inconnu -> aucun réglage à appliquer
     agentInstructions: null, // appelant inconnu -> aucune consigne à appliquer
+    recapOffer: false, // appelant inconnu -> rien à lui résumer
   };
   if (!phoneE164) return empty;
   const db = supabaseAdmin();
@@ -53,6 +55,9 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
     // Consignes libres de la personne : lecture tolérante (0009 peut ne pas
     // encore être appliqué), donc un défaut d'accès retombe sur « aucune ».
     agentInstructions: await agentInstructionsOf(phone.user_id),
+    // Offre de résumé dans l'accueil. Court-circuité dès qu'aucun code ne peut
+    // partir, donc zéro requête de plus sur une instance sans SMS.
+    recapOffer: await recapOfferAvailable(phone.user_id),
   };
 }
 

@@ -186,6 +186,13 @@ export function agentTools() {
       ["query"],
     ),
 
+    // --- Résumé de l'appel précédent (livraison sans écran) ---
+    serverTool(
+      "get_last_call_summary",
+      "Read back the summary of the caller's own PREVIOUS inbound call. Call it only when they ask for it, never on your own initiative. Takes no arguments: it always returns the caller's most recent finished inbound call, never an outbound call placed on their behalf. Protected action: requires the code first (request_code then verify_code). It returns nothing unless the person switched call recaps on in their dashboard.",
+      {},
+    ),
+
     // --- Sécurité : code jetable par SMS (voix ou clavier/DTMF) ---
     serverTool(
       "request_code",

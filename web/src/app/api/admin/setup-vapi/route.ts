@@ -30,6 +30,10 @@ export async function POST(req: Request) {
     language: defaultLanguage(),
     voiceSpeed: null,
     agentInstructions: null,
+    // Même raison que le débit : cet assistant persistant n'appartient à
+    // personne, donc il n'y a aucun appel précédent à proposer. L'offre se
+    // décide dans le webhook, qui seul sait qui décroche.
+    recapOffer: false,
   });
 
   const assistant = await upsertAssistant(envOr("VAPI_ASSISTANT_ID", "") || undefined, generic);

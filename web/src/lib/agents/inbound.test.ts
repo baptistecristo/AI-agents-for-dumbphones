@@ -5,6 +5,7 @@ import {
   VOICE_SPEED_MAX,
   VOICE_SPEED_MIN,
   clampVoiceSpeed,
+  inboundFirstMessage,
   inboundSystemPrompt,
 } from "./inbound";
 
@@ -42,6 +43,7 @@ const ctx = (over: Partial<CallerContext> = {}): CallerContext => ({
   language: "fr",
   voiceSpeed: null,
   agentInstructions: null,
+  recapOffer: false,
   ...over,
 });
 
@@ -80,6 +82,63 @@ describe("inboundSystemPrompt — consignes de la personne", () => {
     expect(prompt).toContain("x".repeat(800));
     expect(prompt).not.toContain("x".repeat(801));
     expect(prompt).toContain("…");
+  });
+});
+
+// L'offre de résumé se joue dans le message d'accueil. Ce qui est en jeu : un
+// appel qui s'ouvre sur le résumé récité de la fois d'avant fait payer à CHAQUE
+// appel une chose qu'on voulait une fois — et sans écran, on ne peut ni le
+// passer ni le survoler, seulement attendre la fin. On propose, on n'impose pas.
+describe("inboundFirstMessage — l'offre de résumé", () => {
+  it("leaves the greeting untouched when there is nothing to offer", () => {
+    for (const language of ["fr", "en", "es"] as const) {
+      const greeting = inboundFirstMessage(ctx({ language }));
+      expect(greeting).not.toMatch(/résumer|recap|resumirte/);
+      // Une seule question : celle qui ouvre l'appel.
+      expect(greeting.match(/\?/g) ?? []).toHaveLength(1);
+    }
+  });
+
+  it("adds one short offer, in the caller's language", () => {
+    expect(inboundFirstMessage(ctx({ language: "fr", recapOffer: true }))).toContain(
+      "Je peux te résumer notre dernier appel si tu veux.",
+    );
+    expect(inboundFirstMessage(ctx({ language: "en", recapOffer: true }))).toContain(
+      "I can recap our last call if you want.",
+    );
+    expect(inboundFirstMessage(ctx({ language: "es", recapOffer: true }))).toContain(
+      "Puedo resumirte nuestra última llamada si quieres.",
+    );
+  });
+
+  it("keeps the offer ahead of the open question, so ignoring it costs nothing", () => {
+    // Qui n'en veut pas répond à la question et n'entend jamais le résumé : il
+    // n'a rien eu à refuser. C'est pour ça que l'offre passe en premier.
+    const greeting = inboundFirstMessage(ctx({ language: "en", recapOffer: true }));
+    expect(greeting.indexOf("I can recap")).toBeLessThan(greeting.indexOf("What can I do for you?"));
+  });
+
+  it("offers the recap without leaking a word of what is in it", () => {
+    const greeting = inboundFirstMessage(ctx({ language: "en", recapOffer: true }));
+    expect(greeting.split(". ").length).toBeLessThanOrEqual(4);
+    expect(greeting).not.toContain("Summary of your call");
+  });
+
+  it("still works for someone who never set a preferred name", () => {
+    const greeting = inboundFirstMessage(ctx({ language: "fr", preferredName: null, recapOffer: true }));
+    expect(greeting).toContain("Bonjour !");
+    expect(greeting).toContain("Je peux te résumer notre dernier appel si tu veux.");
+  });
+});
+
+// Le prompt annonce la capacité, et interdit de la déclencher tout seul.
+describe("inboundSystemPrompt — le résumé se demande", () => {
+  it("names the tool and forbids reciting a summary unprompted", () => {
+    expect(inboundSystemPrompt(ctx({ language: "fr" }))).toContain("ne récite JAMAIS un résumé de toi-même");
+    expect(inboundSystemPrompt(ctx({ language: "en" }))).toContain("NEVER recite a summary on your own");
+    expect(inboundSystemPrompt(ctx({ language: "es" }))).toContain("NUNCA recites un resumen por tu cuenta");
+    for (const language of ["fr", "en", "es"] as const)
+      expect(inboundSystemPrompt(ctx({ language }))).toContain("get_last_call_summary");
   });
 });
 

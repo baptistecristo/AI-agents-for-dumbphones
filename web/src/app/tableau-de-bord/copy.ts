@@ -5,7 +5,9 @@
 
 import { Language } from "@/lib/language";
 
-// Les six sources du registre de consentement, dans l'ordre d'affichage.
+// Les sources du registre de consentement, dans l'ordre d'affichage.
+// `call_recap` est l'interrupteur du résumé relu au téléphone : absent du
+// registre = éteint, et c'est l'état de départ de tout le monde.
 export const CONSENT_SOURCES = [
   "calendar",
   "contacts",
@@ -13,6 +15,7 @@ export const CONSENT_SOURCES = [
   "outbound_calls",
   "memory",
   "recording",
+  "call_recap",
 ] as const;
 export type ConsentSource = (typeof CONSENT_SOURCES)[number];
 
@@ -285,6 +288,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
           label: "Enregistrement des appels",
           help: "Garder et transcrire tes appels pour le suivi.",
         },
+        call_recap: {
+          label: "Résumé de l'appel précédent",
+          help: "Te relire au téléphone le résumé de ton dernier appel, quand tu me le demandes. Jamais un appel que j'ai passé pour toi.",
+        },
       },
       grantedAction: "Autorisé — révoquer",
       refusedAction: "Refusé — autoriser",
@@ -514,6 +521,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
           label: "Call recording",
           help: "Keep and transcribe your calls for follow-up.",
         },
+        call_recap: {
+          label: "Recap of the previous call",
+          help: "Read you back the summary of your last call, over the phone, when you ask for it. Never a call I placed for you.",
+        },
       },
       grantedAction: "Allowed — revoke",
       refusedAction: "Refused — allow",
@@ -741,6 +752,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
         recording: {
           label: "Grabación de las llamadas",
           help: "Guardar y transcribir tus llamadas para el seguimiento.",
+        },
+        call_recap: {
+          label: "Resumen de la llamada anterior",
+          help: "Releerte por teléfono el resumen de tu última llamada, cuando me lo pidas. Nunca una llamada que haya hecho por ti.",
         },
       },
       grantedAction: "Autorizado — revocar",

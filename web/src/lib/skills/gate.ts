@@ -47,6 +47,10 @@ export const TOOL_POLICY = {
   place_call: "code",
   // Éteint un rappel que le cron devait envoyer : destructif, et silencieux.
   mark_done: "code",
+  // Relit le résumé de l'appel précédent : au moins aussi bavard que recall,
+  // puisqu'il rapporte ce qui s'est DIT. L'opt-in (consents) décide si la
+  // fonction existe pour cette personne ; le code décide qui peut l'entendre.
+  get_last_call_summary: "code",
 
   // Rappels : lecture et ajout
   set_reminder: "free",
@@ -115,6 +119,7 @@ export const CODE_TOOL_EFFECT = {
   list_events: "read",
   find_contact: "read",
   recall: "read",
+  get_last_call_summary: "read",
   create_event: "write",
   move_event: "write",
   mark_done: "write",

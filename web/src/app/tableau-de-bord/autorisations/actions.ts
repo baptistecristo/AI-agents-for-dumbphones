@@ -11,9 +11,9 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 import { DASHBOARD } from "../copy";
 
-// Les six sources du registre. Une valeur hors liste (input hidden trafiqué)
-// est simplement ignorée : on n'insère rien d'inconnu.
-const CONSENT_SOURCES = ["calendar", "contacts", "sms", "outbound_calls", "memory", "recording"];
+// Les sources du registre. Une valeur hors liste (input hidden trafiqué) est
+// simplement ignorée : on n'insère rien d'inconnu.
+const CONSENT_SOURCES = ["calendar", "contacts", "sms", "outbound_calls", "memory", "recording", "call_recap"];
 
 export async function toggleConsent(formData: FormData): Promise<void> {
   const supabase = await supabaseServer();

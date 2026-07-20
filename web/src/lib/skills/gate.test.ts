@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { agentTools } from "../agents/tools";
-import { TOOL_POLICY, isClassified, requiresVerification } from "./gate";
+import { TOOL_POLICY, isClassified, requiresVerification, requiresVerificationOverSms } from "./gate";
 
 const declaredToolNames = () => agentTools().map((tool) => tool.function.name).sort();
 const classifiedToolNames = () => Object.keys(TOOL_POLICY).sort();
@@ -42,9 +42,24 @@ describe("requiresVerification", () => {
       expect(requiresVerification(n)).toBe(false);
   });
 
+  it("protects the recap of a previous call: it reports what was said", () => {
+    // L'opt-in (consents) décide si la fonction existe pour cette personne ; le
+    // code décide qui, sur la ligne, a le droit de l'entendre. Un caller-ID
+    // usurpé ne doit pas suffire à se faire relire une conversation.
+    expect(requiresVerification("get_last_call_summary")).toBe(true);
+  });
+
   it("fails closed: an unclassified tool demands the code instead of sailing through", () => {
     expect(requiresVerification("totally_unknown_tool")).toBe(true);
     expect(isClassified("totally_unknown_tool")).toBe(false);
+  });
+
+  it("treats the recap as a read over text: the reply only reaches the registered number", () => {
+    // Par texte, une lecture n'a rien à protéger d'un usurpateur — c'est la
+    // victime qui reçoit la réponse. Le résumé suit donc recall et list_events,
+    // pas les écritures.
+    expect(requiresVerificationOverSms("get_last_call_summary")).toBe(false);
+    expect(requiresVerificationOverSms("mark_done")).toBe(true);
   });
 
   it("is not fooled by inherited Object properties", () => {
