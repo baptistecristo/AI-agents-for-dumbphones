@@ -64,7 +64,7 @@
 4. **Data plane** — identity, encrypted OAuth tokens, consent ledger, per-user memory, logs.
 5. **Web/app** — where users sign up and *connect everything*; the only screen the paying customer ever really touches.
 
-**Two front-ends, one brain.** You can reach the agent two ways: **call it** or **text it** (SMS from a dumbphone, or the web chat). A call is wrapped in STT/TTS + turn-taking (plane 2); a text message skips that wrapper and hits the **Agent Core** directly — same tools, same memory, same confirmations, same code gate. Voice is the headline; text is the lighter channel for when speaking is hard, or a keypad-free "quick question". Neither is a bolt-on: both are front-ends to the one agent loop (§4).
+**Two front-ends, one brain.** You can reach the agent two ways: **call it** or **text it** (SMS from a dumbphone; a web chat is planned, not built). A call is wrapped in STT/TTS + turn-taking (plane 2); a text message skips that wrapper and hits the **Agent Core** directly — same tools, same memory, same confirmations, same code gate. Voice is the headline; text is the lighter channel for when speaking is hard, or a keypad-free "quick question". Neither is a bolt-on: both are front-ends to the one agent loop (§4).
 
 ---
 
