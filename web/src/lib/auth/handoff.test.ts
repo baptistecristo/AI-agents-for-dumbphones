@@ -7,6 +7,16 @@ describe("authHandoff", () => {
     expect(authHandoff({ utm_source: "newsletter" })).toBeNull();
   });
 
+  it("laisse passer un lien vitrine qui porte type ou error_description", () => {
+    // Supabase n'envoie jamais `type` seul, toujours collé à un token_hash. Un
+    // /?type=annual (tarif, campagne) est du trafic ordinaire : le réexpédier
+    // enverrait le visiteur sur /connexion?erreur=lien sans qu'il ait rien
+    // demandé. Le déclencheur, c'est le justificatif, pas son accompagnement.
+    expect(authHandoff({ type: "annual" })).toBeNull();
+    expect(authHandoff({ type: "magiclink", utm_source: "newsletter" })).toBeNull();
+    expect(authHandoff({ error_description: "quelque chose" })).toBeNull();
+  });
+
   it("rattrape le code PKCE tombé sur la racine", () => {
     expect(authHandoff({ code: "abc123" })).toBe("/auth/callback?code=abc123&next=%2Fonboarding");
   });
@@ -19,7 +29,8 @@ describe("authHandoff", () => {
     ).toBe("/auth/callback?error=access_denied&error_code=otp_expired&next=%2Fonboarding");
   });
 
-  it("rattrape aussi un gabarit e-mail en token_hash", () => {
+  it("rattrape aussi un gabarit e-mail en token_hash, avec son type", () => {
+    // verifyOtp, côté /auth/callback, exige les deux : le type doit voyager.
     expect(authHandoff({ token_hash: "xyz", type: "magiclink" })).toBe(
       "/auth/callback?token_hash=xyz&type=magiclink&next=%2Fonboarding",
     );
@@ -40,8 +51,13 @@ describe("authHandoff", () => {
   });
 
   it("encode les valeurs plutôt que de les concaténer", () => {
-    expect(authHandoff({ error_description: "Email link is invalid or has expired" })).toBe(
-      "/auth/callback?error_description=Email+link+is+invalid+or+has+expired&next=%2Fonboarding",
+    expect(
+      authHandoff({
+        error: "access_denied",
+        error_description: "Email link is invalid or has expired",
+      }),
+    ).toBe(
+      "/auth/callback?error=access_denied&error_description=Email+link+is+invalid+or+has+expired&next=%2Fonboarding",
     );
   });
 });
