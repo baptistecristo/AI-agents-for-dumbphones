@@ -7,6 +7,7 @@ import { buildInboundAssistant, CallerContext } from "@/lib/agents/inbound";
 import { defaultLanguage, normalizeLanguage } from "@/lib/language";
 import { agentInstructionsOf } from "@/lib/profile";
 import { inboundRateVerdict, rateLimitMessage } from "@/lib/rate-limit";
+import { extractCallActionItems } from "@/lib/reports/action-items";
 import { executeTool } from "@/lib/skills";
 import { closeJobWithoutReport, handleReportOutcome } from "@/lib/skills/outbound-report";
 import { CallSession } from "@/lib/skills/types";
@@ -166,6 +167,17 @@ export async function POST(req: Request) {
       // remise en file ou abandon (logique partagée avec le runtime self-host).
       const jobId: string | undefined = call?.metadata?.outbound_job_id;
       if (jobId) await closeJobWithoutReport(jobId);
+
+      // Engagements pris pendant l'appel -> rappels. Ne lit le transcript que
+      // pour un appel ENTRANT dont l'appelant a explicitement autorisé la
+      // source « action_items » (défaut : refusé) — tout est décidé dans
+      // reports/action-items.ts. L'appel est terminé : cette étape ne doit
+      // jamais faire échouer le webhook, d'où le try/catch.
+      try {
+        await extractCallActionItems(callId);
+      } catch (err) {
+        console.error("Extraction des engagements en erreur", err);
+      }
       break;
     }
 

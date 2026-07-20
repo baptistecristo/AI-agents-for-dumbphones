@@ -11,6 +11,7 @@ export const CONSENT_SOURCES = [
   "outbound_calls",
   "memory",
   "recording",
+  "action_items",
 ] as const;
 export type ConsentSource = (typeof CONSENT_SOURCES)[number];
 
@@ -58,6 +59,9 @@ const CONSENT_DEFAULTS: Record<ConsentSource, boolean> = {
   outbound_calls: true,
   memory: true,
   recording: false,
+  // Relire un transcript pour en tirer des engagements sert une autre finalité
+  // que l'appel lui-même : ça se demande, ça ne se suppose pas.
+  action_items: false,
 };
 
 export const ONBOARDING: Record<Language, OnboardingCopy> = {
@@ -97,6 +101,8 @@ export const ONBOARDING: Record<Language, OnboardingCopy> = {
         outbound_calls: "Passer des appels à ma place (restaurant, taxi, rendez-vous)",
         memory: "Retenir mes préférences (lieux, personnes, habitudes)",
         recording: "Enregistrer et transcrire les appels pour le suivi",
+        action_items:
+          "Relire mes appels entrants pour en tirer ce que je me suis engagé à faire, et le poser en rappel",
       },
       defaults: CONSENT_DEFAULTS,
     },
@@ -145,6 +151,8 @@ export const ONBOARDING: Record<Language, OnboardingCopy> = {
         outbound_calls: "Place calls on my behalf (restaurant, taxi, appointments)",
         memory: "Remember my preferences (places, people, habits)",
         recording: "Record and transcribe calls for follow-up",
+        action_items:
+          "Read back my inbound calls to pull out what I said I'd do, and save it as a reminder",
       },
       defaults: CONSENT_DEFAULTS,
     },
@@ -193,6 +201,8 @@ export const ONBOARDING: Record<Language, OnboardingCopy> = {
         outbound_calls: "Hacer llamadas en mi nombre (restaurante, taxi, citas)",
         memory: "Recordar mis preferencias (lugares, personas, costumbres)",
         recording: "Grabar y transcribir las llamadas para el seguimiento",
+        action_items:
+          "Releer mis llamadas entrantes para sacar lo que me he comprometido a hacer, y anotarlo como recordatorio",
       },
       defaults: CONSENT_DEFAULTS,
     },

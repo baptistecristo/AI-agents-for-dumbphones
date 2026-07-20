@@ -5,7 +5,7 @@
 
 import { Language } from "@/lib/language";
 
-// Les six sources du registre de consentement, dans l'ordre d'affichage.
+// Les sources du registre de consentement, dans l'ordre d'affichage.
 export const CONSENT_SOURCES = [
   "calendar",
   "contacts",
@@ -13,6 +13,7 @@ export const CONSENT_SOURCES = [
   "outbound_calls",
   "memory",
   "recording",
+  "action_items",
 ] as const;
 export type ConsentSource = (typeof CONSENT_SOURCES)[number];
 
@@ -285,6 +286,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
           label: "Enregistrement des appels",
           help: "Garder et transcrire tes appels pour le suivi.",
         },
+        action_items: {
+          label: "Engagements tirés des appels",
+          help: "Relire tes appels entrants pour en sortir ce que tu as dit que tu ferais, et le poser en rappel.",
+        },
       },
       grantedAction: "Autorisé — révoquer",
       refusedAction: "Refusé — autoriser",
@@ -514,6 +519,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
           label: "Call recording",
           help: "Keep and transcribe your calls for follow-up.",
         },
+        action_items: {
+          label: "Commitments from calls",
+          help: "Read back your inbound calls to pull out what you said you'd do, and save it as a reminder.",
+        },
       },
       grantedAction: "Allowed — revoke",
       refusedAction: "Refused — allow",
@@ -741,6 +750,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
         recording: {
           label: "Grabación de las llamadas",
           help: "Guardar y transcribir tus llamadas para el seguimiento.",
+        },
+        action_items: {
+          label: "Compromisos sacados de las llamadas",
+          help: "Releer tus llamadas entrantes para sacar lo que dijiste que harías, y anotarlo como recordatorio.",
         },
       },
       grantedAction: "Autorizado — revocar",
