@@ -75,6 +75,37 @@ Stages 1 to 4 and the rule schema follow [Sift](https://github.com/edleeman17/si
 by Ed Leeman (MIT), which solves the same problem for an iPhone-to-dumbphone
 bridge. The budget ceilings and the per-message cost model are additions.
 
+### Where the notifications come from
+
+Sift captures them from an iPhone over Bluetooth, using ANCS and a Raspberry Pi.
+Nothing about that ports: it is hardware plumbing, and the hard part is keeping a
+BLE link alive rather than any algorithm.
+
+This gets them from OpenClaw instead. `message_received` is the one hook that
+fires for every channel rather than only the plugin's own, so whatever the user
+has connected (WhatsApp, Telegram, Signal, Discord) arrives here already
+normalised, with no pairing, no extra hardware, and no second always-on machine.
+Sift needs a Pi and a Mac; this needs the gateway the user is already running.
+
+Two consequences of that hook shape drive the code. It is fire-and-forget, so
+nothing on this path may throw. And it fires per message while the filter works
+in batches, because the urgency stage costs one model call per batch rather than
+per message, so messages are gathered for a few seconds first.
+
+Three things this has to get right, none of them optional:
+
+- **The loop.** An SMS the user sends arrives as inbound. Forwarding it back is
+  an infinite loop with a per-lap charge. Our own channel is refused first,
+  before any allow-list is consulted.
+- **The budget across restarts.** Spend state lives in OpenClaw's keyed store,
+  not in memory. A gateway restarted twice in an evening would otherwise grant
+  itself three daily budgets, which makes the one control over real money
+  decorative.
+- **A model outage.** A failed completion is read as "no". The rules stage still
+  runs, so an allow-listed sender is forwarded regardless; only the ambiguous
+  middle goes quiet. Failing the other way would turn a provider outage into a
+  bill.
+
 ## Status
 
 **This has never sent or received a real SMS.** It has no OVH account behind it
@@ -82,7 +113,7 @@ yet.
 
 Verified:
 
-- 217 tests pass
+- 255 tests pass
 - typechecks against the real `openclaw` SDK with no casts or `any`
 - builds, and the built module loads with a working `register` function, a
   `gateway.startAccount` hook and the segment-aligned chunk limit
@@ -91,6 +122,10 @@ Verified:
   the delivery adapter. TypeScript checks the turn against the SDK's
   `AssembledChannelTurn` and the adapter against `ChannelEventDeliveryAdapter`.
   I broke each one on purpose to confirm the compiler catches it.
+- the notification bridge is wired to `message_received`, so every other channel
+  the user has connected feeds the filter. The hook name is checked against
+  `PluginHookName` and its payload against `PluginHookMessageReceivedEvent`;
+  I broke both on purpose too.
 - the OVH request signature is implemented against reference vectors computed
   independently from OVH's published formula, including a case proving the
   escaped and unescaped request bodies hash differently
@@ -113,12 +148,13 @@ Known gaps:
   resolver and pairing adapter.
 - **No setup wizard**, so the channel cannot be configured through
   `openclaw channels add`.
-- **The notification filter is a library nothing calls yet.** It is built and
-  tested, but no code subscribes to OpenClaw's other channels and feeds them
-  through it. Texting the agent works; the agent pushing you a filtered
-  WhatsApp notification does not, because nothing is watching WhatsApp. That is
-  the next piece of work, and it is larger than it sounds: OpenClaw has no
-  generic "notify me about inbound on other channels" event to hook.
+- **The notification bridge has never run against a live channel.** It is wired
+  to `message_received` and tested against fake events, but no real WhatsApp
+  message has been through it.
+- **Group detection is a heuristic.** OpenClaw's hook carries a conversation id
+  but does not say whether a conversation is a group, so a conversation that
+  differs from the sender is treated as one. That is right for the channels I
+  reasoned about and unverified for the rest.
 
 ## Blockers outside the code
 
@@ -177,7 +213,24 @@ polling begins on its own once the account is configured. Two things to know:
       "allowFrom": ["+33612345678"],
       "pollIntervalSeconds": 20,
       "textChunkLimit": 153,
-      "maxReplySegments": 6
+      "maxReplySegments": 6,
+
+      // Forwarding other channels to the phone. Off unless both of the first
+      // two are set, because everything below here spends money unprompted.
+      "notify": {
+        "enabled": true,
+        "to": "+33612345678",
+        "fromChannels": ["whatsapp", "signal"], // empty means all but this one
+        "batchSeconds": 15,
+        "maxBatch": 10,
+        "limits": {
+          "cooldownSeconds": 30,
+          "perSenderHourly": 50,
+          "dedupeSeconds": 300,
+          "softDailyBudget": 2, // EUR; critical messages still pass
+          "hardDailyBudget": 5  // EUR; nothing passes
+        }
+      }
     }
   }
 }

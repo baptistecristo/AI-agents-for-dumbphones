@@ -8,6 +8,7 @@
 
 import { z } from "zod";
 
+import { DEFAULT_RATE_LIMITS, type RateLimitConfig } from "../filter/rate-limit.js";
 import type { OvhRegion } from "../ovh/client.js";
 
 export const CHANNEL_ID = "sms-ovh";
@@ -36,8 +37,51 @@ export const DEFAULT_POLL_INTERVAL_SECONDS = 20;
  */
 export const DEFAULT_MAX_REPLY_SEGMENTS = 6;
 
+/**
+ * Forwarding notifications from the user's other channels to their phone.
+ *
+ * Off by default, and deliberately so. Every forwarded notification is an SMS
+ * the user pays for, so this is the one part of the plugin that spends money
+ * without anyone asking it a question.
+ */
+export const OvhSmsNotifySchema = z.object({
+  enabled: z.boolean().optional(),
+  /** The phone to push notifications to. Required once enabled. */
+  to: z.string().optional(),
+  /** Channels to watch. Empty means every channel except this one. */
+  fromChannels: z.array(z.string()).optional(),
+  /** How long to gather notifications before running the filter over them. */
+  batchSeconds: z.number().int().positive().optional(),
+  /** Flush early once this many have piled up. */
+  maxBatch: z.number().int().positive().optional(),
+  /** Model ref for the classifier and urgency stages. */
+  model: z.string().optional(),
+  /**
+   * The spend controls. These are the knobs that decide the bill, so they are
+   * user-facing rather than buried as constants.
+   */
+  limits: z
+    .object({
+      /** Minimum gap between two forwarded notifications. */
+      cooldownSeconds: z.number().int().nonnegative().optional(),
+      /** Cap per sender per hour. */
+      perSenderHourly: z.number().int().positive().optional(),
+      /** Window in which identical text is treated as a duplicate. */
+      dedupeSeconds: z.number().int().nonnegative().optional(),
+      /** Daily spend, in EUR, above which only critical messages pass. */
+      softDailyBudget: z.number().nonnegative().optional(),
+      /** Daily spend, in EUR, above which nothing passes. */
+      hardDailyBudget: z.number().nonnegative().optional(),
+    })
+    .optional(),
+});
+
+export const DEFAULT_NOTIFY_BATCH_SECONDS = 15;
+export const DEFAULT_NOTIFY_MAX_BATCH = 10;
+
 export const OvhSmsAccountSchema = z.object({
   enabled: z.boolean().optional(),
+  notify: OvhSmsNotifySchema.optional(),
   applicationKey: z.string().optional(),
   applicationSecret: z.string().optional(),
   consumerKey: z.string().optional(),
@@ -79,6 +123,17 @@ export interface ResolvedOvhSmsAccount {
   maxReplySegments: number;
   allowFrom: string[];
   dmPolicy: "open" | "pairing" | "closed";
+  notify: ResolvedNotifyConfig;
+}
+
+export interface ResolvedNotifyConfig {
+  enabled: boolean;
+  to: string;
+  fromChannels: string[];
+  batchSeconds: number;
+  maxBatch: number;
+  model?: string;
+  limits: RateLimitConfig;
 }
 
 function readChannelConfig(cfg: unknown): OvhSmsChannelConfig {
@@ -137,7 +192,39 @@ export function resolveAccount(cfg: unknown, accountId?: string | null): Resolve
     maxReplySegments: source.maxReplySegments ?? DEFAULT_MAX_REPLY_SEGMENTS,
     allowFrom: (source.allowFrom ?? []).map(normalizePhone).filter((n) => n !== ""),
     dmPolicy: source.dmPolicy ?? "pairing",
+    notify: resolveNotify(source.notify),
   };
+}
+
+function resolveNotify(source: z.infer<typeof OvhSmsNotifySchema> | undefined): ResolvedNotifyConfig {
+  const model = source?.model;
+  const limits = source?.limits;
+  return {
+    enabled: source?.enabled ?? false,
+    to: normalizePhone(source?.to ?? ""),
+    fromChannels: source?.fromChannels ?? [],
+    batchSeconds: source?.batchSeconds ?? DEFAULT_NOTIFY_BATCH_SECONDS,
+    maxBatch: source?.maxBatch ?? DEFAULT_NOTIFY_MAX_BATCH,
+    ...(model === undefined ? {} : { model }),
+    limits: {
+      cooldownSeconds: limits?.cooldownSeconds ?? DEFAULT_RATE_LIMITS.cooldownSeconds,
+      perSenderHourly: limits?.perSenderHourly ?? DEFAULT_RATE_LIMITS.perSenderHourly,
+      dedupeSeconds: limits?.dedupeSeconds ?? DEFAULT_RATE_LIMITS.dedupeSeconds,
+      softDailyBudget: limits?.softDailyBudget ?? DEFAULT_RATE_LIMITS.softDailyBudget,
+      hardDailyBudget: limits?.hardDailyBudget ?? DEFAULT_RATE_LIMITS.hardDailyBudget,
+    },
+  };
+}
+
+/**
+ * Whether the notification bridge should run.
+ *
+ * A destination is required rather than inferred from `allowFrom`. Guessing
+ * which of several allowed numbers should receive a paid stream of alerts is
+ * not a guess worth making.
+ */
+export function isNotifyEnabled(account: ResolvedOvhSmsAccount): boolean {
+  return account.notify.enabled && account.notify.to !== "" && isConfigured(account);
 }
 
 export function isConfigured(account: ResolvedOvhSmsAccount): boolean {

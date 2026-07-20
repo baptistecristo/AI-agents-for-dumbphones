@@ -31,6 +31,7 @@ import {
   unconfiguredReason,
   type ResolvedOvhSmsAccount,
 } from "./plugin/accounts.js";
+import { createNotifyRouter } from "./notify/register.js";
 import { setOvhSmsRuntime } from "./plugin/runtime.js";
 import { sendText as deliverText } from "./plugin/send.js";
 import { startAccount } from "./plugin/start.js";
@@ -43,6 +44,10 @@ export * from "./ovh/poller.js";
 export * from "./ovh/sms.js";
 export * from "./plugin/accounts.js";
 export * from "./plugin/gateway.js";
+export * from "./notify/bridge.js";
+export * from "./notify/model.js";
+export * from "./notify/register.js";
+export * from "./notify/state.js";
 export * from "./plugin/inbound.js";
 export * from "./plugin/runtime.js";
 export * from "./plugin/send.js";
@@ -143,6 +148,23 @@ const entry: OvhSmsChannelEntry = defineChannelPluginEntry({
   // The runtime arrives here and is needed later inside the polling loop, on a
   // path the host never calls into. See `plugin/runtime.ts`.
   setRuntime: setOvhSmsRuntime,
+  // `message_received` is the one hook that fires for every channel rather than
+  // only this plugin's own, which is what lets the bridge watch WhatsApp and
+  // Telegram at all. Registered here because `registerFull` runs with the whole
+  // runtime available, unlike setup-only registration.
+  registerFull: (api) => {
+    const router = createNotifyRouter({
+      runtime: api.runtime,
+      // Read through the runtime rather than closing over `api.config`, which
+      // is a snapshot taken at load. Enabling notifications should not need a
+      // gateway restart.
+      readConfig: () => api.runtime.config.current(),
+      log: api.logger,
+    });
+    api.on("message_received", (event, ctx) => {
+      router.handle(event, ctx);
+    });
+  },
 });
 
 export default entry;
