@@ -52,6 +52,14 @@ export interface Rule {
   prompt?: string;
   /** Human-readable explanation, surfaced in logs and the audit trail. */
   reason?: string;
+  /**
+   * Exempt this rule's drops from the stage 3 emergency re-check.
+   *
+   * Needed for anything that must never be forwarded under any circumstance.
+   * The agent's own outbound messages are the load-bearing case: rescuing one
+   * would feed the bridge its own output and loop.
+   */
+  finalDrop?: boolean;
 }
 
 export interface AppConfig {
@@ -72,6 +80,8 @@ export interface RuleResult {
   action: Action;
   reason: string;
   priority: Priority;
+  /** True when this drop must not be revisited by the emergency re-check. */
+  finalDrop: boolean;
   prompt?: string;
 }
 
@@ -182,6 +192,7 @@ function toResult(rule: Rule, fallbackReason: string): RuleResult {
     action: rule.action,
     reason: rule.reason ?? fallbackReason,
     priority: rule.priority ?? "default",
+    finalDrop: rule.finalDrop ?? false,
   };
   // Assigned conditionally because exactOptionalPropertyTypes forbids
   // writing `undefined` into an optional property.
@@ -208,6 +219,7 @@ export function evaluate(config: FilterConfig, notification: Notification): Rule
       action: config.global.unknown_apps,
       reason: `unknown app "${notification.app}"`,
       priority: "default",
+      finalDrop: false,
     };
   }
 
@@ -221,6 +233,7 @@ export function evaluate(config: FilterConfig, notification: Notification): Rule
     action: app.default,
     reason: `${notification.app} default`,
     priority: "default",
+    finalDrop: false,
   };
 }
 
@@ -258,7 +271,12 @@ export const DEFAULT_CONFIG: FilterConfig = {
     unknown_apps: "drop",
     rules: [
       // Never forward the agent's own outbound messages back to the user.
-      { sender_contains: "openclaw", action: "drop", reason: "agent loopback" },
+      {
+        sender_contains: "openclaw",
+        action: "drop",
+        reason: "agent loopback",
+        finalDrop: true,
+      },
       {
         // The code appears before the keyword ("483920 is your code") about as
         // often as after it ("your code is 483920"), so both orders match.
