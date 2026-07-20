@@ -34,6 +34,7 @@
   --color-clay-tint: var(--clay-tint);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
+  --color-danger: var(--danger);
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), Georgia, "Times New Roman", serif;
 }
