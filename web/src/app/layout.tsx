@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Hanken_Grotesk } from "next/font/google";
 import { Language } from "@/lib/language";
 import { siteLanguage } from "@/lib/site-i18n";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { PublicSpeedInsights } from "@/components/speed-insights";
 import "./globals.css";
 
 // Corps : Hanken Grotesk — une grotesque nette et très lisible, dans l'esprit
@@ -56,7 +56,7 @@ export default async function RootLayout({
     <html lang={await siteLanguage()} className={`${body.variable} ${display.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         {children}
-        <SpeedInsights />
+        <PublicSpeedInsights />
       </body>
     </html>
   );
