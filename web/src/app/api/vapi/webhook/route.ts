@@ -64,6 +64,7 @@ async function sessionFor(callId: string): Promise<CallSession> {
     .maybeSingle();
   return {
     callId,
+    channel: "voice",
     userId: data?.user_id ?? null,
     callerNumber: data?.from_number ?? null,
     verified: data?.pin_verified ?? false,

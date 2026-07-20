@@ -112,6 +112,40 @@ function parseTime(word: string): { hour: number; minute: number } | null {
   return { hour, minute };
 }
 
+// Mots-clés reconnus (toutes langues) = l'union exacte des branches ci-dessous.
+// Sert aussi à décider, en amont, si un SMS est une commande à traiter ici (bon
+// marché, sans LLM) ou du langage naturel à router vers la boucle d'agent.
+const KEYWORDS = new Set([
+  "AIDE", "HELP", "AYUDA", "?",
+  "METEO", "WEATHER", "TIEMPO", "CLIMA",
+  "AGENDA", "SCHEDULE",
+  "RAPPEL", "REMIND", "REMINDER", "RECUERDA", "RECUERDAME",
+  "RAPPELS", "REMINDERS", "RECORDATORIOS",
+  "FAIT", "DONE", "HECHO",
+  "DEJA", "ALREADY", "YA",
+  "ROUTE", "ITINERAIRE", "DIRECTIONS", "RUTA",
+  "STOP", "START",
+]);
+
+// Accents aplatis pour comparer les mots-clés : RECUÉRDAME -> RECUERDAME,
+// DÉJÀ -> DEJA. Le tilde (Ñ) est conservé : aucun mot-clé n'en porte.
+function normalizeKeyword(word: string): string {
+  return word
+    .toUpperCase()
+    .replace(/[ÉÈÊ]/g, "E")
+    .replace(/[ÁÀÂ]/g, "A")
+    .replace(/[ÍÎ]/g, "I")
+    .replace(/[ÓÔ]/g, "O")
+    .replace(/[ÚÙÛ]/g, "U");
+}
+
+// Le message commence-t-il par un mot-clé connu ? Si oui, le routeur le traite
+// (rapide, sans LLM) ; sinon c'est du langage naturel pour agents/loop.ts.
+export function looksLikeKeywordCommand(body: string): boolean {
+  const first = body.trim().split(/\s+/)[0] ?? "";
+  return KEYWORDS.has(normalizeKeyword(first));
+}
+
 export async function handleSmsCommand(session: CallSession, body: string): Promise<string> {
   const text = body.trim();
   const upper = text.toUpperCase();
@@ -126,15 +160,7 @@ export async function handleSmsCommand(session: CallSession, body: string): Prom
     });
   }
 
-  // Accents aplatis pour comparer les mots-clés : RECUÉRDAME -> RECUERDAME,
-  // DÉJÀ -> DEJA. Le tilde (Ñ) est conservé : aucun mot-clé n'en porte.
-  const k = keyword
-    .toUpperCase()
-    .replace(/[ÉÈÊ]/g, "E")
-    .replace(/[ÁÀÂ]/g, "A")
-    .replace(/[ÍÎ]/g, "I")
-    .replace(/[ÓÔ]/g, "O")
-    .replace(/[ÚÙÛ]/g, "U");
+  const k = normalizeKeyword(keyword);
 
   if (["AIDE", "HELP", "AYUDA", "?"].includes(k)) {
     return getHelp(session);

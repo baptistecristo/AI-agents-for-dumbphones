@@ -3,6 +3,7 @@
 // telles quelles à l'agent, jamais dans le canal d'instructions.
 
 import { supabaseAdmin } from "../supabase/admin";
+import { PIN_LENGTH, userHasTextPin } from "../text-pin";
 import { smsProviderConfigured } from "../twilio";
 import { createEvent, listEvents, moveEvent } from "./agenda";
 import { requestCode, verifyCode } from "./auth";
@@ -11,7 +12,7 @@ import { convert } from "./convert";
 import { define } from "./define";
 import { getDirections } from "./directions";
 import { reportGap } from "./gap";
-import { isClassified, requiresVerification } from "./gate";
+import { isClassified, requiresVerification, requiresVerificationOverSms } from "./gate";
 import { recall, remember } from "./memory";
 import { placeCall } from "./outbound";
 import { didIAlready, listReminders, markDone, setReminder } from "./reminders";
@@ -64,9 +65,29 @@ export async function executeTool(name: string, args: any, session: CallSession)
       );
       return t(session, { fr: `Outil inconnu : ${name}.`, en: `Unknown tool: ${name}.`, es: `Herramienta desconocida: ${name}.` });
     }
-    // Gate unique : les outils qui lisent des données stockées ou envoient/dépensent
-    // exigent le code SMS. Le caller-ID seul ne débloque rien de sensible.
-    if (requiresVerification(name) && !session.verified) {
+    // Gate. En appel, tout outil "code" exige le code jetable ; par TEXTE, seules
+    // les ÉCRITURES l'exigent (une lecture ne part qu'au numéro enregistré, cf.
+    // gate.ts), et le "code" est le PIN du tableau de bord (voir text-pin.ts).
+    const needsVerify =
+      session.channel === "text" ? requiresVerificationOverSms(name) : requiresVerification(name);
+    if (needsVerify && !session.verified) {
+      // Canal texte : PIN, pas de code jetable, aucune dépendance à Twilio Verify.
+      // Aucun PIN réglé -> on invite à en poser un ; sinon on renvoie vers
+      // request_code/verify_code (adaptés au canal dans auth.ts).
+      if (session.channel === "text") {
+        if (!session.userId || !(await userHasTextPin(session.userId))) {
+          return t(session, {
+            fr: `Pour « ${name} » (une action qui modifie ou envoie), il me faut ton code de sécurité, et tu n'en as pas encore réglé. Choisis un code à ${PIN_LENGTH} chiffres dans ton espace « Mon agent », puis envoie-le-moi. En attendant, météo, agenda, rappels et itinéraires marchent sans code.`,
+            en: `For "${name}" (an action that changes or sends something), I need your security code, and you haven't set one yet. Pick a ${PIN_LENGTH}-digit code in your "My agent" settings, then text it to me. Meanwhile, weather, calendar, reminders and directions work without a code.`,
+            es: `Para «${name}» (una acción que modifica o envía algo), necesito tu código de seguridad, y aún no has puesto ninguno. Elige un código de ${PIN_LENGTH} cifras en tu espacio «Mi agente» y envíamelo. Mientras tanto, el tiempo, la agenda, los recordatorios y las rutas funcionan sin código.`,
+          });
+        }
+        return t(session, {
+          fr: `REFUS : cette action exige le PIN. Appelle request_code, puis verify_code avec les ${PIN_LENGTH} chiffres que la personne envoie.`,
+          en: `REFUSED: this action needs the PIN. Call request_code, then verify_code with the ${PIN_LENGTH} digits the person texts.`,
+          es: `RECHAZADO: esta acción exige el PIN. Llama a request_code y luego verify_code con las ${PIN_LENGTH} cifras que envíe la persona.`,
+        });
+      }
       // Sans fournisseur SMS branché, le code ne peut PAS arriver. Renvoyer le
       // modèle vers request_code le ferait tourner en rond sur une promesse
       // impossible, et l'appelant attendrait un SMS fantôme. La capacité est

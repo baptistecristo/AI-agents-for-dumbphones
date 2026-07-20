@@ -9,14 +9,15 @@ import { agentInstructionsOf } from "@/lib/profile";
 import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { userHasTextPin } from "@/lib/text-pin";
 import { DASHBOARD } from "../copy";
 import { VOICE_SPEED_CHOICES, nearestVoiceSpeed } from "../format";
-import { Bubble, Card, Hint, PageIntro, fieldLabel, inputCls, primaryBtn, selectCls, textareaCls } from "../ui";
-import { updatePersonalization } from "./actions";
+import { Bubble, Card, Hint, PageIntro, fieldLabel, inputCls, primaryBtn, secondaryBtn, selectCls, textareaCls } from "../ui";
+import { updatePersonalization, updateTextPin } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AgentPage({ searchParams }: { searchParams: Promise<{ enregistre?: string }> }) {
+export default async function AgentPage({ searchParams }: { searchParams: Promise<{ enregistre?: string; pin?: string }> }) {
   const supabase = await supabaseServer();
   const {
     data: { user },
@@ -26,18 +27,34 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
   // Les colonnes stables et les consignes sont lues séparément : agent_instructions
   // arrive avec 0009, et agentInstructionsOf() tolère son absence. La page reste
   // donc correcte que la migration soit appliquée ou non.
-  const [{ data: profile }, agentInstructions] = await Promise.all([
+  // hasPin est lu à part et tolérant : la colonne arrive avec 0011, et
+  // userHasTextPin() retombe sur false si elle manque — la page reste correcte
+  // que la migration soit appliquée ou non (même logique que agent_instructions).
+  const [{ data: profile }, agentInstructions, hasPin] = await Promise.all([
     supabaseAdmin()
       .from("profiles")
       .select("preferred_name, full_name, home_address, preferred_language, voice_speed")
       .eq("id", user.id)
       .single(),
     agentInstructionsOf(user.id),
+    userHasTextPin(user.id),
   ]);
 
-  const saved = (await searchParams).enregistre === "1";
+  const sp = await searchParams;
+  const saved = sp.enregistre === "1";
   const lang = await siteLanguage();
   const tr = DASHBOARD[lang].agent;
+
+  const pinNotice =
+    sp.pin === "1"
+      ? { text: tr.pin.saved, ok: true }
+      : sp.pin === "cleared"
+        ? { text: tr.pin.cleared, ok: true }
+        : sp.pin === "format"
+          ? { text: tr.pin.badFormat, ok: false }
+          : sp.pin === "err"
+            ? { text: tr.pin.error, ok: false }
+            : null;
 
   return (
     <>
@@ -116,6 +133,47 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
           </div>
 
           <button className={primaryBtn}>{tr.save}</button>
+        </form>
+      </Card>
+
+      {pinNotice && (
+        <p
+          className={`mt-6 flex items-center rounded-lg border px-4 py-2.5 text-sm ${
+            pinNotice.ok ? "border-ok/30 bg-ok/5 text-ok" : "border-danger/30 bg-danger/5 text-danger"
+          }`}
+        >
+          <span
+            className={`mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full align-middle ${pinNotice.ok ? "bg-ok" : "bg-danger"}`}
+            aria-hidden
+          />
+          {pinNotice.text}
+        </p>
+      )}
+
+      <Card className="mt-6">
+        <form action={updateTextPin} className="space-y-4">
+          <label className="block">
+            {fieldLabel(tr.pin.label)}
+            <input
+              name="text_pin"
+              inputMode="numeric"
+              pattern="\d{3}"
+              maxLength={3}
+              autoComplete="off"
+              placeholder="•••"
+              className={inputCls}
+            />
+            <Hint>{tr.pin.hint}</Hint>
+          </label>
+          <p className="text-sm text-muted">{hasPin ? tr.pin.set : tr.pin.unset}</p>
+          <div className="flex flex-wrap gap-3">
+            <button className={primaryBtn}>{tr.pin.save}</button>
+            {hasPin && (
+              <button name="action" value="clear" className={secondaryBtn}>
+                {tr.pin.remove}
+              </button>
+            )}
+          </div>
         </form>
       </Card>
     </>

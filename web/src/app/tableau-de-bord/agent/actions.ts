@@ -12,6 +12,7 @@ import { clampVoiceSpeed } from "@/lib/agents/inbound";
 import { normalizeLanguage } from "@/lib/language";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { clearTextPin, isValidPinFormat, setTextPin } from "@/lib/text-pin";
 
 // On stocke un peu plus que ce que le prompt lit (800), pour ne pas tronquer en
 // base sous les yeux de la personne. Le prompt borne à nouveau à l'usage.
@@ -55,4 +56,40 @@ export async function updatePersonalization(formData: FormData): Promise<void> {
   }
 
   redirect("/tableau-de-bord/agent?enregistre=1");
+}
+
+// PIN du canal texte : le code court qui débloque les ÉCRITURES par SMS. Deux
+// boutons — « Enregistrer » (défaut) et « Retirer » (action=clear). On ne wrappe
+// jamais redirect() dans le try : il fonctionne en LEVANT, un catch l'avalerait.
+export async function updateTextPin(formData: FormData): Promise<void> {
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/connexion");
+
+  let outcome: "1" | "cleared" | "format" | "err";
+  if (String(formData.get("action") ?? "") === "clear") {
+    try {
+      await clearTextPin(user.id);
+      outcome = "cleared";
+    } catch (err) {
+      console.warn("PIN texte non retiré (migration 0011 appliquée ?) :", err);
+      outcome = "err";
+    }
+  } else {
+    const pin = String(formData.get("text_pin") ?? "").trim();
+    if (!isValidPinFormat(pin)) {
+      outcome = "format";
+    } else {
+      try {
+        await setTextPin(user.id, pin);
+        outcome = "1";
+      } catch (err) {
+        console.warn("PIN texte non enregistré (migration 0011 appliquée ?) :", err);
+        outcome = "err";
+      }
+    }
+  }
+  redirect(`/tableau-de-bord/agent?pin=${outcome}`);
 }

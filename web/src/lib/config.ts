@@ -69,6 +69,9 @@ const schema = z.object({
   AGENT_MODEL: z.string().optional(),
   OUTBOUND_MODEL: z.string().optional(),
   ELEVENLABS_VOICE_ID: z.string().optional(),
+  // Clé Anthropic pour la boucle d'agent TEXTE (agents/loop.ts). La voix passe
+  // par Vapi, qui a sa propre clé ; le canal texte appelle l'API directement.
+  ANTHROPIC_API_KEY: z.string().optional(),
 
   // Twilio
   TWILIO_ACCOUNT_SID: z.string().optional(),
@@ -110,6 +113,7 @@ export const SENSITIVE_KEYS: ReadonlySet<string> = new Set([
   "GOOGLE_CLIENT_SECRET",
   "ORS_API_KEY",
   "CRON_SECRET",
+  "ANTHROPIC_API_KEY",
 ]);
 
 export function isSensitive(key: string): boolean {

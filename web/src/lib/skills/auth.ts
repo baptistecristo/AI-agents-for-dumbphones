@@ -11,6 +11,7 @@ import {
   warnSmsProviderMissing,
 } from "../twilio";
 import { supabaseAdmin } from "../supabase/admin";
+import { PIN_LENGTH, userHasTextPin, verifyTextPin } from "../text-pin";
 import { CallSession, SkillResult, t } from "./types";
 
 // L'envoi de codes n'est pas configuré : état permanent et identique des deux
@@ -38,8 +39,58 @@ async function registeredNumber(userId: string): Promise<string | null> {
   return data?.e164 ?? null;
 }
 
+// ——— Canal texte : le PIN du tableau de bord, pas un code jetable ———
+// Rien à envoyer (le PIN est déjà connu de la personne), donc aucune dépendance
+// à Twilio Verify : ce chemin marche même là où le SMS sortant n'est pas branché.
+
+async function requestTextPin(session: CallSession): Promise<SkillResult> {
+  if (!(await userHasTextPin(session.userId!))) {
+    return t(session, {
+      fr: `Tu n'as pas encore de code de sécurité. Choisis-en un à ${PIN_LENGTH} chiffres dans ton espace « Mon agent », puis renvoie-le-moi ici.`,
+      en: `You haven't set a security code yet. Pick a ${PIN_LENGTH}-digit one in your "My agent" settings, then text it back to me here.`,
+      es: `Aún no tienes un código de seguridad. Elige uno de ${PIN_LENGTH} cifras en tu espacio «Mi agente» y reenvíamelo aquí.`,
+    });
+  }
+  return t(session, {
+    fr: `Envoie-moi ton code à ${PIN_LENGTH} chiffres (celui de ton tableau de bord) pour confirmer.`,
+    en: `Text me your ${PIN_LENGTH}-digit code (the one from your dashboard) to confirm.`,
+    es: `Envíame tu código de ${PIN_LENGTH} cifras (el de tu panel) para confirmar.`,
+  });
+}
+
+async function verifyTextPinCode(session: CallSession, args: { code: string }): Promise<SkillResult> {
+  if (!session.callerNumber) {
+    return t(session, { fr: "Numéro inconnu, impossible de vérifier.", en: "Unknown number, can't verify.", es: "Número desconocido, no puedo verificar." });
+  }
+  const result = await verifyTextPin(session.userId!, session.callerNumber, args.code ?? "");
+  switch (result) {
+    case "ok":
+      session.verified = true;
+      return t(session, {
+        fr: "Code correct ✅ C'est débloqué pour un moment.",
+        en: "Correct code ✅ Unlocked for a little while.",
+        es: "Código correcto ✅ Desbloqueado por un rato.",
+      });
+    case "no_pin":
+      return t(session, {
+        fr: `Tu n'as pas encore réglé de code. Choisis-en un à ${PIN_LENGTH} chiffres dans « Mon agent », puis renvoie-le.`,
+        en: `You haven't set a code yet. Pick a ${PIN_LENGTH}-digit one in "My agent", then text it back.`,
+        es: `Aún no has puesto un código. Elige uno de ${PIN_LENGTH} cifras en «Mi agente» y reenvíalo.`,
+      });
+    case "locked":
+      return t(session, {
+        fr: "Trop d'essais. Le code est bloqué un moment, réessaie plus tard ou appelle-moi 📞",
+        en: "Too many tries. The code is locked for a while — try later or call me 📞",
+        es: "Demasiados intentos. El código está bloqueado un rato — inténtalo más tarde o llámame 📞",
+      });
+    default:
+      return t(session, { fr: "Code incorrect.", en: "Wrong code.", es: "Código incorrecto." });
+  }
+}
+
 export async function requestCode(session: CallSession): Promise<SkillResult> {
   if (!session.userId) return t(session, { fr: "Appelant non identifié.", en: "Unidentified caller.", es: "Persona no identificada." });
+  if (session.channel === "text") return requestTextPin(session);
   // Rien de branché : état permanent, pas un incident. On le distingue du catch
   // plus bas, sinon l'agent propose de réessayer un envoi qui n'aura jamais lieu.
   if (!smsProviderConfigured("verify")) {
@@ -75,6 +126,7 @@ export async function requestCode(session: CallSession): Promise<SkillResult> {
 
 export async function verifyCode(session: CallSession, args: { code: string }): Promise<SkillResult> {
   if (!session.userId) return t(session, { fr: "Appelant non identifié.", en: "Unidentified caller.", es: "Persona no identificada." });
+  if (session.channel === "text") return verifyTextPinCode(session, args);
   // Même garde qu'à la demande. Sans elle, checkPhoneVerification appelle env()
   // qui lève, le catch plus bas l'aplatit en « Code incorrect », et la personne
   // rappelle des chiffres corrects contre une instance qui n'a jamais pu lui en
