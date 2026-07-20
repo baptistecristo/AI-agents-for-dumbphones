@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { buildInboundAssistant, CallerContext } from "@/lib/agents/inbound";
+import { callerIsTrusted } from "@/lib/consent";
 import { defaultLanguage, normalizeLanguage } from "@/lib/language";
 import { agentInstructionsOf } from "@/lib/profile";
 import { inboundRateVerdict, rateLimitMessage } from "@/lib/rate-limit";
@@ -56,18 +57,27 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
   };
 }
 
+// Reconstruite à CHAQUE message tool-calls, jamais gardée entre deux. C'est ce
+// qui fait que le grant « appelant de confiance » se révoque pour de bon : il
+// est relu ici, en base, au même titre que le code jetable de l'appel. Rien de
+// ce grant n'est passé à l'assistant ni retenu ailleurs.
 async function sessionFor(callId: string): Promise<CallSession> {
   const { data } = await supabaseAdmin()
     .from("call_logs")
     .select("user_id, from_number, pin_verified, direction, language")
     .eq("vapi_call_id", callId)
     .maybeSingle();
+  const userId = data?.user_id ?? null;
+  const callerNumber = data?.from_number ?? null;
   return {
     callId,
     channel: "voice",
-    userId: data?.user_id ?? null,
-    callerNumber: data?.from_number ?? null,
+    userId,
+    callerNumber,
     verified: data?.pin_verified ?? false,
+    // user_id n'est renseigné que si le numéro correspond à un phones vérifié
+    // (callerContextFor) : un appelant inconnu n'a donc aucun grant à trouver.
+    trustedCaller: await callerIsTrusted(userId, callerNumber),
     language: normalizeLanguage(data?.language),
   };
 }

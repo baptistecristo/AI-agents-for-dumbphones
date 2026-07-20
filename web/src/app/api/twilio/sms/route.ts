@@ -95,7 +95,20 @@ export async function POST(req: Request) {
   await db.from("sms_logs").insert({ user_id: userId, direction: "inbound", e164: from, body });
 
   const verified = userId ? await loadTextVerified(userId, from) : false;
-  const session: CallSession = { callId: "sms", channel: "text", userId, callerNumber: from, verified, language };
+  // trustedCaller reste faux par TEXTE, et sans lecture en base : le grant ne
+  // dispense que des lectures, or elles sont déjà libres ici (la réponse ne part
+  // qu'au numéro enregistré, cf. gate.ts), et les écritures exigent le PIN, que
+  // le grant ne remplace pas. Aller le chercher coûterait une requête pour
+  // aucun effet ; le laisser faux garde le canal texte fermé par défaut.
+  const session: CallSession = {
+    callId: "sms",
+    channel: "text",
+    userId,
+    callerNumber: from,
+    verified,
+    trustedCaller: false,
+    language,
+  };
 
   let reply: string;
   if (looksLikeKeywordCommand(body)) {

@@ -91,6 +91,16 @@ export type DashboardCopy = {
     refusedAction: string;
     footer: string;
     scopeNote: string; // écrit en base : la note que la personne a réellement vue
+    // Numéros de confiance : un consentement par numéro, pas par domaine. Le
+    // texte doit dire ce que le grant ne couvre PAS, sinon il promet plus que le
+    // gate ne tient (gate.ts : les écritures redemandent le code).
+    trusted: {
+      title: string;
+      help: string;
+      empty: string;
+      stillAsks: string;
+      scopeNote: string;
+    };
   };
   compte: {
     eyebrow: string;
@@ -291,6 +301,14 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
       footer:
         "Chaque changement s'ajoute au registre avec la date et l'heure. Rien n'est effacé : tu gardes l'historique complet de tes choix.",
       scopeNote: "Modifié depuis l'espace personnel",
+      trusted: {
+        title: "Numéros de confiance",
+        help: "Depuis un numéro de confiance, l'agent ne redemande pas le code par SMS à chaque appel pour consulter ton agenda, tes contacts ou tes notes.",
+        empty: "Aucun numéro vérifié sur ce compte pour le moment.",
+        stillAsks:
+          "Ce que ça ne change pas : envoyer un SMS, passer un appel, créer ou déplacer un rendez-vous, marquer un rappel comme fait. Ces actions redemandent le code à chaque fois, parce qu'un numéro qui s'affiche peut être imité.",
+        scopeNote: "Numéro de confiance, modifié depuis l'espace personnel",
+      },
     },
     compte: {
       eyebrow: "Compte",
@@ -520,6 +538,14 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
       footer:
         "Every change is added to the register with the date and time. Nothing is erased: you keep the full history of your choices.",
       scopeNote: "Changed from the personal space",
+      trusted: {
+        title: "Trusted numbers",
+        help: "From a trusted number, the agent stops texting you a code on every call just to look at your calendar, your contacts or your notes.",
+        empty: "No verified number on this account yet.",
+        stillAsks:
+          "What this does not change: sending a text, placing a call, creating or moving an appointment, marking a reminder as done. Those ask for the code every time, because a number on a screen can be faked.",
+        scopeNote: "Trusted number, changed from the personal space",
+      },
     },
     compte: {
       eyebrow: "Account",
@@ -748,6 +774,14 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
       footer:
         "Cada cambio se añade al registro con la fecha y la hora. Nada se borra: conservas el historial completo de tus elecciones.",
       scopeNote: "Modificado desde el espacio personal",
+      trusted: {
+        title: "Números de confianza",
+        help: "Desde un número de confianza, el agente deja de enviarte un código en cada llamada solo para consultar tu agenda, tus contactos o tus notas.",
+        empty: "Ningún número verificado en esta cuenta por ahora.",
+        stillAsks:
+          "Lo que no cambia: enviar un SMS, hacer una llamada, crear o mover una cita, marcar un recordatorio como hecho. Eso pide el código cada vez, porque un número que aparece en pantalla puede falsificarse.",
+        scopeNote: "Número de confianza, modificado desde el espacio personal",
+      },
     },
     compte: {
       eyebrow: "Cuenta",

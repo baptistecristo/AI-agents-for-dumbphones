@@ -3,6 +3,7 @@
 // le runtime vocal (Vapi ou Pipecat).
 
 import { NextResponse } from "next/server";
+import { callerIsTrusted } from "@/lib/consent";
 import { safeEqual } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { normalizeLanguage } from "@/lib/language";
@@ -34,12 +35,18 @@ export async function POST(req: Request) {
     .eq("vapi_call_id", body.call_id)
     .maybeSingle();
 
+  const userId = data?.user_id ?? null;
+  const callerNumber = data?.from_number ?? null;
+
   const result = await executeTool(body.name, body.arguments, {
     callId: body.call_id,
     channel: "voice",
-    userId: data?.user_id ?? null,
-    callerNumber: data?.from_number ?? null,
+    userId,
+    callerNumber,
     verified: data?.pin_verified ?? false,
+    // Le grant appartient au numéro, pas au runtime : le même consentement vaut
+    // ici et sur le chemin Vapi, et il est relu en base à chaque appel d'outil.
+    trustedCaller: await callerIsTrusted(userId, callerNumber),
     language: normalizeLanguage(data?.language), // absent -> 'fr'
   });
   return NextResponse.json({ result });

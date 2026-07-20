@@ -193,6 +193,13 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
   The weather only ever gets your city, and a route "from home" asks where you're
   starting from until you've given the code. Anything that sends or commits also gets a
   two-step voice confirmation.
+- **Trusted numbers, and taking it back.** From the dashboard you can mark one of your
+  own verified numbers trusted, so the agent stops asking for a code on every call to
+  **read** your calendar, contacts, saved notes or home address. It still asks for one to
+  send a text, place a call, create or move an appointment, or mark a reminder done.
+  Caller-ID is spoofable, so no standing grant covers an action that leaves something
+  behind. Numbers start untrusted, you grant them one at a time, and revoking writes a
+  new line in the same append-only register that the next call reads.
 - **External content is data, never instructions.** Tool outputs are returned to the model
   as data, never merged into the instruction channel.
 
