@@ -18,7 +18,7 @@ const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? "Agent";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | undefined>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // Un lien magique dont le redirect_to a été rabattu sur la Site URL atterrit
   // ici : on le rend à /auth/callback plutôt que d'afficher la vitrine comme si

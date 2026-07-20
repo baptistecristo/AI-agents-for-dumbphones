@@ -5,7 +5,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isOnboardingComplete } from "@/lib/auth/onboarding";
+import { shouldEnterOnboarding } from "@/lib/auth/onboarding";
 import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -34,10 +34,12 @@ export default async function PersonalAreaLayout({ children }: { children: React
   ]);
 
   // La garde d'onboarding vit ici, une fois pour toutes les sous-pages. Le
-  // verdict vient d'isOnboardingComplete, comme dans /onboarding : les deux
-  // gardes se renvoyaient la balle sur les états qu'elles jugeaient différemment.
-  if (profile?.onboarding_step && !isOnboardingComplete(profile.onboarding_step))
-    redirect("/onboarding");
+  // verdict vient de shouldEnterOnboarding, miroir exact de celui de
+  // /onboarding : les deux gardes se renvoyaient la balle sur les états qu'elles
+  // jugeaient différemment. La valeur part brute : un compte sans ligne profiles
+  // n'a pas fini son onboarding, il ne l'a même pas commencé, et le tableau de
+  // bord était seul à le lire à l'envers, si bien qu'il le laissait entrer.
+  if (shouldEnterOnboarding(profile?.onboarding_step)) redirect("/onboarding");
 
   const phone = phones?.[0]?.e164 ?? null;
   const lang = await siteLanguage();
