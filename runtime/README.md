@@ -63,10 +63,30 @@ voix française, et rien d'autre ne le signalerait. Le runtime interroge donc
 Piper simplement injoignable ne bloque pas le démarrage (il finit peut-être de
 démarrer) : c'est alors l'appel qui échouera, avec un message nommant l'URL.
 
-`PIPER_BASE_URL` est la **racine** du serveur (`http://localhost:5000`), pas une
-route : les versions publiées de Piper (1.3 à 1.4.2) servent la synthèse sur
-`POST /`. La route `/synthesize` que documentent Piper et Pipecat n'existe que
-sur `master`, non publié — la viser donne un 404.
+`PIPER_BASE_URL` est la **racine** du serveur (`http://localhost:5000`), jamais
+une route : le runtime en dérive `GET /voices` **et** la route de synthèse. Y
+coller `/synthesize` casserait les deux, et le démarrage le refuse.
+
+### La route de synthèse a changé en 1.5.0
+
+| `piper-tts` | Synthèse | Ce que fait `/` |
+|---|---|---|
+| 1.3 à 1.4.2 | `POST /` | la synthèse elle-même |
+| 1.5.0 et plus (17/07/2026) | `POST /synthesize` | page de test, `GET` seulement |
+
+`pip install "piper-tts[http]"` installe aujourd'hui la 1.5.0 : un runtime qui
+viserait `/` en dur récolterait un **405 à chaque synthèse**. Le runtime résout
+donc la route lui-même au démarrage (`PIPER_SYNTHESIZE_PATH=auto`, le défaut) :
+il sonde les deux formes en `OPTIONS`, garde celle qui accepte `POST`, et refuse
+de démarrer si aucune ne répond. Les deux versions marchent sans rien régler.
+
+Ce contrôle est distinct de celui des voix, et il faut les deux : `GET /voices`
+existe à l'identique dans toutes les versions, il laisserait donc démarrer un
+runtime dont aucune synthèse ne passe.
+
+Pour épingler la route (proxy devant Piper qui empêche la détection) :
+`PIPER_SYNTHESIZE_PATH=/synthesize` ou `PIPER_SYNTHESIZE_PATH=/`. Une valeur
+épinglée fausse est refusée au démarrage elle aussi, pas au premier appel.
 
 ⚠️ L'image `linuxserver/piper` ne convient pas : elle emballe l'ancien Piper de
 Rhasspy et parle le protocole Wyoming sur le port 10200, pas cette API HTTP.

@@ -111,8 +111,14 @@ async def run_call(
     # Voix Piper monolingue : elle reste fixe pendant tout l'appel (voir README).
     # La synthèse tourne dans un serveur Piper séparé (config.PIPER_BASE_URL) :
     # le runtime n'embarque pas `piper-tts`. Voir piper_http.py.
+    #
+    # La route est lue sur `config` à CHAQUE appel, et non importée une fois pour
+    # toutes : le démarrage de server.py y écrit la route effectivement détectée
+    # (PIPER_SYNTHESIZE_PATH=auto), et `from config import ...` figerait la
+    # valeur d'avant détection.
     tts = PiperHttpTTSService(
         base_url=config.PIPER_BASE_URL,
+        synthesize_path=config.PIPER_SYNTHESIZE_PATH,
         settings=PiperHttpTTSService.Settings(voice=config.piper_voice_for(language)),
     )
 
