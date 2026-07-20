@@ -41,6 +41,13 @@ machine.
 someone else absorbs the per-segment cost. Here the default is 153, one
 concatenated GSM-7 segment, so split points line up with what is billed.
 
+**A reply has a spend ceiling.** An agent that answers a one-line question at
+chat length is a familiar failure; here the user pays for it by the segment. One
+turn may spend `maxReplySegments`, six by default, about 0.72 EUR at Time2Chat's
+rate. Past that the plugin drops the rest and marks the last message with
+`[...]`, so someone waiting on a phone can tell the answer was cut rather than
+never sent.
+
 **One character can double the bill.** Anything outside GSM 03.38 re-encodes the
 whole message as UCS-2 and drops capacity from 160 characters to 70. In French
 that means `ê î ô û â ë ï ç` and every emoji. `é è à ù ì ò` are free. `toGsm7`
@@ -75,9 +82,15 @@ yet.
 
 Verified:
 
-- 179 tests pass
+- 212 tests pass
 - typechecks against the real `openclaw` SDK with no casts or `any`
-- builds, and the built module loads with a working `register` function
+- builds, and the built module loads with a working `register` function, a
+  `gateway.startAccount` hook and the segment-aligned chunk limit
+- inbound is wired end to end: the poll loop hands each message to
+  `inbound.run`, which routes it to an agent and sends the reply back through
+  the delivery adapter. TypeScript checks the turn against the SDK's
+  `AssembledChannelTurn` and the adapter against `ChannelEventDeliveryAdapter`.
+  I broke each one on purpose to confirm the compiler catches it.
 - the OVH request signature is implemented against reference vectors computed
   independently from OVH's published formula, including a case proving the
   escaped and unescaped request bodies hash differently
@@ -89,9 +102,15 @@ Not verified, and needing a real account:
 - whether a Time2Chat 09 number appears under `/virtualNumbers`, which decides
   which of the two send routes is correct. One `GET /sms/{service}/senders/{sender}`
   after provisioning settles it.
-- **inbound is not yet wired to OpenClaw.** The poll loop is built and tested,
-  and calls an `onMessage` handler; connecting that handler to the gateway's
-  `inbound.run` is the remaining integration work.
+- **the inbound path has never carried a real message.** The tests drive it with
+  a fake runtime that calls the adapter the way OpenClaw does. No live gateway
+  has run it.
+
+Known gap:
+
+- **`dmPolicy: "pairing"` behaves as `closed`.** The allow-list is the whole
+  gate, with no pairing-code exchange. Real pairing needs the SDK's ingress
+  resolver and pairing adapter.
 
 ## Blockers outside the code
 
@@ -117,7 +136,8 @@ Not verified, and needing a real account:
       "virtualNumber": "+33937000000",
       "allowFrom": ["+33612345678"],
       "pollIntervalSeconds": 20,
-      "textChunkLimit": 153
+      "textChunkLimit": 153,
+      "maxReplySegments": 6
     }
   }
 }

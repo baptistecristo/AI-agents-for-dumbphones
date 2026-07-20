@@ -55,9 +55,15 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
 /**
  * Decide whether a sender may talk to the agent.
  *
- * An empty allow-list with a `closed` policy refuses everyone, which is the
- * safe reading of "no one is allowed yet". Under `open` it admits anyone,
- * which is only sensible for a number nobody knows.
+ * An empty allow-list refuses everyone, which is the safe reading of "no one is
+ * allowed yet". Under `open` it admits anyone, which is only sensible for a
+ * number nobody knows.
+ *
+ * Note that `pairing` currently behaves exactly like `closed`: the allow-list
+ * is the whole gate, and there is no pairing-code exchange. Real pairing means
+ * wiring the SDK's ingress resolver and pairing adapter, which is not done here.
+ * The value is accepted so config written against it keeps working, but it does
+ * not yet buy anything beyond the allow-list.
  */
 export function isSenderAllowed(account: ResolvedOvhSmsAccount, sender: string): boolean {
   if (account.dmPolicy === "open") return true;

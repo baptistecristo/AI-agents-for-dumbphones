@@ -26,6 +26,16 @@ export const DEFAULT_TEXT_CHUNK_LIMIT = 153;
 
 export const DEFAULT_POLL_INTERVAL_SECONDS = 20;
 
+/**
+ * Ceiling on what a single agent reply may cost.
+ *
+ * Six segments is roughly 900 characters, which is a generous answer by SMS
+ * standards and about 0.72 EUR on Time2Chat's two-credits-per-SMS rate. The
+ * ceiling exists because the failure it guards against is not hypothetical: an
+ * agent that answers at chat length turns one question into a bill.
+ */
+export const DEFAULT_MAX_REPLY_SEGMENTS = 6;
+
 export const OvhSmsAccountSchema = z.object({
   enabled: z.boolean().optional(),
   applicationKey: z.string().optional(),
@@ -41,6 +51,8 @@ export const OvhSmsAccountSchema = z.object({
   region: z.enum(["eu", "ca", "us"]).optional(),
   pollIntervalSeconds: z.number().int().positive().optional(),
   textChunkLimit: z.number().int().positive().optional(),
+  /** Most segments one agent reply may spend before it is cut short. */
+  maxReplySegments: z.number().int().positive().optional(),
   /** Phone numbers permitted to talk to the agent. */
   allowFrom: z.array(z.string()).optional(),
   dmPolicy: z.enum(["open", "pairing", "closed"]).optional(),
@@ -64,6 +76,7 @@ export interface ResolvedOvhSmsAccount {
   region: OvhRegion;
   pollIntervalSeconds: number;
   textChunkLimit: number;
+  maxReplySegments: number;
   allowFrom: string[];
   dmPolicy: "open" | "pairing" | "closed";
 }
@@ -121,6 +134,7 @@ export function resolveAccount(cfg: unknown, accountId?: string | null): Resolve
     region,
     pollIntervalSeconds: source.pollIntervalSeconds ?? DEFAULT_POLL_INTERVAL_SECONDS,
     textChunkLimit: source.textChunkLimit ?? DEFAULT_TEXT_CHUNK_LIMIT,
+    maxReplySegments: source.maxReplySegments ?? DEFAULT_MAX_REPLY_SEGMENTS,
     allowFrom: (source.allowFrom ?? []).map(normalizePhone).filter((n) => n !== ""),
     dmPolicy: source.dmPolicy ?? "pairing",
   };
@@ -152,6 +166,7 @@ export function inspectAccount(account: ResolvedOvhSmsAccount): Record<string, u
     region: account.region,
     pollIntervalSeconds: account.pollIntervalSeconds,
     textChunkLimit: account.textChunkLimit,
+    maxReplySegments: account.maxReplySegments,
     // Never echo the secret triple back.
     credentials: account.applicationKey === "" ? "missing" : "present",
   };

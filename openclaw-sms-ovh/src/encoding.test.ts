@@ -7,6 +7,8 @@ import {
   FRENCH_UCS2_TRAPS,
   isGsm7,
   toGsm7,
+  TRUNCATION_MARKER,
+  truncateToSegments,
   ucs2Offenders,
 } from "./encoding.js";
 
@@ -168,5 +170,61 @@ describe("estimateCost", () => {
     expect(estimateCost(plain, OVH_PER_SEGMENT)).toBeCloseTo(0.06);
     // 150 UCS-2 units at 67/part = 3 segments. Six cents becomes eighteen.
     expect(estimateCost(accented, OVH_PER_SEGMENT)).toBeCloseTo(0.18);
+  });
+});
+
+describe("truncateToSegments", () => {
+  it("leaves a message that already fits alone", () => {
+    expect(truncateToSegments("court", 1)).toBe("court");
+  });
+
+  it("cuts a long message down to the budget", () => {
+    const result = truncateToSegments("mot ".repeat(200).trim(), 1);
+    expect(analyze(result).segments).toBe(1);
+  });
+
+  it("marks that it cut something", () => {
+    const result = truncateToSegments("mot ".repeat(200).trim(), 1);
+    expect(result.endsWith("[...]")).toBe(true);
+  });
+
+  it("uses a marker that stays inside GSM-7", () => {
+    // An ellipsis character would re-encode the whole message as UCS-2 and
+    // halve its capacity, to make room for the sign that we ran out of room.
+    expect(isGsm7(TRUNCATION_MARKER)).toBe(true);
+  });
+
+  it("does not overshoot the budget when the text forces UCS-2", () => {
+    const accented = "prêt ".repeat(100).trim();
+    const result = truncateToSegments(accented, 2);
+    expect(analyze(result).segments).toBeLessThanOrEqual(2);
+  });
+
+  it("returns as much as fits, not a token amount", () => {
+    const result = truncateToSegments("mot ".repeat(200).trim(), 2);
+    const info = analyze(result);
+    expect(info.segments).toBe(2);
+    // Should fill the budget rather than stopping early.
+    expect(info.units).toBeGreaterThan(200);
+  });
+
+  it("prefers a word boundary when one is close by", () => {
+    const result = truncateToSegments("mot ".repeat(200).trim(), 1);
+    expect(result).not.toMatch(/mo\[\.\.\.\]$/);
+  });
+
+  it("hard-cuts a single unbroken token rather than returning nothing", () => {
+    const result = truncateToSegments("a".repeat(500), 1);
+    expect(analyze(result).segments).toBe(1);
+    expect(result.length).toBeGreaterThan(100);
+  });
+
+  it("respects a budget of more than one segment", () => {
+    const result = truncateToSegments("mot ".repeat(500).trim(), 3);
+    expect(analyze(result).segments).toBe(3);
+  });
+
+  it("refuses a non-positive budget", () => {
+    expect(() => truncateToSegments("x", 0)).toThrowError(RangeError);
   });
 });

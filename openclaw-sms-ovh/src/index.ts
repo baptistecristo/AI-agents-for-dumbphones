@@ -21,6 +21,7 @@ import { z } from "zod";
 
 import {
   CHANNEL_ID,
+  DEFAULT_TEXT_CHUNK_LIMIT,
   inspectAccount,
   isConfigured,
   listAccountIds,
@@ -30,7 +31,9 @@ import {
   unconfiguredReason,
   type ResolvedOvhSmsAccount,
 } from "./plugin/accounts.js";
+import { setOvhSmsRuntime } from "./plugin/runtime.js";
 import { sendText as deliverText } from "./plugin/send.js";
+import { startAccount } from "./plugin/start.js";
 
 export * from "./encoding.js";
 export * from "./filter/pipeline.js";
@@ -40,7 +43,10 @@ export * from "./ovh/poller.js";
 export * from "./ovh/sms.js";
 export * from "./plugin/accounts.js";
 export * from "./plugin/gateway.js";
+export * from "./plugin/inbound.js";
+export * from "./plugin/runtime.js";
 export * from "./plugin/send.js";
+export * from "./plugin/start.js";
 
 const LOOKS_LIKE_PHONE = /^\+?[\d\s().-]{6,}$/;
 
@@ -88,8 +94,15 @@ export const ovhSmsPlugin: ChannelPlugin<ResolvedOvhSmsAccount> = {
       hint: "<+33612345678>",
     },
   },
+  gateway: {
+    startAccount: (ctx) => startAccount(ctx),
+  },
   outbound: {
     deliveryMode: "gateway",
+    // Chunk where the money is, not where the prose is. The reply pipeline
+    // splits before delivery ever sees the text, so this is what decides how
+    // many segments an answer costs.
+    textChunkLimit: DEFAULT_TEXT_CHUNK_LIMIT,
     sendText: async (ctx) => {
       const account = resolveAccount(ctx.cfg, ctx.accountId);
       const result = await deliverText({
@@ -127,6 +140,9 @@ const entry: OvhSmsChannelEntry = defineChannelPluginEntry({
   name: "SMS (OVH)",
   description: "Two-way SMS over an OVHcloud dedicated long number.",
   plugin: ovhSmsPlugin,
+  // The runtime arrives here and is needed later inside the polling loop, on a
+  // path the host never calls into. See `plugin/runtime.ts`.
+  setRuntime: setOvhSmsRuntime,
 });
 
 export default entry;

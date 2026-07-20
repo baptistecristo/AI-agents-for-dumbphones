@@ -204,6 +204,59 @@ export function chunk(text: string, maxCharsPerPart: number): string[] {
 }
 
 /**
+ * Marker appended to a reply that was cut short.
+ *
+ * Three ASCII dots rather than an ellipsis character on purpose. `…` is absent
+ * from GSM 03.38, so using it would re-encode the entire message as UCS-2 and
+ * halve its capacity, in order to make room for the sign that we had run out of
+ * room. The leading space keeps it off the end of the last word.
+ */
+export const TRUNCATION_MARKER = " [...]";
+
+/**
+ * Cut text down until it fits inside `maxSegments`, marking that it was cut.
+ *
+ * This is a spend ceiling, not a formatting nicety. An agent that answers a
+ * one-line question with nine paragraphs is a real and recurring failure mode,
+ * and on a metered channel it is charged to the user per segment rather than
+ * merely being annoying to read.
+ *
+ * Segment count is monotonic in prefix length: appending characters can only
+ * add units, and can only push the encoding from GSM-7 to UCS-2, never back.
+ * So the longest prefix that fits can be found by bisection.
+ */
+export function truncateToSegments(
+  text: string,
+  maxSegments: number,
+  marker: string = TRUNCATION_MARKER,
+): string {
+  if (maxSegments <= 0) throw new RangeError("maxSegments must be positive");
+
+  const trimmed = text.trim();
+  if (analyze(trimmed).segments <= maxSegments) return trimmed;
+
+  const fits = (length: number): boolean =>
+    analyze(trimmed.slice(0, length).trimEnd() + marker).segments <= maxSegments;
+
+  let low = 0;
+  let high = trimmed.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (fits(mid)) low = mid;
+    else high = mid - 1;
+  }
+
+  const prefix = trimmed.slice(0, low).trimEnd();
+  // Back off to a word boundary only when one is close by. A distant space
+  // means the tail is a single long token, and discarding it to reach that
+  // space would throw away far more than the half-word it saves.
+  const lastSpace = prefix.lastIndexOf(" ");
+  const body = lastSpace >= 0 && prefix.length - lastSpace <= 40 ? prefix.slice(0, lastSpace) : prefix;
+
+  return (body + marker).trim();
+}
+
+/**
  * What a message will actually cost to deliver.
  *
  * The notification filter needs this to decide whether an alert is worth
