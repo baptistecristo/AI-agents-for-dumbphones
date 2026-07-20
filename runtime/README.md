@@ -92,6 +92,94 @@ Pour épingler la route (proxy devant Piper qui empêche la détection) :
 Rhasspy et parle le protocole Wyoming sur le port 10200, pas cette API HTTP.
 `OHF-Voice/piper1-gpl` fournit un `Dockerfile` (`docker build -t piper-tts .`,
 puis `docker run -p 5000:5000 piper-tts server -m fr_FR-siwis-medium`).
+Le `compose.yaml` de la racine fait tout ça pour vous (section suivante).
+
+## Avec Docker (compose)
+
+`compose.yaml`, à la racine du dépôt, monte le runtime et son serveur Piper
+ensemble. C'est le chemin le plus court : il fait à votre place le venv, le
+téléchargement des voix et le câblage des deux processus.
+
+```bash
+cp runtime/.env.example runtime/.env   # puis remplir RUNTIME_API_SECRET au minimum
+docker compose up --build
+```
+
+Le premier démarrage est long : construction de l'image de Piper depuis la
+source, téléchargement des trois voix, puis du modèle faster-whisper (~1,5 Go
+en `medium`) au premier appel. Les deux derniers atterrissent dans des volumes,
+donc une seule fois.
+
+| Service | Rôle | Exposé |
+|---|---|---|
+| `piper-voices` | Télécharge les trois voix dans le volume, puis sort. `piper` attend qu'il ait réussi. | non |
+| `piper` | Serveur TTS. Image construite depuis `OHF-Voice/piper1-gpl` (tag épinglé). | non, réseau interne seulement |
+| `runtime` | Ce dossier : FastAPI, Pipecat, STT, LLM. | `:8000` |
+
+Piper n'a **aucune authentification** : il reste sur le réseau interne, sans
+`ports:`, joignable du seul runtime. Le port 8000 du runtime est le seul ouvert
+sur l'hôte, parce que l'opérateur téléphonique doit l'atteindre.
+
+Les deux conteneurs tournent sans capacité (`cap_drop: ALL`) et avec
+`no-new-privileges` ; le runtime tourne en utilisateur non root (UID 10001) et
+porte un `HEALTHCHECK` sur `/health`.
+
+### Ce qui n'est pas dans le compose
+
+L'API Next.js (`web/`) et Ollama tournent **sur l'hôte**, pas ici. Dans un
+conteneur, `localhost` désigne le conteneur lui-même : `NEXT_API_URL` et
+`OLLAMA_URL` sont donc réécrits vers `host.docker.internal`. Si le web est
+déployé ailleurs (Vercel), mettez son URL publique dans `.env` et retirez la
+ligne `NEXT_API_URL` du `compose.yaml`.
+
+### Les voix arrivent par un volume
+
+Elles ne sont pas dans l'image d'OHF-Voice : son entrypoint les lit dans
+`/data`. Le service `piper-voices` les y dépose une fois pour toutes dans le
+volume `piper-voices`, avant que le serveur ne démarre. Changer une voix
+suppose donc de relancer ce service :
+
+```bash
+docker compose run --rm piper-voices download fr_FR-tom-medium
+docker compose up -d --force-recreate piper
+```
+
+Les modèles de voix ne sont pas sous GPL : `fr_FR-siwis-medium` est sous licence
+MIT, son corpus d'entraînement sous CC-BY 4.0. Ils ne relèvent pas de la
+séparation décrite ci-dessous.
+
+### Pourquoi Piper garde son image à lui
+
+Une contrainte de licence, pas un goût pour les microservices.
+`piper-tts` est en GPL-3.0-or-later et ce dépôt en Apache-2.0 : la
+compatibilité ne va que dans un sens, du code GPL ne peut pas entrer dans un
+artefact Apache-2.0. Un fichier compose qui **nomme** une source tierce ne
+distribue rien, exactement comme une ligne de `requirements.txt`. Une image du
+runtime qui **embarquerait** `piper-tts` distribuerait, elle, et les
+obligations de la GPL-3.0 s'attacheraient à cette image.
+
+Le `Dockerfile` du runtime le vérifie plutôt que d'y compter : sa dernière
+étape de construction échoue si `pip show piper-tts` réussit. La CI fait le
+même contrôle sur l'arbre de dépendances.
+
+Construire l'image de Piper sur votre machine ne distribue rien non plus : la
+GPL-3.0 §0 exclut « executing it on a computer ». Ce qui distribuerait, c'est
+pousser une image vers un registre. La CI de ce dépôt construit l'image du
+runtime pour vérifier qu'elle tient debout, et ne la pousse nulle part : aucun
+job ne se connecte à un registre. Détail complet dans l'issue #26.
+
+⚠️ **Sortir Piper ne suffit pas à rendre cette image publiable.**
+`pyyaml-include` est lui aussi en GPL-3.0-or-later, et c'est une dépendance de
+**base** de `pipecat-ai` (`pyyaml-include<2,>=1.4`), pas un extra facultatif :
+il est donc dans l'image. Le code n'est pas importé par le runtime (ni `bot`
+ni `server` ne le chargent), mais il est bien présent sur le disque, et
+publier l'image le distribuerait.
+
+Rien n'est distribué aujourd'hui, puisque rien n'est poussé. Le problème est
+latent, de la même famille que l'import Piper en processus avant l'#28 : il
+faudra le trancher avant qu'une image parte vers un registre. L'étape
+d'inventaire du `Dockerfile` l'imprime à chaque construction pour qu'il reste
+sous les yeux.
 
 ## Branchement opérateur
 

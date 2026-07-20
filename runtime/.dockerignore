@@ -1,0 +1,46 @@
+# Contexte de build de l'image du runtime (compose.yaml : `context: ./runtime`).
+#
+# Deux raisons de le tenir serré : ce qui entre dans le contexte peut finir
+# dans une couche de l'image, et le `COPY . /app` du Dockerfile copie tout ce
+# qui reste. Un `.env` oublié ici serait un secret embarqué dans l'image.
+
+# ---- Secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Environnements Python locaux ----
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.python-version
+
+# ---- Caches d'outils ----
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Modèles téléchargés (volume, jamais une couche d'image) ----
+models/
+*.onnx
+*.onnx.json
+
+# ---- Inutile à l'exécution ----
+tests/
+requirements-dev.txt
+README.md
+Dockerfile
+.dockerignore
+
+# ---- Divers ----
+.git/
+.gitignore
+.DS_Store
+Thumbs.db
+*.swp

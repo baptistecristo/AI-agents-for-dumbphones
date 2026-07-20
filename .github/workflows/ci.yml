@@ -69,6 +69,30 @@ jobs:
       - run: ruff check .
         working-directory: runtime
 
+  docker:
+    name: runtime — image (construction seule)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      # Le fichier compose doit rester analysable sans secrets : `runtime/.env`
+      # n'existe pas ici, d'où le `required: false` côté compose.
+      - name: compose.yaml est valide
+        run: docker compose config -q
+      # Construction SEULE, jamais de `push`, et aucune connexion à un registre.
+      # C'est délibéré et c'est une contrainte de licence, pas une économie de
+      # CI : construire chez soi ne distribue rien (GPL-3.0 §0 exclut
+      # « executing it on a computer »), pousser vers ghcr.io ou Docker Hub
+      # distribuerait. Voir l'issue #26 et runtime/README.md.
+      #
+      # Ce job sert surtout de garde-fou : l'étape finale du Dockerfile échoue
+      # si `piper-tts` (GPL-3.0-or-later) revenait dans l'image, et elle
+      # imprime l'inventaire des paquets GPL qui y restent.
+      - name: Construire l'image du runtime (sans push)
+        run: docker build -t dumbphone-voice-runtime:ci ./runtime
+      # Le service Piper n'est pas construit ici : son image vient de la source
+      # d'OHF-Voice, c'est une construction longue, et rien de ce dépôt n'en
+      # dépend à la compilation.
+
   scripts:
     name: scripts — tests
     runs-on: ubuntu-latest
