@@ -1,0 +1,15 @@
+{
+  "id": "sms-ovh",
+  "name": "SMS (OVH)",
+  "description": "Two-way SMS over an OVHcloud dedicated long number, for reaching a basic phone.",
+  "activation": {
+    "onStartup": false,
+    "onChannels": ["sms-ovh"]
+  },
+  "channels": ["sms-ovh"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
