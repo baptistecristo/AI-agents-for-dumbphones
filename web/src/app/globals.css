@@ -30,21 +30,29 @@
   --ivory-100: #f0eee6;
   --ivory-200: #e7e3d7;
   --ivory-300: #d9d5c8;
+  /* Le cran manquant entre le filet et l'encre. Un champ de saisie n'a que sa
+     bordure pour dire où il commence, donc 3:1 minimum (WCAG 1.4.11), là où
+     ivoire-300 plafonne à 1,26:1 : bon entre deux cartes, insuffisant partout
+     ailleurs. Valeur trouvée en descendant le dégradé vers l'encre jusqu'au
+     premier point qui tient 3:1 sur les trois fonds, survol compris. Descendre
+     ivoire-300 en HSL virait à l'olive, la saturation d'un quasi-neutre
+     remontant à mesure qu'il fonce ; l'interpolation reste sur l'axe chaud. */
+  --ivory-400: #848278;
 
   /* Encre : le même axe chaud, côté sombre. Le filet ivoire-300 et l'encre
      appartiennent au même dégradé, d'où l'absence de gris froid nulle part. */
-  --ink-500: #78736a;
+  --ink-500: #69655d;
   --ink-700: #46433b;
   --ink-900: #14130f;
 
   /* Argile : le seul accent chromatique du site. */
   --clay-100: #ecdccf;
   --clay-400: #cc785c;
-  --clay-600: #bd5b3a;
+  --clay-600: #9c4b30;
 
   /* Statuts : trois teintes sourdes, jamais décoratives. */
-  --moss: #4f7a52;
-  --ochre: #9a6a2f;
+  --moss: #486e4a;
+  --ochre: #875d2a;
   --rust: #b0402f;
 }
 
@@ -56,7 +64,8 @@
   --ink: var(--ink-900); /* titres, texte principal */
   --slate: var(--ink-700); /* texte courant */
   --muted: var(--ink-500); /* légendes, secondaire */
-  --line: var(--ivory-300); /* filets et bordures */
+  --line: var(--ivory-300); /* filets décoratifs : séparer deux cartes, souligner une section */
+  --line-strong: var(--ivory-400); /* la bordure d'un contrôle : champ, bouton fantôme, segment */
   --clay: var(--clay-600); /* accent : liens, marques, focus */
   --clay-soft: var(--clay-400); /* l'argile reconnaissable, en petites touches */
   --clay-tint: var(--clay-100); /* lavis, la voix de l'agent dans la transcription */
@@ -82,6 +91,7 @@
   --color-slate: var(--slate);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-clay: var(--clay);
   --color-clay-soft: var(--clay-soft);
   --color-clay-tint: var(--clay-tint);

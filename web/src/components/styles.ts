@@ -6,9 +6,11 @@
 // les jetons `rounded-control` / `rounded-card` / `rounded-chip`, l'interlettrage
 // par `tracking-eyebrow`. Voir web/docs/design-system.md avant d'en ajouter une.
 
-// Surface d'un champ texte / d'un select.
+// Surface d'un champ texte / d'un select. Bordure `line-strong` et pas `line` :
+// un champ n'a que son contour pour dire où il commence, donc il tombe sous les
+// 3:1 de WCAG 1.4.11, quand `line` est un filet décoratif à 1,26:1.
 export const field =
-  "w-full rounded-control border border-line bg-surface px-4 py-3 text-ink placeholder:text-muted transition-colors focus:border-clay";
+  "w-full rounded-control border border-line-strong bg-surface px-4 py-3 text-ink placeholder:text-muted transition-colors focus:border-clay";
 
 // La petite étiquette au-dessus d'un champ.
 export const fieldLabel = "mb-1.5 block text-sm font-medium text-ink";

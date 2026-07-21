@@ -54,7 +54,7 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
   }
 
   const selectClass =
-    "w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink transition-colors focus:border-clay";
+    "w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-sm text-ink transition-colors focus:border-clay";
   const labelClass = "mb-1 block text-xs font-bold uppercase tracking-wide text-muted";
 
   return (
@@ -62,7 +62,7 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
       {/* Titre + bascule de langue */}
       <div className="mb-4 flex items-start justify-between gap-4">
         <h1 className="font-display text-3xl leading-tight text-ink md:text-4xl">{tr.pageTitle}</h1>
-        <div className="inline-flex shrink-0 overflow-hidden rounded-control border border-line text-xs font-semibold">
+        <div className="inline-flex shrink-0 overflow-hidden rounded-control border border-line-strong text-xs font-semibold">
           {(["fr", "en", "es"] as Lang[]).map((l) => (
             <button
               key={l}
@@ -281,7 +281,7 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
           href={shop.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 flex items-center justify-center gap-1.5 rounded-control border border-line px-4 py-2.5 text-sm font-medium text-clay transition-colors hover:bg-cream-deep"
+          className="mt-4 flex items-center justify-center gap-1.5 rounded-control border border-line-strong px-4 py-2.5 text-sm font-medium text-clay transition-colors hover:bg-cream-deep"
         >
           {tr.shopAt} {shop.label}
           <span aria-hidden className="text-xs">

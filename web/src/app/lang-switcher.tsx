@@ -13,7 +13,7 @@ export function LangSwitcher({ current }: { current: Language }) {
     <form
       action={setSiteLanguage}
       aria-label="Langue du site / Site language / Idioma del sitio"
-      className="flex overflow-hidden rounded-control border border-line text-xs font-semibold"
+      className="flex overflow-hidden rounded-control border border-line-strong text-xs font-semibold"
     >
       {(Object.keys(LABELS) as Language[]).map((l) => (
         <button

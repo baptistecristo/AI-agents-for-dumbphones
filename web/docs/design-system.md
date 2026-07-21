@@ -115,48 +115,72 @@ wins, which is how buttons lost their focus indicator until this was removed fro
 
 ### Contrast, measured
 
-Ratios against the two grounds the site actually uses. AA needs 4.5:1 for normal text, 3:1
-for text at 24px or 18.66px bold, and 3:1 for the boundary of a control you must be able to
-find.
+Every pair the site actually puts together, computed from `globals.css` itself. AA needs
+4.5:1 for normal text and 3:1 for the boundary of a control you have to be able to find. The
+site writes almost everything at `text-sm`, so the large-text exemption applies nowhere and
+is not used below.
+
+`src/app/contrast.test.ts` recomputes this from the stylesheet on every run. A primitive that
+drifts fails there rather than in review, which is what went wrong before: this table once
+claimed ratios the palette no longer held.
 
 | Pair | Ratio | AA at normal size |
 |---|---|---|
-| `ink` on `cream` | 16.00:1 | pass |
 | `ink` on `surface` | 17.64:1 | pass |
+| `ink` on `cream` | 16.00:1 | pass |
+| `cream` on `ink` | 16.00:1 | pass |
 | `ink` on `cream-deep` | 14.49:1 | pass |
 | `ink` on `clay-tint` | 13.90:1 | pass |
-| `cream` on `ink` | 16.00:1 | pass |
-| `slate` on `cream` | 8.50:1 | pass |
 | `slate` on `surface` | 9.37:1 | pass |
+| `slate` on `cream` | 8.50:1 | pass |
+| `slate` on `cream-deep` | 7.70:1 | pass |
+| `clay` on `surface` | 5.76:1 | pass |
 | `clay-soft` on `ink` | 5.67:1 | pass |
+| `ok` on `surface` | 5.53:1 | pass |
+| `muted` on `surface` | 5.51:1 | pass |
+| `danger` on `surface` | 5.51:1 | pass |
+| `warn` on `surface` | 5.49:1 | pass |
+| `clay` on `cream` | 5.22:1 | pass |
+| `ok` on `cream` | 5.01:1 | pass |
+| `muted` on `cream` | 4.99:1 | pass |
 | `danger` on `cream` | 4.99:1 | pass |
-| `muted` on `surface` | 4.47:1 | **fails**, large text only |
-| `ok` on `cream` | 4.27:1 | **fails**, large text only |
-| `clay` on `surface` | 4.22:1 | **fails**, large text only |
-| `muted` on `cream` | 4.05:1 | **fails**, large text only |
-| `warn` on `cream` | 4.04:1 | **fails**, large text only |
-| `clay` on `cream` | 3.83:1 | **fails**, large text only |
-| `muted` on `cream-deep` | 3.67:1 | **fails**, large text only |
-| `clay` on `cream-deep` | 3.47:1 | **fails**, large text only |
-| `clay` on `clay-tint` | 3.33:1 | **fails**, large text only |
-| `line` on `cream` | 1.26:1 | **fails** 1.4.11 for field borders |
+| `warn` on `cream` | 4.98:1 | pass |
+| `clay` on `cream-deep` | 4.73:1 | pass |
+| `ok` on `cream-deep` | 4.54:1 | pass |
+| `clay` on `clay-tint` | 4.54:1 | pass |
+| `muted` on `cream-deep` | 4.52:1 | pass |
+| `danger` on `cream-deep` | 4.52:1 | pass |
+| `warn` on `cream-deep` | 4.51:1 | pass |
 
-### Known gaps
+Non-text, where the bar is 3:1:
 
-These are real and not yet fixed. Fixing them means darkening primitives, which is a
-deliberate palette change, not a token change.
+| Pair | Ratio | 1.4.11 |
+|---|---|---|
+| `line-strong` on `surface` | 3.66:1 | pass |
+| `line-strong` on `cream` | 3.32:1 | pass |
+| `line-strong` on `cream-deep` | 3.01:1 | pass |
+| `clay` focus ring on `cream` | 5.22:1 | pass |
+| `line` on `cream` | 1.26:1 | decorative, exempt |
 
-1. `muted` and `clay` are the two heaviest-used text colours after `ink`, and both sit under
-   4.5:1 at `text-sm`. Every caption, hint and inline link on the site is affected.
-   `--ink-500` would need to reach roughly `#6b665d`, and `--clay-600` roughly `#a94e30`.
-2. `line` at 1.26:1 is fine as decoration between cards but is the only boundary a text input
-   has, so fields fail WCAG 1.4.11. Inputs need a darker border than panels do, which means
-   splitting `line` into two roles.
-3. The focus ring itself passes: `clay` on `cream` is 3.83:1, above the 3:1 the ring needs.
+### Two line roles, and why
+
+`line` is a hairline between two cards. It carries no meaning, nothing depends on finding it,
+and at 1.26:1 it is doing exactly what a hairline should.
+
+`line-strong` is the border of a control. A text field has nothing else to say where it
+starts: no fill that differs from the page, no shadow, no label inside it. That makes it a
+user interface component under WCAG 1.4.11, so it needs 3:1. The same goes for the ghost
+button and the segmented switches, whose border defines the target you click.
+
+Use `border-line` for panels, dividers and empty states. Use `border-line-strong` for
+anything a person types into or clicks. When unsure, ask whether a person has to locate the
+edge to use the thing.
 
 ### Checklist before shipping a screen
 
-- text at `text-sm` uses `ink` or `slate`, not `muted` or `clay`, when it carries meaning
+- `muted` and `clay` are safe at `text-sm` now that they meet AA, so use them for what they
+  mean (secondary, accent) rather than avoiding them
+- a control you type into or click uses `border-line-strong`, not `border-line`
 - every interactive element is reachable by keyboard and shows the clay ring
 - nothing cancels `outline` on a focusable element
 - colour is never the only signal: status dots pair with a word, `warn` pairs with an icon

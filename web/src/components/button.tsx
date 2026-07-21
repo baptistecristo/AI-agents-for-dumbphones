@@ -22,7 +22,7 @@ const base =
 const VARIANT: Record<Variant, string> = {
   primary: "bg-ink text-cream hover:bg-ink/85",
   accent: "bg-clay text-cream hover:bg-clay/90",
-  ghost: "border border-line bg-transparent text-ink hover:bg-cream-deep",
+  ghost: "border border-line-strong bg-transparent text-ink hover:bg-cream-deep",
 };
 
 const SIZE: Record<Size, string> = {
