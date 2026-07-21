@@ -11,6 +11,7 @@ import { safeEqual } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { defaultLanguage, normalizeLanguage } from "@/lib/language";
 import { agentInstructionsOf } from "@/lib/profile";
+import { recapOfferAvailable } from "@/lib/skills/recap";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function authorized(req: Request): boolean {
@@ -84,6 +85,7 @@ export async function POST(req: Request) {
     // Le réglage par appelant ne vaut que sur le chemin Vapi (ElevenLabs).
     voiceSpeed: null as number | null,
     agentInstructions: null as string | null,
+    recapOffer: false, // appelant inconnu -> rien à lui résumer
   };
   if (caller) {
     const { data: phone } = await db
@@ -104,6 +106,7 @@ export async function POST(req: Request) {
         language: normalizeLanguage(profile?.preferred_language),
         voiceSpeed: null,
         agentInstructions: await agentInstructionsOf(phone.user_id),
+        recapOffer: await recapOfferAvailable(phone.user_id),
       };
     }
   }

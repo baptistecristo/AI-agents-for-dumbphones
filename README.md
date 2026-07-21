@@ -55,7 +55,8 @@ will never come.
 That second gap costs more than the SMS skills. A one-time code **texted to the caller**
 unlocks every sensitive action, and the gate fails closed, so with no Twilio the code never
 arrives and everything behind it stays locked: calendar, contacts, reading back reminders
-and notes, marking a reminder done, dictated texts, outbound calls. A caller today reaches
+and notes, the recap of your previous call, marking a reminder done, dictated texts,
+outbound calls. A caller today reaches
 only the ungated set: weather, local time, directions, setting and listing reminders,
 taking a note. Connecting a Twilio account unlocks the rest, and it's a small first
 contribution.
@@ -126,7 +127,7 @@ is drawn the way it is.
 | Inbound agent | Trilingual (FR/EN/ES) system prompt + greeting, one-time-SMS-code gate before sensitive actions, two-step voice confirmation, per-caller speaking rate. On Vapi the voice/STT/LLM are **ElevenLabs + Deepgram + Anthropic** — managed, and none of them EU | `web/src/lib/agents/inbound.ts` |
 | Public-number guard | 180s per call, plus three limits that stack: **5 calls per caller per hour** and **20 per caller per day** stop one person redialling in a loop, and **60 calls a day across everyone** caps the bill even if the abuse comes from fifty different numbers. Over any of them, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
-| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, call auth (`request_code` / `verify_code`) | `web/src/lib/skills/` |
+| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, spoken recap of your previous call (opt-in, off by default), call auth (`request_code` / `verify_code`) | `web/src/lib/skills/` |
 | SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `REMINDERS`, `ALREADY`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift), with French and Spanish aliases (`METEO`/`TIEMPO`, `RECUERDA`, `AYUDA`…). `DONE` is phone-only — marking a reminder done needs the call | `web/src/lib/sms-commands.ts` |
 | Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`, `voice_speed`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
 | Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent), dashboard with language and speaking-rate settings — the site itself is FR/EN/ES (cookie-backed switcher) | `web/src/app/` |

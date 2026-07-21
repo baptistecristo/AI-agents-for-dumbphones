@@ -8,6 +8,12 @@ export type CallSession = {
   // seul le gate diffère (voix : code jetable ; texte : PIN, écritures seules
   // — voir gate.ts). "voice" par défaut historique.
   channel: "voice" | "text";
+  // Sens de l'appel. Un skill qui ne doit tourner que sur un appel ENTRANT le
+  // vérifie ici, sur le tour en cours, plutôt que de compter sur son absence de
+  // la liste d'outils sortante : une liste se modifie, et l'oubli ne se voit
+  // pas. Fail-closed chez l'appelant : tout ce qui n'est pas lisiblement
+  // "inbound" est traité comme sortant (cf. api/vapi/webhook).
+  direction: "inbound" | "outbound";
   userId: string | null;
   callerNumber: string | null;
   verified: boolean; // code SMS (Twilio Verify) validé sur cet appel

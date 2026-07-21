@@ -3,10 +3,12 @@ import { agentTools } from "../agents/tools";
 import {
   GateContext,
   TOOL_POLICY,
+  isAggregateRead,
   isClassified,
   isConsequential,
   personalReadsUnlocked,
   requiresVerification,
+  requiresVerificationOverSms,
   toolNeedsCode,
 } from "./gate";
 
@@ -50,9 +52,24 @@ describe("requiresVerification", () => {
       expect(requiresVerification(n)).toBe(false);
   });
 
+  it("protects the recap of a previous call: it reports what was said", () => {
+    // L'opt-in (consents) décide si la fonction existe pour cette personne ; le
+    // code décide qui, sur la ligne, a le droit de l'entendre. Un caller-ID
+    // usurpé ne doit pas suffire à se faire relire une conversation.
+    expect(requiresVerification("get_last_call_summary")).toBe(true);
+  });
+
   it("fails closed: an unclassified tool demands the code instead of sailing through", () => {
     expect(requiresVerification("totally_unknown_tool")).toBe(true);
     expect(isClassified("totally_unknown_tool")).toBe(false);
+  });
+
+  it("treats the recap as a read over text: the reply only reaches the registered number", () => {
+    // Par texte, une lecture n'a rien à protéger d'un usurpateur — c'est la
+    // victime qui reçoit la réponse. Le résumé suit donc recall et list_events,
+    // pas les écritures.
+    expect(requiresVerificationOverSms("get_last_call_summary")).toBe(false);
+    expect(requiresVerificationOverSms("mark_done")).toBe(true);
   });
 
   it("is not fooled by inherited Object properties", () => {
@@ -70,12 +87,18 @@ describe("requiresVerification", () => {
 const ORDINARY: GateContext = { channel: "voice", verified: false, trustedCaller: false };
 const TRUSTED: GateContext = { channel: "voice", verified: false, trustedCaller: true };
 
+// Les lectures que le grant durable couvre : elles répondent à une question
+// POSÉE, donc leur portée est bornée par l'argument.
 const READS = ["list_events", "find_contact", "recall"];
 const CONSEQUENTIAL = ["create_event", "move_event", "mark_done", "send_sms", "place_call"];
+// La lecture AGRÉGÉE : une lecture, mais sans argument, donc sans question. Elle
+// rend d'un coup l'union de ce que les trois lectures ci-dessus auraient donné
+// séparément. Le grant ne la couvre pas : cf. AGGREGATE_READS dans gate.ts.
+const AGGREGATE = ["get_last_call_summary"];
 
 describe("toolNeedsCode without a grant", () => {
   it("defaults to off: an ungranted caller sees exactly the old behaviour", () => {
-    for (const n of [...READS, ...CONSEQUENTIAL]) expect(toolNeedsCode(n, ORDINARY)).toBe(true);
+    for (const n of [...READS, ...AGGREGATE, ...CONSEQUENTIAL]) expect(toolNeedsCode(n, ORDINARY)).toBe(true);
     for (const n of ["get_weather", "list_reminders", "request_code"])
       expect(toolNeedsCode(n, ORDINARY)).toBe(false);
   });
@@ -97,12 +120,46 @@ describe("toolNeedsCode with a granted caller", () => {
     for (const n of CONSEQUENTIAL) expect(toolNeedsCode(n, TRUSTED)).toBe(true);
   });
 
-  it("classifies every code tool one way or the other, with nothing left over", () => {
+  // Un numéro de confiance NON vérifié n'obtient pas le résumé : un caller-ID
+  // usurpé qui tombe sur un numéro de confiance ferait sinon rendre, en un seul
+  // appel et sans question, l'union de l'agenda, d'un contact, d'une note relue
+  // et d'une adresse prononcée.
+  it("refuses the aggregate read to a trusted but unverified caller", () => {
+    for (const n of AGGREGATE) {
+      expect(toolNeedsCode(n, TRUSTED)).toBe(true);
+      expect(isAggregateRead(n)).toBe(true);
+    }
+  });
+
+  it("serves the aggregate read once the one-time code is verified", () => {
+    for (const n of AGGREGATE) {
+      expect(toolNeedsCode(n, { ...TRUSTED, verified: true })).toBe(false);
+      expect(toolNeedsCode(n, { ...ORDINARY, verified: true })).toBe(false);
+    }
+  });
+
+  // On ne l'a PAS reclassé "write" pour arriver là : ce serait faux (rien ne
+  // persiste) et isConsequential() sert ailleurs, à commencer par le canal texte.
+  it("keeps the recap an honest read: nothing about it persists past the reply", () => {
+    for (const n of AGGREGATE) {
+      expect(isConsequential(n)).toBe(false);
+      expect(requiresVerificationOverSms(n)).toBe(false);
+    }
+  });
+
+  it("marks nothing else as an aggregate read", () => {
+    for (const n of [...READS, ...CONSEQUENTIAL, "get_weather", "list_reminders"])
+      expect(isAggregateRead(n)).toBe(false);
+  });
+
+  it("classifies every code tool into exactly one of the three buckets", () => {
     // Un outil "code" ajouté plus tard est couvert par le grant s'il lit, et
-    // recontrôlé s'il écrit. Aucun cas ne peut tomber entre les deux en silence.
+    // recontrôlé s'il écrit ou s'il agrège. Aucun cas ne peut tomber entre les
+    // trois en silence.
     const codeTools = Object.entries(TOOL_POLICY).filter(([, p]) => p === "code").map(([n]) => n);
-    expect(codeTools.sort()).toEqual([...READS, ...CONSEQUENTIAL].sort());
-    for (const n of codeTools) expect(toolNeedsCode(n, TRUSTED)).toBe(isConsequential(n));
+    expect(codeTools.sort()).toEqual([...READS, ...AGGREGATE, ...CONSEQUENTIAL].sort());
+    for (const n of codeTools)
+      expect(toolNeedsCode(n, TRUSTED)).toBe(isConsequential(n) || isAggregateRead(n));
   });
 
   it("fails closed on an unclassified tool, grant or no grant", () => {
@@ -116,7 +173,7 @@ describe("toolNeedsCode with a granted caller", () => {
   });
 
   it("changes nothing over text, where reads are already free and writes need the PIN", () => {
-    for (const n of [...READS, ...CONSEQUENTIAL, "get_weather"]) {
+    for (const n of [...READS, ...AGGREGATE, ...CONSEQUENTIAL, "get_weather"]) {
       const withGrant = toolNeedsCode(n, { channel: "text", verified: false, trustedCaller: true });
       const without = toolNeedsCode(n, { channel: "text", verified: false, trustedCaller: false });
       expect(withGrant).toBe(without);

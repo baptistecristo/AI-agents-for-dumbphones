@@ -47,6 +47,10 @@ export const TOOL_POLICY = {
   place_call: "code",
   // Éteint un rappel que le cron devait envoyer : destructif, et silencieux.
   mark_done: "code",
+  // Relit le résumé de l'appel précédent : au moins aussi bavard que recall,
+  // puisqu'il rapporte ce qui s'est DIT. L'opt-in (consents) décide si la
+  // fonction existe pour cette personne ; le code décide qui peut l'entendre.
+  get_last_call_summary: "code",
 
   // Rappels : lecture et ajout
   set_reminder: "free",
@@ -115,6 +119,10 @@ export const CODE_TOOL_EFFECT = {
   list_events: "read",
   find_contact: "read",
   recall: "read",
+  // "read" est exact : rien ne persiste après la réponse, et par TEXTE le résumé
+  // est une lecture comme les autres. En VOIX il est en plus exclu du grant
+  // durable, parce qu'il agrège : cf. AGGREGATE_READS plus bas.
+  get_last_call_summary: "read",
   create_event: "write",
   move_event: "write",
   mark_done: "write",
@@ -156,7 +164,37 @@ export function requiresVerificationOverSms(name: string): boolean {
 //
 // Ce que le grant NE couvre jamais : créer ou déplacer un rendez-vous, éteindre
 // un rappel, envoyer un SMS, passer un appel. Ces cinq-là redemandent le code, à
-// chaque appel, grant ou pas.
+// chaque appel, grant ou pas, et la lecture AGRÉGÉE ci-dessous avec eux.
+//
+// ——— La lecture agrégée ———
+//
+// isConsequential() mesure la PERSISTANCE : l'effet survit-il à la réponse ?
+// C'est le bon axe pour le canal texte et pour tout ce qui envoie ou détruit.
+// Il ne sait pas répondre à une deuxième question, qui est celle de la PORTÉE :
+// combien de choses distinctes cette lecture rend-elle d'un coup ?
+//
+// get_last_call_summary ne prend AUCUN argument. Il ne relit pas la donnée qu'on
+// lui a demandée : il rend le condensé de tout ce qui est passé dans l'appel
+// précédent : un créneau d'agenda, le numéro d'un contact, une note relue, une
+// adresse prononcée, et par-dessus la parole libre. Un seul appel sans code rend
+// donc l'union de ce que trois lectures protégées séparément auraient donné,
+// sans que personne ait eu à formuler la moindre question.
+//
+// D'où l'exclusion. Le caller-ID est usurpable : c'est la raison d'être du code
+// jetable, et le grant durable accepte ce risque là où la lecture est bornée par
+// une question posée. Il ne l'accepte pas sur un agrégat non interrogé.
+//
+// On ne le reclasse PAS en "write" pour obtenir le même effet : ce serait faux
+// (rien ne persiste après la réponse) et isConsequential() sert ailleurs, à
+// commencer par le canal texte, où le résumé reste une lecture ordinaire.
+const AGGREGATE_READS = ["get_last_call_summary"] as const satisfies readonly ToolName[];
+
+// Cette lecture rend-elle d'un coup l'union de plusieurs lectures protégées ?
+// Si oui, aucun grant durable ne la couvre : seul le code jetable l'ouvre.
+export function isAggregateRead(name: string): boolean {
+  return (AGGREGATE_READS as readonly string[]).includes(name);
+}
+
 export type GateContext = {
   channel: "voice" | "text";
   verified: boolean; // code jetable (ou PIN, par texte) validé sur ce tour
@@ -170,9 +208,10 @@ export function toolNeedsCode(name: string, ctx: GateContext): boolean {
   const gated = ctx.channel === "text" ? requiresVerificationOverSms(name) : requiresVerification(name);
   if (!gated) return false;
   if (ctx.verified) return false;
-  // Le grant ne rattrape que le non-conséquent. isConsequential() étant
-  // fail-closed, un outil inconnu reste refusé même pour un numéro de confiance.
-  return !(ctx.trustedCaller && !isConsequential(name));
+  // Le grant ne rattrape que le non-conséquent, et jamais une lecture agrégée.
+  // isConsequential() étant fail-closed, un outil inconnu reste refusé même pour
+  // un numéro de confiance.
+  return !(ctx.trustedCaller && !isConsequential(name) && !isAggregateRead(name));
 }
 
 // Une donnée personnelle peut aussi ENTRER dans un outil libre : l'adresse du

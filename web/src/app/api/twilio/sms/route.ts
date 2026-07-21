@@ -74,7 +74,10 @@ export async function POST(req: Request) {
 
   // Profil : langue + persona (prénom, consignes) en une lecture.
   let language: Language = "fr";
-  let ctx: CallerContext = { userId, preferredName: null, language, voiceSpeed: null, agentInstructions: null };
+  // recapOffer : toujours false ici. C'est une phrase du message d'ACCUEIL, et
+  // un fil de texte n'en a pas — on ne décroche pas, on écrit. Par texte, la
+  // personne demande le résumé quand elle le veut, comme le reste.
+  let ctx: CallerContext = { userId, preferredName: null, language, voiceSpeed: null, agentInstructions: null, recapOffer: false };
   if (userId) {
     const { data: profile } = await db
       .from("profiles")
@@ -88,6 +91,7 @@ export async function POST(req: Request) {
       language,
       voiceSpeed: null,
       agentInstructions: profile?.agent_instructions ?? null,
+      recapOffer: false,
     };
   }
 
@@ -103,6 +107,9 @@ export async function POST(req: Request) {
   const session: CallSession = {
     callId: "sms",
     channel: "text",
+    // Un SMS reçu est toujours entrant : c'est la personne qui écrit, jamais
+    // nous qui ouvrons le fil. Rien à déduire d'une colonne ici.
+    direction: "inbound",
     userId,
     callerNumber: from,
     verified,

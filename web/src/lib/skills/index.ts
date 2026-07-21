@@ -15,6 +15,7 @@ import { reportGap } from "./gap";
 import { isClassified, personalReadsUnlocked, toolNeedsCode } from "./gate";
 import { recall, remember } from "./memory";
 import { placeCall } from "./outbound";
+import { getLastCallSummary } from "./recap";
 import { didIAlready, listReminders, markDone, setReminder } from "./reminders";
 import { sendDictatedSms } from "./sms";
 import { getCurrentTime } from "./time";
@@ -156,6 +157,11 @@ export async function executeTool(name: string, args: any, session: CallSession)
         return await remember(session, args);
       case "recall":
         return await recall(session, args);
+      case "get_last_call_summary":
+        // Aucun argument : le skill ne choisit pas l'appel qu'il relit, il prend
+        // le dernier ENTRANT terminé de cette personne. Rien à passer, donc rien
+        // à détourner vers l'appel de quelqu'un d'autre.
+        return await getLastCallSummary(session);
       case "request_code":
         return await requestCode(session);
       case "verify_code":

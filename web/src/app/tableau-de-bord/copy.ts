@@ -6,6 +6,8 @@
 import { Language } from "@/lib/language";
 
 // Les sources du registre de consentement, dans l'ordre d'affichage.
+// `call_recap` est l'interrupteur du résumé relu au téléphone : absent du
+// registre = éteint, et c'est l'état de départ de tout le monde.
 export const CONSENT_SOURCES = [
   "calendar",
   "contacts",
@@ -14,6 +16,7 @@ export const CONSENT_SOURCES = [
   "memory",
   "recording",
   "action_items",
+  "call_recap",
 ] as const;
 export type ConsentSource = (typeof CONSENT_SOURCES)[number];
 
@@ -300,6 +303,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
           label: "Engagements tirés des appels",
           help: "Relire tes appels entrants pour en sortir ce que tu as dit que tu ferais, et le poser en rappel.",
         },
+        call_recap: {
+          label: "Résumé de l'appel précédent",
+          help: "Te relire au téléphone le résumé de ton dernier appel, quand tu me le demandes. Jamais un appel que j'ai passé pour toi.",
+        },
       },
       grantedAction: "Autorisé — révoquer",
       refusedAction: "Refusé — autoriser",
@@ -541,6 +548,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
           label: "Commitments from calls",
           help: "Read back your inbound calls to pull out what you said you'd do, and save it as a reminder.",
         },
+        call_recap: {
+          label: "Recap of the previous call",
+          help: "Read you back the summary of your last call, over the phone, when you ask for it. Never a call I placed for you.",
+        },
       },
       grantedAction: "Allowed — revoke",
       refusedAction: "Refused — allow",
@@ -780,6 +791,10 @@ export const DASHBOARD: Record<Language, DashboardCopy> = {
         action_items: {
           label: "Compromisos sacados de las llamadas",
           help: "Releer tus llamadas entrantes para sacar lo que dijiste que harías, y anotarlo como recordatorio.",
+        },
+        call_recap: {
+          label: "Resumen de la llamada anterior",
+          help: "Releerte por teléfono el resumen de tu última llamada, cuando me lo pidas. Nunca una llamada que haya hecho por ti.",
         },
       },
       grantedAction: "Autorizado — revocar",
