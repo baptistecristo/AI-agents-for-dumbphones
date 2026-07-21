@@ -179,7 +179,10 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
   the only working runtime today is a managed one. See
   [#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 - **EU / privacy-first.** Data in an EU Postgres, OAuth tokens encrypted at rest, an
-  append-only revocable consent registry, RLS everywhere.
+  append-only revocable consent registry, RLS everywhere. One exception, stated rather
+  than buried: the public pages report Web Vitals to Vercel Speed Insights, in the US.
+  The signed-in area sends nothing, so which reminders or notes you open stays between
+  you and the EU database.
 - **The phone stays dumb.** No app, no account on the handset. Caller-ID identifies you,
   but anyone can spoof it, so on its own it unlocks nothing personal. Your calendar,
   contacts, saved notes, and anything that sends a text or places a call need a
