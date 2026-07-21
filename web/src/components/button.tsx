@@ -3,19 +3,26 @@
 //   primary — near-black ink on cream, the main action
 //   accent  — clay, used sparingly for the one call that should feel warm
 //   ghost   — hairline outline, secondary and quiet
+//
+// Le rayon vient du jeton `rounded-control`, partagé avec les champs : un
+// bouton et le champ qu'il valide doivent avoir le même coin.
 
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 type Variant = "primary" | "accent" | "ghost";
 type Size = "md" | "lg";
 
+// Rien ici n'annule le contour de focus. Un utilitaire qui le ferait
+// l'emporterait en spécificité (0,2,0) sur l'anneau argile de globals.css
+// (0,1,0), et laisserait les boutons, premières cibles du clavier, sans
+// marque de focus visible.
 const base =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex items-center justify-center gap-1.5 rounded-control font-medium transition-colors disabled:pointer-events-none disabled:opacity-50";
 
 const VARIANT: Record<Variant, string> = {
   primary: "bg-ink text-cream hover:bg-ink/85",
   accent: "bg-clay text-cream hover:bg-clay/90",
-  ghost: "border border-line bg-transparent text-ink hover:bg-cream-deep",
+  ghost: "border border-line-strong bg-transparent text-ink hover:bg-cream-deep",
 };
 
 const SIZE: Record<Size, string> = {

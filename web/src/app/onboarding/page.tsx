@@ -80,7 +80,7 @@ export default async function OnboardingPage() {
             {CONSENT_SOURCES.map((source) => (
               <label
                 key={source}
-                className="flex items-start gap-3 rounded-xl border border-line p-4 hover:bg-cream-deep"
+                className="flex items-start gap-3 rounded-card border border-line p-4 hover:bg-cream-deep"
               >
                 <input type="checkbox" name={source} defaultChecked={tr.consents.defaults[source]} className="mt-1 h-5 w-5 accent-clay" />
                 <span className="text-slate">{tr.consents.labels[source]}</span>

@@ -33,3 +33,6 @@ npm run build
 | `src/lib/agents/` | system prompts, greetings, and the tool schemas each runtime is handed |
 | `src/app/api/` | the runtime-facing API: `tools/execute`, `runtime/session`, the Vapi webhook, the crons |
 | `src/app/` | the site itself: landing, sign-in, onboarding, dashboard |
+
+Styling the site: [`docs/design-system.md`](docs/design-system.md) covers the tokens, the
+type scale and the accessibility checklist.
