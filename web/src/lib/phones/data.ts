@@ -426,12 +426,15 @@ export const PHONES: Phone[] = [
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 110 4G") }],
   },
   {
+    // Simplicity (V27) est une barre. Ne pas la repasser en `flip` : c'est la
+    // SimplicityGLAM (V227) qui est un clapet, et les revendeurs laissent
+    // souvent tomber le « glam » — vérifié le 2026-07-20.
     id: "emporia-simplicity",
     image: "/phones/emporia-simplicity.webp",
     brand: "Emporia",
     name: "Simplicity",
     regions: ["europe"],
-    formFactor: "flip",
+    formFactor: "candybar",
     os: "feature",
     trueDumbphone: true,
     nav: "none",
@@ -450,16 +453,16 @@ export const PHONES: Phone[] = [
     brand: "Gigaset",
     name: "GL590",
     regions: ["europe"],
-    formFactor: "candybar",
+    formFactor: "flip",
     os: "feature",
     trueDumbphone: true,
     nav: "none",
     googleMaps: false,
     priceEur: 55,
     blurb: {
-      fr: "Barre allemande (UE) simple et robuste, grandes touches, bouton SOS. Assemblée en Allemagne.",
-      en: "Simple, rugged German (EU) candybar, big keys, SOS button. Assembled in Germany.",
-      es: "Barra alemana (UE) sencilla y robusta, teclas grandes, botón SOS. Ensamblada en Alemania.",
+      fr: "Clapet allemand (UE) simple et robuste, grandes touches, bouton SOS. Assemblé en Allemagne.",
+      en: "Simple, rugged German (EU) flip, big keys, SOS button. Assembled in Germany.",
+      es: "Teléfono de tapa alemán (UE) sencillo y robusto, teclas grandes, botón SOS. Ensamblado en Alemania.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Gigaset GL590") }],
   },
