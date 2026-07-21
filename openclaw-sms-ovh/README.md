@@ -8,18 +8,19 @@ agent, including notifications from the messaging apps that phone cannot run.
 
 ## Why this exists
 
-OpenClaw's official SMS channel is Twilio-only. Twilio sells only mobile
-numbers in France, and 06/07 mobile is the one tier French regulation gives no
-automated-messaging derogation to. So the channel that could reach a basic
-phone is exactly the one that cannot legally be used for it here.
+OpenClaw's official SMS channel is Twilio-only, and Twilio sells only mobile
+numbers in France. OVHcloud's Time2Chat sells a dedicated 09 3x number instead,
+which a recipient can reply to, which is what this plugin talks to.
 
-OVHcloud's Time2Chat sells a dedicated 09 3x number, which a recipient can
-reply to and which sits in a tier that does have a derogation: ARCEP decision
-2025-2215, article 2.3.9(f), exempts messages from the sender-identification
-asymmetry test that otherwise applies to these numbers. That is one specific
-exemption rather than a blanket one, and 09 3x numbers are allocated to
-operators rather than to individuals, so the number is bought from an operator
-such as OVHcloud rather than held directly.
+**The regulatory position is not settled here, and this file does not decide
+it.** French numbering was reworked by ARCEP decision 2025-2215 (27 November
+2025, in force 1 January 2026), which tightened caller and sender identification
+to fight spoofing and created a specific category for automated calls and
+messages. Whether a given number may carry an automated agent, and whether an
+individual rather than a company may order the service at all, are questions for
+OVHcloud and ARCEP in writing before anyone runs this on a real number. Earlier
+drafts of this file asserted a specific exemption; that claim was removed
+because it was never verified against the decision itself.
 
 ## Design decisions worth knowing
 
