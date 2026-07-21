@@ -212,6 +212,11 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
   two-way SMS command model inspired `sms-commands.ts`.
 - **[Omi](https://github.com/BasedHardware/omi)** — an open-source, wearable AI
   companion; a kindred bet that you keep the assistant and drop the screen.
+- **[OpenClaw](https://github.com/openclaw/openclaw)** (MIT) — a self-hosted gateway that
+  bridges chat apps to an LLM; a reference for the "one brain, swappable body" and
+  plugin-skill patterns, and for hardening third-party skills. Messaging-only, no telephony,
+  so it shapes the design rather than the runtime
+  ([docs/openclaw-inspiration.md](docs/openclaw-inspiration.md)).
 - **[Pipecat](https://github.com/pipecat-ai/pipecat)** / **[LiveKit Agents](https://github.com/livekit/agents)** — the self-hosted voice runtime.
 - **Open-Meteo** (free weather + geocoding), **OpenRouteService** (EU directions), **WorldTimeAPI** (free local time).
 
