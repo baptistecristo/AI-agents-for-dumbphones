@@ -1,0 +1,156 @@
+# Runtime vocal auto-hébergé : le runtime et son serveur Piper.
+#
+#   docker compose up --build
+#
+# Trois services :
+#   piper-voices  une passe, télécharge les voix dans le volume, puis sort
+#   piper         serveur TTS (image construite depuis la source d'OHF-Voice)
+#   runtime       le pipeline vocal de ce dépôt (runtime/Dockerfile)
+#
+# ---------------------------------------------------------------------------
+# Pourquoi Piper reste une image à part
+#
+# `piper-tts` est en GPL-3.0-or-later, ce dépôt en Apache-2.0, et la
+# compatibilité ne va que dans un sens : du code GPL ne peut pas être inclus
+# dans un artefact Apache-2.0. Un fichier compose qui NOMME une source tierce
+# ne distribue rien, exactement comme une ligne de requirements.txt. Une image
+# du runtime qui EMBARQUERAIT `piper-tts` distribuerait, elle, et les
+# obligations de la GPL-3.0 s'attacheraient à cette image. D'où la séparation,
+# qui est la condition pour que l'image du runtime reste sous Apache-2.0 et non
+# un goût pour les microservices. Voir l'issue #26 et runtime/Dockerfile.
+#
+# Construire l'image de Piper sur sa propre machine ne distribue rien non plus
+# (la GPL-3.0 §0 exclut « executing it on a computer »). Ce qui distribuerait,
+# c'est pousser une image vers un registre : la CI de ce dépôt ne le fait pas.
+#
+# ---------------------------------------------------------------------------
+# Pourquoi un `build:` et pas une image publiée
+#
+# OHF-Voice ne publie aucune image de conteneur : sa CI (`publish.yml`) sort
+# des wheels vers PyPI et des archives vers les GitHub Releases, rien de plus.
+# Les images `piper1-gpl` visibles sur Docker Hub sont des reconstructions de
+# tiers, sans lien avec le projet. On construit donc depuis le Dockerfile
+# d'OHF-Voice lui-même, à un tag épinglé : même provenance, aucun intermédiaire.
+#
+# ⚠️ `linuxserver/piper` ne convient pas : c'est l'ancien Piper de Rhasspy, qui
+# parle le protocole Wyoming sur le port 10200 et non cette API HTTP.
+
+name: dumbphone-voice-runtime
+
+# Le tag de piper1-gpl est épinglé : la route de synthèse a changé entre 1.4.2
+# et 1.5.0 (voir runtime/README.md). Le runtime sait détecter les deux, mais
+# une construction reproductible vaut mieux qu'une détection qui rattrape.
+x-piper-build: &piper-build
+  context: https://github.com/OHF-Voice/piper1-gpl.git#v1.5.0
+
+x-piper-image: &piper-image piper1-gpl-local:1.5.0
+
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  # Les voix ne sont pas dans l'image d'OHF-Voice : son entrypoint les lit dans
+  # /data. Ce service les y dépose une fois pour toutes, puis sort ; `piper`
+  # attend qu'il ait réussi. Sans ça, le serveur démarrerait avec un /data vide.
+  #
+  # Les modèles de voix ne sont PAS sous GPL et ne relèvent donc pas de la
+  # séparation décrite plus haut : `fr_FR-siwis-medium` est sous licence MIT,
+  # son corpus d'entraînement sous CC-BY 4.0.
+  piper-voices:
+    build: *piper-build
+    image: *piper-image
+    # Les TROIS voix : le serveur n'en précharge qu'une (`-m`) mais sert les
+    # autres à la demande depuis --data-dir. Une voix manquante ne provoque
+    # aucune erreur côté Piper, d'où le contrôle au démarrage du runtime.
+    command:
+      - download
+      - ${PIPER_VOICE_FR:-fr_FR-siwis-medium}
+      - ${PIPER_VOICE_EN:-en_US-lessac-medium}
+      - ${PIPER_VOICE_ES:-es_ES-davefx-medium}
+    volumes:
+      - piper-voices:/data
+    restart: "no"
+    <<: *hardening
+
+  piper:
+    build: *piper-build
+    image: *piper-image
+    command: ["server", "-m", "${PIPER_VOICE_FR:-fr_FR-siwis-medium}"]
+    volumes:
+      - piper-voices:/data
+    depends_on:
+      piper-voices:
+        condition: service_completed_successfully
+    # Aucun `ports:` à dessein. Piper n'a pas d'authentification : il reste sur
+    # le réseau interne, joignable du seul runtime. L'exposer sur l'hôte
+    # offrirait un moteur de synthèse ouvert à qui atteint la machine.
+    expose:
+      - "5000"
+    healthcheck:
+      # `GET /voices` existe à l'identique dans toutes les versions ; il dit que
+      # le serveur répond. La route de synthèse, elle, est vérifiée par le
+      # runtime au démarrage (PIPER_SYNTHESIZE_PATH=auto).
+      test:
+        - CMD
+        - python3
+        - -c
+        - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5000/voices', timeout=4).status == 200 else 1)
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    <<: *hardening
+
+  runtime:
+    build:
+      context: ./runtime
+    image: dumbphone-voice-runtime:local
+    # Le fichier des secrets, non versionné. `cp runtime/.env.example
+    # runtime/.env` puis remplir : RUNTIME_API_SECRET au minimum, le runtime
+    # refuse de charger sans lui.
+    #
+    # `required: false` pour que `docker compose config` reste vérifiable sans
+    # secrets (la CI le fait, et un contributeur qui clone aussi). Un .env
+    # absent ne passe pas inaperçu pour autant : config.py lève
+    # « Variable d'environnement manquante : RUNTIME_API_SECRET » au démarrage.
+    env_file:
+      - path: runtime/.env
+        required: false
+    environment:
+      # Ces trois-là écrasent .env volontairement : elles y valent `localhost`,
+      # ce qui, dans un conteneur, désigne le conteneur lui-même.
+      #
+      # Piper est joint par son nom de service sur le réseau compose.
+      PIPER_BASE_URL: http://piper:5000
+      # Ollama et l'API Next.js tournent sur l'HÔTE, pas ici : d'où
+      # host.docker.internal (et l'extra_hosts plus bas pour Linux). Si l'API
+      # web est déployée ailleurs (Vercel), mettre son URL publique dans .env
+      # et retirer la ligne NEXT_API_URL ci-dessous.
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434/v1}
+      NEXT_API_URL: ${NEXT_API_URL:-http://host.docker.internal:3000}
+    extra_hosts:
+      # Fourni d'office par Docker Desktop (macOS, Windows) ; sous Linux il faut
+      # cette ligne.
+      - host.docker.internal:host-gateway
+    volumes:
+      # Le modèle faster-whisper (~1,5 Go en `medium`) se télécharge au premier
+      # appel. Le garder hors de l'image et hors du conteneur : sinon chaque
+      # `docker compose up --build` le retélécharge.
+      - whisper-cache:/home/runtime/.cache/huggingface
+    ports:
+      # L'opérateur téléphonique doit joindre ce port (webhooks + websocket
+      # média) : c'est le seul service exposé.
+      - "${RUNTIME_PORT:-8000}:8000"
+    depends_on:
+      piper:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *hardening
+
+volumes:
+  piper-voices:
+  whisper-cache:
