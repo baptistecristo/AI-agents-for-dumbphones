@@ -26,15 +26,15 @@ Already how the repo works. OpenClaw is independent evidence these were the righ
 
 ## Worth adopting (not here yet)
 
-- **Harden the skill surface before it grows.** OpenClaw's popularity turned third-party skills
-  into an attack surface, with prompt-injection and data-exfiltration
-  [reported](https://en.wikipedia.org/wiki/OpenClaw) through community skills. "Add a skill"
+- **Harden the skill surface before it grows.** Any project that invites third-party skills is
+  building an attack surface: a skill runs with the agent's own reach, so prompt injection and
+  data exfiltration are the shapes to plan for. "Add a skill"
   ([CONTRIBUTING.md](../CONTRIBUTING.md)) is this project's growth path too, so the same
   guardrails apply: keep treating skill output as data (already a design principle), scope each
   skill to only the APIs it needs, and review community skills before they can reach stored
   tokens.
-- **Keep consequential actions gated.** OpenClaw drew criticism for agents that acted on
-  people's behalf with no clear consent step. The outbound engine here
+- **Keep consequential actions gated.** An agent that acts on someone's behalf without a
+  visible consent step leaves them to discover what it did afterwards. The outbound engine here
   (`web/src/lib/agents/outbound.ts`) can call places and work through menus, so anything that
   sends or commits should keep its one-time code and two-step voice confirmation rather than
   acting on inference alone.
