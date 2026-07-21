@@ -9,6 +9,16 @@
 //  - `trueDumbphone: false` = smartphone simplifié (Android bridé), pas un
 //    vrai téléphone simple.
 //  - Les prix sont indicatifs et bougent ; ils sont affichés comme approximatifs.
+//  - Calendrier 2G/3G France : la 2G s'éteint par vagues régionales depuis le
+//    31 mars 2026 (premières communes Orange) et doit être généralisée d'ici
+//    fin 2026 chez Orange, SFR et Bouygues ; Free suit Orange (itinérance).
+//    Les dates précises par opérateur bougent encore et se contredisent d'une
+//    source à l'autre : on ne les écrit donc pas dans les fiches. « Par vagues
+//    depuis mars 2026, partout d'ici fin 2026 » est ce qu'on peut affirmer.
+//    La 3G tient jusqu'à fin 2028 (fin 2029 pour Bouygues). Ne pas écrire
+//    « la 2G est fermée » tant que les vagues courent, ni « la 2G ferme en
+//    mars 2026 » : les deux sont faux. Sources Arcep (fiche extinction 2G/3G)
+//    et calendriers opérateurs, vérifié le 2026-07-20.
 
 import type { Phone } from "./types";
 
@@ -478,14 +488,14 @@ export const PHONES: Phone[] = [
     googleMaps: false,
     priceEur: 30,
     blurb: {
-      fr: "L'un des téléphones simples neufs les moins chers. Double SIM, radio, lampe. 2G/3G — vérifier la 4G.",
-      en: "One of the cheapest new dumbphones. Dual SIM, radio, torch. 2G/3G — check for 4G.",
-      es: "Uno de los teléfonos básicos nuevos más baratos. Doble SIM, radio, linterna. 2G/3G — comprueba si hay 4G.",
+      fr: "L'un des téléphones simples neufs les moins chers. Double SIM, radio, lampe. 2G/3G : vérifier la 4G.",
+      en: "One of the cheapest new dumbphones. Dual SIM, radio, torch. 2G/3G: check for 4G.",
+      es: "Uno de los teléfonos básicos nuevos más baratos. Doble SIM, radio, linterna. 2G/3G: comprueba si hay 4G.",
     },
     caveat: {
-      fr: "Modèle 2G/3G : la 2G ferme en France (mars 2026) — préférez une variante 4G.",
-      en: "2G/3G model: 2G is shutting down in France (March 2026) — prefer a 4G variant.",
-      es: "Modelo 2G/3G: la 2G se apaga en Francia (marzo de 2026) — mejor una variante 4G.",
+      fr: "Modèle 2G/3G : en France, la 2G s'éteint par vagues depuis mars 2026 et partout d'ici fin 2026. Prenez une variante 4G.",
+      en: "2G/3G model: in France, 2G has been shutting down region by region since March 2026, and everywhere by the end of 2026. Take a 4G variant.",
+      es: "Modelo 2G/3G: en Francia, la 2G se apaga por zonas desde marzo de 2026, y en todo el país a finales de 2026. Elige una variante 4G.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Alcatel 2057") }],
   },
@@ -912,9 +922,9 @@ export const PHONES: Phone[] = [
       es: "Barra 2G/4G minimalista, linterna, radio FM sin auriculares. Muy barata.",
     },
     caveat: {
-      fr: "Selon la variante, vérifier la 4G : la 2G ferme en France (mars 2026).",
-      en: "Depending on the variant, check for 4G: 2G is shutting down in France (March 2026).",
-      es: "Según la variante, comprueba que tenga 4G: la 2G se apaga en Francia (marzo de 2026).",
+      fr: "Selon la variante, exiger la 4G : en France, la 2G s'éteint par vagues depuis mars 2026 et partout d'ici fin 2026.",
+      en: "Depending on the variant, insist on 4G: in France, 2G has been shutting down region by region since March 2026, and everywhere by the end of 2026.",
+      es: "Según la variante, exige la 4G: en Francia, la 2G se apaga por zonas desde marzo de 2026, y en todo el país a finales de 2026.",
     },
     shops: [{ region: "europe", label: "Amazon.fr", url: amzFr("Nokia 150 2023") }],
   },
