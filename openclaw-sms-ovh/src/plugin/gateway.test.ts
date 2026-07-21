@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { OvhClient } from "../ovh/client.js";
+import { emptyState, type PollerState } from "../ovh/poller.js";
+import type { PollerStore } from "../ovh/state.js";
 import type { OvhIncoming } from "../ovh/sms.js";
 import { resolveAccount, type ResolvedOvhSmsAccount } from "./accounts.js";
 import { isSenderAllowed, runPollLoop } from "./gateway.js";
@@ -53,6 +55,21 @@ function fakeClient(inbox: OvhIncoming[], failTimes = 0) {
     },
   } as unknown as OvhClient;
   return client;
+}
+
+/** Stands in for the keyed store, which is exercised in `ovh/state.test.ts`. */
+function memoryStore(initial?: PollerState) {
+  let saved = initial;
+  return {
+    store: {
+      load: () => Promise.resolve(saved ?? emptyState()),
+      save: (state: PollerState) => {
+        saved = state;
+        return Promise.resolve();
+      },
+    } satisfies PollerStore,
+    current: () => saved,
+  };
 }
 
 describe("isSenderAllowed", () => {
@@ -108,6 +125,28 @@ describe("runPollLoop", () => {
 
     expect(onMessage).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalled();
+  });
+
+  it("does not write the rejected sender's number to the log", async () => {
+    // A rejected message still deserves a log line, but a log file is not the
+    // place for someone's phone number.
+    const warn = vi.fn();
+
+    await runPollLoop({
+      account: account(),
+      onMessage: vi.fn().mockResolvedValue(undefined),
+      client: fakeClient([msg(1, "+33699999999")]),
+      sleep,
+      maxIterations: 1,
+      log: { warn },
+    });
+
+    const line = String(warn.mock.calls[0]?.[0] ?? "");
+    expect(line).not.toContain("+33699999999");
+    expect(line).not.toContain("699999");
+    // Still says enough to recognise which sender was refused.
+    expect(line).toContain("*");
+    expect(line).toContain("99");
   });
 
   it("does not deliver the same message twice across iterations", async () => {
@@ -175,6 +214,105 @@ describe("runPollLoop", () => {
     });
 
     expect(onMessage).not.toHaveBeenCalled();
+  });
+
+  it("does not re-deliver messages after a restart", async () => {
+    // `openclaw gateway restart` with in-memory state re-lists the cold-start
+    // window and answers every message in it again, billing the user twice for
+    // an answer they already had.
+    const inbox = [msg(1), msg(2)];
+    const store = memoryStore();
+
+    const first = vi.fn().mockResolvedValue(undefined);
+    await runPollLoop({
+      account: account(),
+      onMessage: first,
+      client: fakeClient(inbox),
+      sleep,
+      maxIterations: 1,
+      store: store.store,
+    });
+    expect(first).toHaveBeenCalledTimes(2);
+
+    // A fresh loop over the same inbox, as if the gateway had been restarted.
+    const second = vi.fn().mockResolvedValue(undefined);
+    await runPollLoop({
+      account: account(),
+      onMessage: second,
+      client: fakeClient(inbox),
+      sleep,
+      maxIterations: 1,
+      store: store.store,
+    });
+
+    expect(second).not.toHaveBeenCalled();
+  });
+
+  it("replays the cold-start window when there is no store", async () => {
+    // The counterpart to the test above: without persistence the second run
+    // cold-starts and hands the same messages over again.
+    const inbox = [msg(1)];
+
+    const first = vi.fn().mockResolvedValue(undefined);
+    await runPollLoop({
+      account: account(),
+      onMessage: first,
+      client: fakeClient(inbox),
+      sleep,
+      maxIterations: 1,
+    });
+
+    const second = vi.fn().mockResolvedValue(undefined);
+    await runPollLoop({
+      account: account(),
+      onMessage: second,
+      client: fakeClient(inbox),
+      sleep,
+      maxIterations: 1,
+    });
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves the state after every poll, not only at the end", async () => {
+    const store = memoryStore();
+
+    await runPollLoop({
+      account: account(),
+      onMessage: vi.fn().mockResolvedValue(undefined),
+      client: fakeClient([msg(1)]),
+      sleep,
+      maxIterations: 1,
+      store: store.store,
+    });
+
+    expect(store.current()?.seenIds).toContain(1);
+    expect(store.current()?.watermark).toBeDefined();
+  });
+
+  it("keeps polling when the stored state cannot be read", async () => {
+    // Degrading to a cold start costs one replay. Throwing would cost the
+    // channel.
+    const onMessage = vi.fn().mockResolvedValue(undefined);
+    const error = vi.fn();
+    const broken: PollerStore = {
+      load: () => Promise.reject(new Error("db locked")),
+      save: () => Promise.resolve(),
+    };
+
+    await runPollLoop({
+      account: account(),
+      onMessage,
+      client: fakeClient([msg(1)]),
+      sleep,
+      maxIterations: 1,
+      store: broken,
+      log: { error },
+    });
+
+    expect(onMessage).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalled();
   });
 
   it("stops once the signal is aborted mid-run", async () => {

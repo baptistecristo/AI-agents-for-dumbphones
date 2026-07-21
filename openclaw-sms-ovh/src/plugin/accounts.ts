@@ -200,6 +200,31 @@ export function normalizePhone(input: string): string {
   return `+${e164}`;
 }
 
+const MASK = "*****";
+
+/**
+ * Reduce a sender to something safe to write to a log file.
+ *
+ * A rejected message still deserves a log line, but a log file is not the
+ * place for someone's phone number: it is kept on disk, it gets copied into
+ * bug reports, and this plugin's whole pitch is that the user's traffic stays
+ * on the user's own machine. Keeping the first three characters and the last
+ * two leaves enough to tell two senders apart and to recognise a number you
+ * already know, without writing down one that could be dialled.
+ *
+ * The mask is a fixed width, so the log does not disclose how long the
+ * original was either.
+ */
+export function maskPhone(input: string): string {
+  const trimmed = input.trim();
+  if (trimmed === "") return "(empty)";
+  // OVH senders can be alphanumeric, so this is not always a number. Mask it
+  // the same way regardless: an alphanumeric sender id is attacker chosen and
+  // can carry a number inside it.
+  if (trimmed.length <= 4) return MASK;
+  return `${trimmed.slice(0, 3)}${MASK}${trimmed.slice(-2)}`;
+}
+
 export function resolveAccount(cfg: unknown, accountId?: string | null): ResolvedOvhSmsAccount {
   const id = accountId ?? DEFAULT_ACCOUNT_ID;
   const channel = readChannelConfig(cfg);

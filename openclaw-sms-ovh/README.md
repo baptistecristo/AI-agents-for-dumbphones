@@ -13,8 +13,13 @@ numbers in France, and 06/07 mobile is the one tier French regulation gives no
 automated-messaging derogation to. So the channel that could reach a basic
 phone is exactly the one that cannot legally be used for it here.
 
-OVHcloud's Time2Chat sells a dedicated 09 3x number, which sits in the tier
-that does have an unconditional derogation, and which a recipient can reply to.
+OVHcloud's Time2Chat sells a dedicated 09 3x number, which a recipient can
+reply to and which sits in a tier that does have a derogation: ARCEP decision
+2025-2215, article 2.3.9(f), exempts messages from the sender-identification
+asymmetry test that otherwise applies to these numbers. That is one specific
+exemption rather than a blanket one, and 09 3x numbers are allocated to
+operators rather than to individuals, so the number is bought from an operator
+such as OVHcloud rather than held directly.
 
 ## Design decisions worth knowing
 
@@ -246,4 +251,9 @@ which would defeat the entire purpose.
 
 ## Licence
 
-Apache-2.0. The filter design is adapted from Sift, MIT, by Ed Leeman.
+Apache-2.0.
+
+The filter cascade and rule schema are derived from
+[Sift](https://github.com/edleeman17/sift) by Ed Leeman, MIT. The permission
+notice, and the list of files carrying that derivation, are in
+[THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md).

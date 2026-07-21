@@ -4,6 +4,7 @@ import {
   DEFAULT_TEXT_CHUNK_LIMIT,
   isConfigured,
   listAccountIds,
+  maskPhone,
   normalizePhone,
   resolveAccount,
 } from "./accounts.js";
@@ -155,5 +156,33 @@ describe("normalizePhone rejects what is not a number", () => {
     expect(normalizePhone("12345")).toBe("");
     expect(normalizePhone("+1234567890123456789")).toBe("");
     expect(normalizePhone("")).toBe("");
+  });
+});
+
+describe("maskPhone", () => {
+  it("keeps the number out of the log while leaving it recognisable", () => {
+    const masked = maskPhone("+33612345678");
+
+    expect(masked).not.toContain("612345");
+    expect(masked.startsWith("+33")).toBe(true);
+    expect(masked.endsWith("78")).toBe(true);
+  });
+
+  it("tells two senders apart", () => {
+    expect(maskPhone("+33612345678")).not.toBe(maskPhone("+33698765432"));
+  });
+
+  it("does not disclose how long the original was", () => {
+    expect(maskPhone("+14155550132")).toHaveLength(maskPhone("+447700900123").length);
+  });
+
+  it("masks an alphanumeric sender too, since OVH allows one", () => {
+    // An alphanumeric sender id is attacker chosen and can carry a number.
+    expect(maskPhone("33612345678xyz")).not.toContain("612345");
+  });
+
+  it("says something rather than nothing for an empty sender", () => {
+    expect(maskPhone("")).toBe("(empty)");
+    expect(maskPhone("  ")).toBe("(empty)");
   });
 });

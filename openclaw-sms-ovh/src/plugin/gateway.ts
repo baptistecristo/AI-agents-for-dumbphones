@@ -14,8 +14,9 @@
 
 import { OvhClient } from "../ovh/client.js";
 import { emptyState, pollIncoming, type PollerState } from "../ovh/poller.js";
+import type { PollerStore } from "../ovh/state.js";
 import type { OvhIncoming } from "../ovh/sms.js";
-import { normalizePhone, type ResolvedOvhSmsAccount } from "./accounts.js";
+import { maskPhone, normalizePhone, type ResolvedOvhSmsAccount } from "./accounts.js";
 
 export interface GatewayLogger {
   info?: (message: string) => void;
@@ -32,6 +33,11 @@ export interface StartAccountParams {
   abortSignal?: AbortSignal;
   log?: GatewayLogger;
   client?: OvhClient;
+  /**
+   * Where the poller state is kept between runs. Omitted, the loop still works
+   * but a restart replays whatever the cold-start window catches.
+   */
+  store?: PollerStore;
   /** Injected for tests. */
   sleep?: (ms: number) => Promise<void>;
   /** Injected for tests: stop after this many iterations. */
@@ -81,10 +87,11 @@ export function isSenderAllowed(account: ResolvedOvhSmsAccount, sender: string):
  * Errors are logged and retried rather than thrown: a transient OVH outage or
  * a network blip must not take the channel down until the gateway restarts.
  * The loop keeps its poller state across iterations, so a failed poll does not
- * lose or replay messages.
+ * lose or replay messages, and it hands that state to the store after every
+ * poll so a restart does not replay them either.
  */
 export async function runPollLoop(params: StartAccountParams): Promise<void> {
-  const { account, abortSignal, log } = params;
+  const { account, abortSignal, log, store } = params;
   const sleep = params.sleep ?? ((ms: number) => defaultSleep(ms, abortSignal));
   const intervalMs = account.pollIntervalSeconds * 1000;
 
@@ -101,7 +108,25 @@ export async function runPollLoop(params: StartAccountParams): Promise<void> {
   // check: abort can flip while a handler is awaited.
   const aborted = (): boolean => abortSignal?.aborted === true;
 
+  // Loaded before the first poll, so the watermark and the seen ids from the
+  // previous run are already in hand. Without this the first poll is a cold
+  // start and re-delivers the tail of what the last run had already answered.
+  //
+  // A store that cannot be read costs one replay, which is the same degraded
+  // behaviour as having no store at all. Letting it throw here would instead
+  // take the whole channel down, which is worse than a duplicate answer.
   let state: PollerState = emptyState();
+  if (store !== undefined) {
+    try {
+      state = await store.load();
+    } catch (error) {
+      log?.error?.(
+        `${account.accountId}: poller state unreadable, starting cold: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
   let iterations = 0;
 
   log?.info?.(
@@ -118,7 +143,9 @@ export async function runPollLoop(params: StartAccountParams): Promise<void> {
 
       for (const message of result.messages) {
         if (!isSenderAllowed(account, message.sender)) {
-          log?.warn?.(`${account.accountId}: ignored message from ${message.sender} (not allowed)`);
+          log?.warn?.(
+            `${account.accountId}: ignored message from ${maskPhone(message.sender)} (not allowed)`,
+          );
           continue;
         }
         try {
@@ -132,6 +159,11 @@ export async function runPollLoop(params: StartAccountParams): Promise<void> {
           );
         }
       }
+
+      // Saved after delivery, not before. A crash between the two replays the
+      // batch, which costs a duplicate answer; saving first would lose it
+      // outright, and a message nobody ever sees is the worse failure.
+      await store?.save(state);
     } catch (error) {
       log?.error?.(
         `${account.accountId}: poll failed: ${

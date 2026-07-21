@@ -2,8 +2,9 @@
  * Stage 2: LLM adjudication of notifications the rules could not decide.
  *
  * Prompt design follows Sift by Ed Leeman (https://github.com/edleeman17/sift,
- * MIT). The central trick is his: tell the model what the message actually
- * costs and make it justify the spend. A model asked "is this important?"
+ * MIT; permission notice reproduced in THIRD-PARTY-NOTICES.md at the root of
+ * this package). The central trick is his: tell the model what the message
+ * actually costs and make it justify the spend. A model asked "is this important?"
  * says yes to almost everything; a model asked "is this worth 12 cents?"
  * behaves like someone spending their own money.
  *

@@ -1,7 +1,9 @@
 /**
  * Spend control: the last gate before a message is actually paid for.
  *
- * The cooldown, per-sender cap and duplicate suppression follow Sift. The
+ * The cooldown, per-sender cap and duplicate suppression follow Sift by Ed
+ * Leeman (https://github.com/edleeman17/sift, MIT; permission notice
+ * reproduced in THIRD-PARTY-NOTICES.md at the root of this package). The
  * budget ceilings do not, and they are the reason this file exists: a filter
  * that only limits message *rate* still has an unbounded bill, because a
  * multi-segment message costs several times a short one. A runaway sender, a
