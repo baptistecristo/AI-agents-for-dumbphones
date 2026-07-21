@@ -13,7 +13,7 @@
  * computed for the specific message being judged.
  */
 
-import { analyze } from "../encoding.js";
+import { analyze, smsPartCount } from "../encoding.js";
 import type { Notification } from "./rules.js";
 
 /**
@@ -48,7 +48,10 @@ export interface ClassificationResult {
 /** What the user would be billed to forward this notification verbatim. */
 export function costOf(notification: Notification, cost: CostModel): number {
   const rendered = renderForSms(notification);
-  return analyze(rendered).segments * cost.creditsPerSegment * cost.pricePerCredit;
+  // The send path posts one job per part, so parts are what gets billed.
+  // analyze().segments answers the concatenated-message question instead, and
+  // reading it here undercounted the 154 to 160 character band by half.
+  return smsPartCount(rendered) * cost.creditsPerSegment * cost.pricePerCredit;
 }
 
 /** How a forwarded notification appears on the dumbphone. */

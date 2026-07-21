@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { analyze } from "../encoding.js";
 import type { OvhClient } from "../ovh/client.js";
 import { resolveAccount, type ResolvedOvhSmsAccount } from "./accounts.js";
 import { sendText, toPlainText } from "./send.js";
@@ -126,17 +127,43 @@ describe("sendText", () => {
     expect(result.segments).toBe(0);
   });
 
-  it("refuses a part that would exceed OVH's six-segment ceiling", async () => {
-    const { client } = fakeClient();
-    // A chunk limit above the concatenation ceiling is a misconfiguration.
-    await expect(
-      sendText({
-        account: account({ textChunkLimit: 2000 }),
-        to: "+33612345678",
-        text: "a".repeat(1800),
-        client,
-      }),
-    ).rejects.toThrowError(/six|6 segments|limit of 6/i);
+  // A chunk limit above what one SMS holds used to produce oversized parts and
+  // throw. Parts are now capped by the encoding itself, so the misconfiguration
+  // costs nothing and the ceiling is unreachable through this path.
+  it("caps a part at one SMS even when the configured limit is absurd", async () => {
+    const { client, sent } = fakeClient();
+    const result = await sendText({
+      account: account({ textChunkLimit: 2000 }),
+      to: "+33612345678",
+      text: "a".repeat(1800),
+      client,
+    });
+
+    expect(sent.length).toBeGreaterThan(1);
+    for (const message of sent) {
+      expect(analyze(message).segments).toBe(1);
+    }
+    // Billed count and part count are the same number, which is the property
+    // the budget depends on.
+    expect(result.segments).toBe(result.parts.length);
+  });
+
+  // The bug: analyze() measured a concatenated message while the send path
+  // posts one job per part. A reply scored at six segments went out as seven.
+  it("bills exactly one message per part, accents included", async () => {
+    const { client, sent } = fakeClient();
+    const result = await sendText({
+      account: account(),
+      to: "+33612345678",
+      // One circumflex re-encodes the whole thing to UCS-2 at 70 units.
+      text: `prêt ${"a".repeat(400)}`,
+      client,
+    });
+
+    expect(result.segments).toBe(sent.length);
+    for (const message of sent) {
+      expect(analyze(message).segments).toBe(1);
+    }
   });
 
   it("counts total segments across every part", async () => {

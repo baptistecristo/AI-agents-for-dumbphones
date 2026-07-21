@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   analyze,
   chunk,
+  chunkForSms,
   estimateCost,
   FRENCH_UCS2_TRAPS,
   isGsm7,
+  smsPartCount,
   toGsm7,
   TRUNCATION_MARKER,
   truncateToSegments,
+  truncateToSmsParts,
   ucs2Offenders,
 } from "./encoding.js";
 
@@ -226,5 +229,82 @@ describe("truncateToSegments", () => {
 
   it("refuses a non-positive budget", () => {
     expect(() => truncateToSegments("x", 0)).toThrowError(RangeError);
+  });
+});
+
+describe("chunkForSms bills what it sends", () => {
+  // Each of these was verified as a real mismatch before the fix: analyze()
+  // measured a concatenated message, chunk() sliced on String.length, and the
+  // send path posted one job per slice.
+
+  it("makes every part exactly one billed SMS", () => {
+    for (const text of [
+      "a".repeat(1800),
+      `prêt ${"a".repeat(400)}`,
+      "€".repeat(100) + "a".repeat(200),
+      "😀".repeat(120),
+      `${"mot ".repeat(200)}`,
+    ]) {
+      for (const part of chunkForSms(text)) {
+        expect(analyze(part).segments, `part of ${JSON.stringify(text.slice(0, 20))}`).toBe(1);
+      }
+    }
+  });
+
+  // One accented character re-encodes the whole message to UCS-2 at 70 units,
+  // so 153 characters is three segments, not one part.
+  it("does not treat 153 accented characters as one message", () => {
+    const text = "ê" + "a".repeat(152);
+    expect(analyze(text).segments).toBeGreaterThan(1);
+    expect(chunkForSms(text).length).toBeGreaterThan(1);
+    for (const part of chunkForSms(text)) expect(analyze(part).segments).toBe(1);
+  });
+
+  // Extension characters cost two septets each, so 153 of them is not 153 units.
+  it("counts an extension character as the two septets it costs", () => {
+    const text = "€".repeat(100) + "a".repeat(53);
+    expect(analyze(text).units).toBe(253);
+    for (const part of chunkForSms(text)) expect(analyze(part).segments).toBe(1);
+  });
+
+  // The 154 to 160 band: one concatenated segment, but two independent ones.
+  it("splits the band where a single segment and a single message disagree", () => {
+    const text = "a".repeat(157);
+    expect(analyze(text).segments).toBe(1); // as a concatenated message
+    expect(smsPartCount(text)).toBe(1); // and as one standalone message too
+    const overflow = "a".repeat(161);
+    expect(smsPartCount(overflow)).toBe(2);
+  });
+
+  it("never cuts a surrogate pair in half", () => {
+    for (const part of chunkForSms("😀".repeat(120))) {
+      expect(part).toBe([...part].join(""));
+      expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(part)).toBe(false);
+      expect(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(part)).toBe(false);
+    }
+  });
+
+  it("still honours a configured character cap", () => {
+    for (const part of chunkForSms("a".repeat(1000), 50)) {
+      expect(part.length).toBeLessThanOrEqual(50);
+    }
+  });
+});
+
+describe("truncateToSmsParts", () => {
+  it("cuts to the number of messages that will actually be billed", () => {
+    const text = "mot ".repeat(500);
+    for (const max of [1, 2, 6]) {
+      expect(smsPartCount(truncateToSmsParts(text, max))).toBeLessThanOrEqual(max);
+    }
+  });
+
+  it("leaves text that already fits alone", () => {
+    expect(truncateToSmsParts("court", 6)).toBe("court");
+  });
+
+  it("holds the ceiling for accented text too", () => {
+    const text = "prêt à partir, ".repeat(60);
+    expect(smsPartCount(truncateToSmsParts(text, 3))).toBeLessThanOrEqual(3);
   });
 });

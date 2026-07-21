@@ -158,13 +158,46 @@ export function listAccountIds(cfg: unknown): string[] {
  */
 export function normalizePhone(input: string): string {
   const trimmed = input.trim();
-  const digits = trimmed.replace(/[^\d]/g, "");
+
+  // Reject anything that is not shaped like a phone number, rather than
+  // stripping it down until it looks like one. Stripping every non-digit meant
+  // "33612345678xyz" normalised to "+33612345678", so an alphanumeric sender id
+  // chosen to end in an allow-listed number passed the gate and earned a full
+  // agent turn. OVH senders can be alphanumeric, so this input is attacker
+  // controlled in practice, not hypothetical.
+  //
+  // Separators people actually type are allowed; letters are not, and `+` only
+  // leads.
+  if (!/^\+?[\d\s.\-/()  ]+$/.test(trimmed)) return "";
+
+  // "+33 (0)6 12 34 56 78" is how a French number is printed on a business
+  // card: the parenthesised zero is the trunk prefix you drop when calling from
+  // abroad, so it must not survive into the digits.
+  const withoutTrunkZero = trimmed.replace(/^(\+\d{1,3}[\s.\-/]*)\(0\)/, "$1");
+
+  const digits = withoutTrunkZero.replace(/[^\d]/g, "");
   if (digits === "") return "";
+
+  // 00 is the international prefix written the ITU way.
+  const international = trimmed.startsWith("+")
+    ? digits
+    : digits.startsWith("00")
+      ? digits.slice(2)
+      : undefined;
+
   // A French national number written as 06... is the same as +336...
-  if (!trimmed.startsWith("+") && digits.startsWith("0") && digits.length === 10) {
-    return `+33${digits.slice(1)}`;
-  }
-  return trimmed.startsWith("+") ? `+${digits}` : `+${digits}`;
+  const national =
+    international === undefined && digits.startsWith("0") && digits.length === 10
+      ? `33${digits.slice(1)}`
+      : undefined;
+
+  const e164 = international ?? national ?? digits;
+
+  // E.164 allows 15 digits, and a country code plus subscriber number does not
+  // get below 8 in practice. Outside that it is not a number we can match.
+  if (e164.length < 8 || e164.length > 15) return "";
+
+  return `+${e164}`;
 }
 
 export function resolveAccount(cfg: unknown, accountId?: string | null): ResolvedOvhSmsAccount {

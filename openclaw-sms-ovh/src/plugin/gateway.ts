@@ -68,6 +68,10 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
 export function isSenderAllowed(account: ResolvedOvhSmsAccount, sender: string): boolean {
   if (account.dmPolicy === "open") return true;
   const normalized = normalizePhone(sender);
+  // A sender that does not normalise is not a number, so it cannot be on a
+  // list of numbers. Checked here too, so a stray "" in allowFrom cannot turn
+  // every unparseable sender into an allowed one.
+  if (normalized === "") return false;
   return account.allowFrom.includes(normalized);
 }
 

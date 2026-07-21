@@ -6,7 +6,7 @@
  * stripped because a basic phone renders asterisks and backticks literally.
  */
 
-import { analyze, chunk, toGsm7 } from "../encoding.js";
+import { analyze, chunkForSms, toGsm7 } from "../encoding.js";
 import { OvhClient } from "../ovh/client.js";
 import { MAX_SEGMENTS, sendFromVirtualNumber, type OvhSendReport } from "../ovh/sms.js";
 import type { ResolvedOvhSmsAccount } from "./accounts.js";
@@ -66,7 +66,10 @@ export async function sendText(params: SendTextParams): Promise<SendTextResult> 
   let body = toPlainText(params.text);
   if (params.forceGsm7 === true) body = toGsm7(body);
 
-  const parts = chunk(body, account.textChunkLimit);
+  // chunkForSms, not chunk: every part here becomes its own OVH job, so a
+  // part must be one billed SMS. Splitting on character count sent seven
+  // messages against a six-message ceiling.
+  const parts = chunkForSms(body, account.textChunkLimit);
   if (parts.length === 0) return { reports: [], parts: [], segments: 0 };
 
   const client =

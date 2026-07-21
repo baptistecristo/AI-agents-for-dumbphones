@@ -116,3 +116,44 @@ describe("listAccountIds", () => {
     expect(ids).toEqual(["default", "work"]);
   });
 });
+
+describe("normalizePhone rejects what is not a number", () => {
+  // The hole: every non-digit was stripped, so an alphanumeric sender id ending
+  // in an allow-listed number normalised onto it and passed the gate.
+  it("refuses a sender id wearing a number", () => {
+    for (const hostile of [
+      "33612345678xyz",
+      "xyz33612345678",
+      "FreeMsg33612345678",
+      "+33612345678 <script>",
+      "33 6 12 34 56 78 BONUS",
+    ]) {
+      expect(normalizePhone(hostile), hostile).toBe("");
+    }
+  });
+
+  it("still accepts the ways a person writes their own number", () => {
+    for (const written of [
+      "+33612345678",
+      "+33 6 12 34 56 78",
+      "+33 (0)6 12.34.56.78",
+      "0612345678",
+      "06 12 34 56 78",
+      "0033612345678",
+    ]) {
+      expect(normalizePhone(written), written).toBe("+33612345678");
+    }
+  });
+
+  it("handles numbers that are not French", () => {
+    expect(normalizePhone("+447700900123")).toBe("+447700900123");
+    expect(normalizePhone("00447700900123")).toBe("+447700900123");
+    expect(normalizePhone("+1 415 555 0132")).toBe("+14155550132");
+  });
+
+  it("refuses lengths that cannot be E.164", () => {
+    expect(normalizePhone("12345")).toBe("");
+    expect(normalizePhone("+1234567890123456789")).toBe("");
+    expect(normalizePhone("")).toBe("");
+  });
+});

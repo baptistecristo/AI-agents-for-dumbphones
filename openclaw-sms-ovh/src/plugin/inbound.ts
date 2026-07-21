@@ -12,7 +12,7 @@
 
 import type { OpenClawConfig, ReplyPayload } from "openclaw/plugin-sdk/core";
 
-import { analyze, truncateToSegments } from "../encoding.js";
+import { smsPartCount, truncateToSmsParts } from "../encoding.js";
 import type { OvhIncoming } from "../ovh/sms.js";
 import { CHANNEL_ID, normalizePhone, type ResolvedOvhSmsAccount } from "./accounts.js";
 import type { GatewayLogger } from "./gateway.js";
@@ -79,7 +79,13 @@ export function createSmsDelivery(params: CreateSmsDeliveryParams): SmsDeliveryA
         return { visibleReplySent: false };
       }
 
-      const body = analyze(text).segments > remaining ? truncateToSegments(text, remaining) : text;
+      // Counted in parts, the same unit the send path bills in. Measuring the
+      // reply as one concatenated message let a reply that "fits" in six go out
+      // as seven separate ones.
+      const body =
+        smsPartCount(text, account.textChunkLimit) > remaining
+          ? truncateToSmsParts(text, remaining, { maxChars: account.textChunkLimit })
+          : text;
       if (body !== text) {
         log?.warn?.(
           `${account.accountId}: reply cut to ${remaining} segment(s) to stay inside the budget`,
