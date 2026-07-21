@@ -107,6 +107,9 @@ export async function POST(req: Request) {
   const session: CallSession = {
     callId: "sms",
     channel: "text",
+    // Un SMS reçu est toujours entrant : c'est la personne qui écrit, jamais
+    // nous qui ouvrons le fil. Rien à déduire d'une colonne ici.
+    direction: "inbound",
     userId,
     callerNumber: from,
     verified,

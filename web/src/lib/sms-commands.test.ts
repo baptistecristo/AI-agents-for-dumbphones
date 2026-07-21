@@ -43,6 +43,7 @@ import { handleSmsCommand } from "./sms-commands";
 const smsSession = (language: "fr" | "en" | "es" = "fr"): CallSession => ({
   callId: "sms",
   channel: "text",
+  direction: "inbound",
   userId: "user-1",
   callerNumber: "+33600000000",
   verified: false,

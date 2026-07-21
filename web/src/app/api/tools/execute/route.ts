@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
   const { data } = await supabaseAdmin()
     .from("call_logs")
-    .select("user_id, from_number, pin_verified, language")
+    .select("user_id, from_number, pin_verified, direction, language")
     .eq("vapi_call_id", body.call_id)
     .maybeSingle();
 
@@ -41,6 +41,10 @@ export async function POST(req: Request) {
   const result = await executeTool(body.name, body.arguments, {
     callId: body.call_id,
     channel: "voice",
+    // Fail-closed comme sur le chemin Vapi : ce qui n'est pas lisiblement
+    // "inbound" compte comme sortant, et les skills réservés à l'entrant
+    // refusent.
+    direction: data?.direction === "inbound" ? ("inbound" as const) : ("outbound" as const),
     userId,
     callerNumber,
     verified: data?.pin_verified ?? false,

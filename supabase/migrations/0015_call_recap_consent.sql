@@ -4,6 +4,11 @@
 -- que la colonne a le droit de contenir, à l'endroit où on le cherchera.
 --
 -- Additif et idempotent : ne touche à aucune ligne, ne crée aucune table.
+--
+-- Numérotée 0015 et non 0013 : 0014 est déjà appliquée. `supabase db push`
+-- considère une migration antérieure qui arrive APRÈS une migration déjà
+-- appliquée comme hors séquence et la saute, sans erreur, tant qu'on ne passe
+-- pas --include-all. En 0013 ce fichier ne serait jamais parti.
 
 -- 'call_recap' = la personne autorise l'agent à lui relire, au téléphone, le
 -- résumé de son dernier appel ENTRANT (call_logs.summary), et seulement quand
@@ -17,9 +22,10 @@
 --
 -- Ce que ce consentement ne couvre PAS, et ne pourra jamais couvrir : les appels
 -- SORTANTS. Quand l'agent appelle un commerce pour quelqu'un, la personne au
--- bout du fil n'a rien accepté. Ces appels sont écartés en dur côté application
--- (filtre direction = 'inbound'), pas par un réglage : aucune valeur de cette
--- colonne ne peut les faire ressortir.
+-- bout du fil n'a rien accepté. Ces appels sont écartés en dur côté application,
+-- à deux endroits (la ligne lue : direction = 'inbound' ; l'appel en cours :
+-- session.direction), pas par un réglage : aucune valeur de cette colonne ne
+-- peut les faire ressortir.
 comment on column public.consents.source is
   'Domaine du consentement : calendar | contacts | sms | outbound_calls | memory | recording | call_recap. '
   'Texte libre par choix (une contrainte CHECK ferait échouer un déploiement applicatif en avance sur la base) : '

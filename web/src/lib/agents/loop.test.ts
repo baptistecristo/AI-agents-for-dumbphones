@@ -11,6 +11,7 @@ import { executeTool } from "../skills";
 const session: CallSession = {
   callId: "sms",
   channel: "text",
+  direction: "inbound",
   userId: "u1",
   callerNumber: "+33600000000",
   verified: false,

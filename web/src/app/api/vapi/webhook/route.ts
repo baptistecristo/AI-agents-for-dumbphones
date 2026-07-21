@@ -11,7 +11,7 @@ import { inboundRateVerdict, rateLimitMessage } from "@/lib/rate-limit";
 import { extractCallActionItems } from "@/lib/reports/action-items";
 import { executeTool } from "@/lib/skills";
 import { closeJobWithoutReport, handleReportOutcome } from "@/lib/skills/outbound-report";
-import { recapOfferAvailable } from "@/lib/skills/recap";
+import { clampSummary, recapOfferAvailable } from "@/lib/skills/recap";
 import { CallSession } from "@/lib/skills/types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isValidVapiRequest } from "@/lib/vapi";
@@ -78,6 +78,11 @@ async function sessionFor(callId: string): Promise<CallSession> {
   return {
     callId,
     channel: "voice",
+    // Fail-closed : tout ce qui n'est pas lisiblement "inbound" (ligne
+    // introuvable, colonne vide, valeur inattendue) compte comme sortant. Les
+    // skills réservés à l'entrant refusent alors, ce qui est le bon sens de
+    // l'erreur.
+    direction: data?.direction === "inbound" ? "inbound" : "outbound",
     userId,
     callerNumber,
     verified: data?.pin_verified ?? false,
@@ -168,11 +173,18 @@ export async function POST(req: Request) {
     case "end-of-call-report": {
       if (!callId) break;
       const db = supabaseAdmin();
+      // Le résumé est borné À L'ÉCRITURE, pas seulement à la relecture.
+      // `user_id` sur cette ligne vient du caller-ID, qui est usurpable : ce
+      // texte est fabriqué à partir de ce que l'appelant a DIT, et il repartira
+      // un jour dans le contexte du modèle via get_last_call_summary. Un texte
+      // planté ne doit pas pouvoir peser plus qu'un résumé (cf. skills/recap.ts,
+      // qui reborne à la lecture pour les lignes déjà écrites sans plafond).
+      const rawSummary: unknown = message.analysis?.summary;
       await db
         .from("call_logs")
         .update({
           transcript: message.artifact?.transcript ?? message.transcript ?? null,
-          summary: message.analysis?.summary ?? null,
+          summary: typeof rawSummary === "string" ? clampSummary(rawSummary) : null,
           ended_at: new Date().toISOString(),
           ended_reason: message.endedReason ?? null,
         })
