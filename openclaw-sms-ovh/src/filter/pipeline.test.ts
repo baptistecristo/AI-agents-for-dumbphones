@@ -36,6 +36,22 @@ describe("filterNotifications", () => {
     expect(outcomes[0]?.text).toContain("483920");
   });
 
+  it("drops a group without consulting the model at any stage", async () => {
+    // Group traffic is the largest source of volume. Reaching the classifier
+    // meant paying for a model call to decide something the conversation shape
+    // already answers, and the urgency stage then refuses groups anyway.
+    const spy = model();
+    const { outcomes } = await filterNotifications(
+      [note({ channel: "Famille", body: "on mange a quelle heure" })],
+      emptyRateLimitState(),
+      { config: DEFAULT_CONFIG, model: spy, limits: NEVER_LIMITED, now: () => NOW },
+    );
+
+    expect(outcomes[0]?.forward).toBe(false);
+    expect(outcomes[0]?.stage).toBe("rules");
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("drops an unknown app without consulting the model", async () => {
     const spy = model();
     const { outcomes } = await filterNotifications([note({ app: "linkedin" })], emptyRateLimitState(), {

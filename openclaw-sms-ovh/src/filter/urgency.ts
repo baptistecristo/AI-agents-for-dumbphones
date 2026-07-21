@@ -1,7 +1,9 @@
 /**
  * Stage 3: a second look at messages already dropped.
  *
- * The idea is Ed Leeman's, and it is the part of Sift he reports actually
+ * The idea is Ed Leeman's, and it is the part of Sift
+ * (https://github.com/edleeman17/sift, MIT; permission notice reproduced in
+ * THIRD-PARTY-NOTICES.md at the root of this package) he reports actually
  * earning its keep: after everything else has decided to stay silent, re-read
  * the discarded messages looking only for genuine distress. Roughly one or two
  * a week get rescued that the earlier stages would have thrown away.
@@ -14,7 +16,15 @@
  */
 
 import type { TextModel } from "./classifier.js";
-import type { Notification } from "./rules.js";
+import { looksLikeGroup, type Notification } from "./rules.js";
+
+/**
+ * Re-exported from the rules stage, which owns the heuristic because it now
+ * drops groups before they reach the classifier. Here it serves the second
+ * purpose it always had: a group is never treated as an emergency, which
+ * removes the largest source of false positives at a stroke.
+ */
+export { looksLikeGroup };
 
 export const MAX_BATCH = 10;
 
@@ -29,21 +39,6 @@ export const MAX_URGENT_PER_BATCH = 2;
 export interface UrgencyResult {
   urgent: boolean;
   reason: string;
-}
-
-/**
- * Heuristic group detection.
- *
- * Messaging apps do not label group chats consistently, so this reads the
- * conversation name: an explicit channel, a comma-separated participant list,
- * or the tilde some clients prefix to a sender inside a group. Groups are
- * never treated as emergencies, which removes the largest source of false
- * positives at a stroke.
- */
-export function looksLikeGroup(notification: Notification): boolean {
-  if (notification.channel !== undefined && notification.channel.trim() !== "") return true;
-  const title = notification.title;
-  return title.includes(",") || title.includes("~") || /\bgroup\b/i.test(title);
 }
 
 /**

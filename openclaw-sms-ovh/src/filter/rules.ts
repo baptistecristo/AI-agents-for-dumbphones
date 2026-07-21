@@ -5,7 +5,8 @@
  * MIT), which solves the same problem: deciding which phone notifications are
  * worth forwarding to a dumbphone when every forward costs real money. The
  * rule schema and precedence order follow his; the code is a TypeScript
- * reimplementation rather than a translation.
+ * reimplementation rather than a translation. The MIT permission notice is
+ * reproduced in THIRD-PARTY-NOTICES.md at the root of this package.
  *
  * Why rules come first: an LLM call per notification is both slow and a
  * running cost, and most traffic is obviously noise. Rules are free and
@@ -46,6 +47,14 @@ export interface Rule {
   body_regex?: string;
   /** Matches against title OR body. */
   regex?: string;
+  /**
+   * Matches on whether the notification looks like a group conversation.
+   *
+   * Reuses `looksLikeGroup`, deliberately: the emergency re-check at stage 3
+   * already refuses to treat groups as urgent, and two separate notions of
+   * "this is a group" would eventually disagree.
+   */
+  is_group?: boolean;
   action: Action;
   priority?: Priority;
   /** Overrides the default classifier prompt when `action` is "llm". */
@@ -135,6 +144,23 @@ export function normalizeText(text: string): string {
   return out.toLowerCase();
 }
 
+/**
+ * Heuristic group detection.
+ *
+ * Messaging apps do not label group chats consistently, so this reads the
+ * conversation name: an explicit channel, a comma-separated participant list,
+ * or the tilde some clients prefix to a sender inside a group.
+ *
+ * Lives here rather than beside the urgency stage because both stages need it:
+ * stage 1 drops groups before they can be billed, and stage 3 refuses to treat
+ * them as emergencies.
+ */
+export function looksLikeGroup(notification: Notification): boolean {
+  if (notification.channel !== undefined && notification.channel.trim() !== "") return true;
+  const title = notification.title;
+  return title.includes(",") || title.includes("~") || /\bgroup\b/i.test(title);
+}
+
 const regexCache = new Map<string, RegExp>();
 
 function compile(pattern: string): RegExp {
@@ -183,6 +209,9 @@ export function matches(rule: Rule, notification: Notification): boolean {
   if (rule.regex !== undefined) {
     const re = compile(rule.regex);
     if (!re.test(title) && !re.test(body)) return false;
+  }
+  if (rule.is_group !== undefined) {
+    if (looksLikeGroup(notification) !== rule.is_group) return false;
   }
   return true;
 }
@@ -238,33 +267,95 @@ export function evaluate(config: FilterConfig, notification: Notification): Rule
 }
 
 /**
- * Words that accompany a one-time code, across the three languages the
- * project supports. Both accented and unaccented spellings are listed because
- * senders are inconsistent and normalisation preserves accents.
+ * Phrases that mark a one-time code, across the three languages the project
+ * supports. Both accented and unaccented spellings are listed because senders
+ * are inconsistent and normalisation preserves accents.
+ *
+ * The word "code" on its own is deliberately NOT enough. "Use code 1234 for
+ * 20% off this weekend" is a discount, not a login, and the earlier version of
+ * this rule forwarded it: an unconditional SEND at `high` priority, which also
+ * skips the cooldown. Any sender able to put the word "code" next to four
+ * digits could spend the user's budget at will, including from an app that
+ * `unknown_apps: "drop"` would otherwise have rejected, because this is a
+ * global rule and global rules run first.
+ *
+ * A real one-time code carries verification framing around the digits, so the
+ * rule asks for that framing rather than for the bare word.
  */
-const OTP_WORDS = [
-  "code",
+const OTP_QUALIFIERS = [
   "otp",
-  "verification",
-  "v\\u00e9rification",
-  "codigo",
-  "c\\u00f3digo",
+  "one[\\s-]?time\\s+(?:code|password|pin)",
+  "(?:verification|verify|security|login|log[\\s-]?in|sign[\\s-]?in|access|confirmation|authentication|auth|2fa)\\s+code",
+  // "your code", and also "your Google verification code".
+  "your\\s+(?:\\S+\\s+){0,3}code",
+  "votre\\s+code",
+  "code\\s+(?:de\\s+|d')?(?:v\\u00e9rification|verification|s\\u00e9curit\\u00e9|securite|confirmation|acc\\u00e8s|acces|connexion)",
+  "(?:su|tu)\\s+c(?:\\u00f3|o)digo",
+  "c(?:\\u00f3|o)digo\\s+de\\s+(?:verificaci(?:\\u00f3|o)n|seguridad|acceso|confirmaci(?:\\u00f3|o)n)",
+].join("|");
+
+/**
+ * Markers that make a message an advert whatever else it says.
+ *
+ * A second line of defence, because a marketing message is perfectly capable
+ * of writing "your code": "your discount code 1234". Checked across the whole
+ * body rather than near the digits, since the giveaway is often at the other
+ * end of the text.
+ */
+const PROMO_MARKERS = [
+  "\\bpromo",
+  "\\bcoupon",
+  "\\bdiscount",
+  "\\bvoucher",
+  "%\\s*off",
+  "\\boff\\s+your\\b",
+  "\\bsale\\b",
+  "\\bunsubscribe\\b",
+  "\\br\\u00e9duction",
+  "\\breduction\\b",
+  "\\bremise\\b",
+  "\\bsoldes\\b",
+  "\\bd\\u00e9sabonner",
+  "\\bdescuento",
+  "\\boferta",
+  "\\brebaja",
 ].join("|");
 
 const OTP_DIGITS = "\\b\\d{4,8}\\b";
 
-/** A code near one of those words, in either order. */
-const OTP_KEYWORDS_NEAR_DIGITS = [
-  `${OTP_DIGITS}[^\\n]{0,40}(?:${OTP_WORDS})`,
-  `(?:${OTP_WORDS})[^\\n]{0,40}${OTP_DIGITS}`,
+/** A qualified code phrase near the digits, in either order. */
+const OTP_NEAR_DIGITS = [
+  `${OTP_DIGITS}[^\\n]{0,40}(?:${OTP_QUALIFIERS})`,
+  `(?:${OTP_QUALIFIERS})[^\\n]{0,40}${OTP_DIGITS}`,
 ].join("|");
+
+/**
+ * The body must clear the promotional exclusion before the proximity match is
+ * considered at all. `normalizeText` has already folded the body onto one
+ * line, so anchoring at the start covers the whole message.
+ */
+const OTP_BODY_REGEX = `^(?!.*(?:${PROMO_MARKERS})).*(?:${OTP_NEAR_DIGITS})`;
+
+/**
+ * Drop group traffic before the classifier is billed for it.
+ *
+ * Not `finalDrop`: stage 3 answers groups from the same heuristic without
+ * calling a model, so leaving them reviewable costs nothing and keeps the
+ * exemption reserved for things that must never be forwarded at all.
+ */
+const GROUP_DROP: Rule = {
+  is_group: true,
+  action: "drop",
+  reason: "group conversation",
+};
 
 /**
  * A starting configuration that errs heavily toward silence.
  *
  * Nothing here is tuned for a specific person; it is the shape a user edits.
- * Unknown apps are dropped outright, and the only unconditional SEND is a
- * one-time code, which is worth money precisely because it is useless late.
+ * Unknown apps are dropped outright, and the only SEND that skips the
+ * classifier is a one-time code, which is worth money precisely because it is
+ * useless late.
  */
 export const DEFAULT_CONFIG: FilterConfig = {
   global: {
@@ -278,11 +369,11 @@ export const DEFAULT_CONFIG: FilterConfig = {
         finalDrop: true,
       },
       {
-        // The code appears before the keyword ("483920 is your code") about as
+        // The code appears before the phrase ("483920 is your code") about as
         // often as after it ("your code is 483920"), so both orders match.
         // Bounded to 40 characters so a digit at one end of a long message and
-        // the word "code" at the other do not combine into a false positive.
-        body_regex: OTP_KEYWORDS_NEAR_DIGITS,
+        // the phrase at the other do not combine into a false positive.
+        body_regex: OTP_BODY_REGEX,
         action: "send",
         priority: "high",
         reason: "one-time code",
@@ -291,14 +382,16 @@ export const DEFAULT_CONFIG: FilterConfig = {
   },
   apps: {
     // Group traffic is the single largest source of volume and the reason a
-    // per-message bill becomes unaffordable, so groups are dropped and only
-    // one-to-one messages reach the classifier.
+    // per-message bill becomes unaffordable, so groups are dropped here, at
+    // stage 1, and only one-to-one messages reach the classifier. Dropping
+    // them later would mean paying for a model call to decide something the
+    // conversation shape already answers.
     whatsapp: {
       default: "llm",
-      rules: [],
+      rules: [GROUP_DROP],
     },
-    signal: { default: "llm", rules: [] },
-    imessage: { default: "llm", rules: [] },
+    signal: { default: "llm", rules: [GROUP_DROP] },
+    imessage: { default: "llm", rules: [GROUP_DROP] },
     // Bot API only: it never sees the user's personal conversations, so
     // anything arriving here is addressed to the bot and worth adjudicating.
     telegram: { default: "llm", rules: [] },

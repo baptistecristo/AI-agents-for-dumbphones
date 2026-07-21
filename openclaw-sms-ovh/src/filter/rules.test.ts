@@ -148,11 +148,53 @@ describe("DEFAULT_CONFIG", () => {
   it("always forwards a one-time code, in each supported language", () => {
     for (const body of [
       "Your verification code is 483920",
+      "483920 is your code",
+      "G-483920 is your Google verification code",
+      "Your OTP is 4821",
       "Votre code de verification 483920",
+      "Votre code est 483920",
       "Tu codigo 483920",
+      "Su codigo de verificacion es 483920",
     ]) {
       expect(evaluate(DEFAULT_CONFIG, note({ body })).action).toBe("send");
     }
+  });
+
+  it("does not treat a bare code word beside digits as a one-time code", () => {
+    // The word "code" next to four digits is not a login. Forwarding this was
+    // an unconditional SEND at `high` priority, which also skips the cooldown,
+    // so any sender able to write "code 1234" could spend the budget at will.
+    // None of these carry a promotional marker, so only the requirement for a
+    // verification phrase can refuse them.
+    for (const body of [
+      "Use code 1234 at checkout this weekend",
+      "Table booked, the door code is 4821",
+      "Le code de la porte est 4821",
+      "El codigo del portal es 4821",
+    ]) {
+      expect(evaluate(DEFAULT_CONFIG, note({ body })).action).not.toBe("send");
+    }
+  });
+
+  it("does not treat a discount code as a one-time code", () => {
+    // Marketing writes "your code" perfectly happily, so the verification
+    // phrase alone is not enough. These are refused on the promotional
+    // markers instead.
+    for (const body of [
+      "Use code 1234 for 20% off this weekend",
+      "Your promo code 4821 gives you 15% off",
+      "Your code 9080 gets you a discount at checkout",
+      "Votre code 4821 : 15% de reduction",
+    ]) {
+      expect(evaluate(DEFAULT_CONFIG, note({ body })).action).not.toBe("send");
+    }
+  });
+
+  it("does not let a marketing message from an unknown app reach the phone", () => {
+    // Global rules run before `unknown_apps`, so an unconditional SEND there
+    // hands the budget to every app the user never configured.
+    const body = "Use code 1234 for 20% off this weekend";
+    expect(evaluate(DEFAULT_CONFIG, note({ app: "linkedin", body })).action).toBe("drop");
   });
 
   it("does not call it a one-time code when the digits are far from the word", () => {
@@ -165,5 +207,33 @@ describe("DEFAULT_CONFIG", () => {
   it("sends ambiguous one-to-one messages to the classifier rather than guessing", () => {
     expect(evaluate(DEFAULT_CONFIG, note()).action).toBe("llm");
     expect(evaluate(DEFAULT_CONFIG, note({ app: "signal" })).action).toBe("llm");
+  });
+
+  it("drops group traffic before the classifier can be billed for it", () => {
+    for (const notification of [
+      note({ channel: "Famille" }),
+      note({ title: "Marie, Paul, Luc" }),
+      note({ title: "~Marie" }),
+      note({ app: "signal", channel: "Voisins" }),
+      note({ app: "imessage", title: "Book group" }),
+    ]) {
+      expect(evaluate(DEFAULT_CONFIG, notification).action).toBe("drop");
+    }
+  });
+});
+
+describe("is_group", () => {
+  it("matches group shape, and its negation matches one-to-one", () => {
+    const group = note({ channel: "Famille" });
+
+    expect(matches({ is_group: true, action: "drop" }, group)).toBe(true);
+    expect(matches({ is_group: true, action: "drop" }, note())).toBe(false);
+    expect(matches({ is_group: false, action: "send" }, note())).toBe(true);
+    expect(matches({ is_group: false, action: "send" }, group)).toBe(false);
+  });
+
+  it("is ignored when the rule says nothing about it", () => {
+    expect(matches({ action: "drop" }, note({ channel: "Famille" }))).toBe(true);
+    expect(matches({ action: "drop" }, note())).toBe(true);
   });
 });
