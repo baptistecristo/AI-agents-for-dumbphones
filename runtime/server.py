@@ -14,6 +14,7 @@ import base64
 import hashlib
 import hmac
 import json
+from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, Request, WebSocket
@@ -22,8 +23,50 @@ from loguru import logger
 
 import bot
 import config
+import piper_http
 
-app = FastAPI(title="runtime-vocal")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Vérifie voix ET route de synthèse Piper au démarrage, avant le premier appel."""
+    voices = sorted({config.PIPER_VOICE_FR, config.PIPER_VOICE_EN, config.PIPER_VOICE_ES})
+    try:
+        config.PIPER_SYNTHESIZE_PATH = await piper_http.check_piper_server(
+            config.PIPER_BASE_URL, voices, config.PIPER_SYNTHESIZE_PATH
+        )
+        logger.info(
+            f"Serveur Piper OK (synthèse sur POST {config.PIPER_SYNTHESIZE_PATH}), "
+            f"voix servies : {', '.join(voices)}"
+        )
+    except piper_http.PiperMisconfigured:
+        # Le serveur a répondu : il tourne. Voix absente, route fausse, ou URL qui
+        # ne pointe pas sur un serveur Piper : trois pannes que l'attente ne
+        # corrige pas et que rien ne signalerait ensuite (voix muette ou mauvaise
+        # langue, pour le seul appelant). On refuse de démarrer.
+        #
+        # Placé AVANT le `except Exception` ci-dessous à dessein : c'est lui qui,
+        # sinon, rétrograderait une configuration fausse en simple avertissement
+        # et laisserait booter un runtime incapable de parler.
+        raise
+    except Exception as err:  # noqa: BLE001
+        # Piper injoignable : il démarre peut-être encore. Ne pas bloquer le
+        # runtime pour autant — un appel produira une erreur explicite.
+        logger.warning(
+            f"Serveur Piper injoignable sur {config.PIPER_BASE_URL} ({err}). "
+            "Ni les voix ni la route de synthèse n'ont pu être vérifiées. "
+            "Voir runtime/README.md."
+        )
+        if config.PIPER_SYNTHESIZE_PATH == piper_http.SYNTHESIZE_PATH_AUTO:
+            # La détection n'a pas eu lieu : il faut bien viser quelque chose.
+            config.PIPER_SYNTHESIZE_PATH = piper_http.SYNTHESIZE_PATH_CURRENT
+            logger.warning(
+                f"Route de synthèse non détectée : "
+                f"POST {config.PIPER_SYNTHESIZE_PATH} (défaut piper-tts >= 1.5.0)."
+            )
+    yield
+
+
+app = FastAPI(title="runtime-vocal", lifespan=lifespan)
 
 
 def _authorized(request: Request) -> bool:

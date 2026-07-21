@@ -61,9 +61,23 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
         working-directory: runtime
+      # Le runtime ne doit pas embarquer piper-tts (GPL-3.0-or-later) : il parle
+      # au serveur Piper en HTTP. Réintroduire l'extra `piper` — directement ou
+      # via une dépendance — le ferait rentrer sans bruit ; d'où ce garde-fou.
+      # Voir runtime/piper_http.py et l'issue #26.
+      - name: piper-tts (GPL-3.0) reste hors de l'arbre de dépendances
+        run: |
+          if pip show piper-tts > /dev/null 2>&1; then
+            echo "::error::piper-tts est installé. L'extra pipecat-ai[piper] est-il revenu dans requirements.txt ?"
+            pip show piper-tts
+            exit 1
+          fi
+        working-directory: runtime
       # Le vrai garde-fou. Les tests ne touchent que config.py ; c'est bot.py qui
       # avait importé pendant des mois un chemin Pipecat inexistant, parce que
       # personne ne l'avait jamais lancé. Cette ligne l'aurait vu le premier jour.
+      # Depuis piper_http.py, cet import prouve aussi que le runtime charge sans
+      # le paquet piper : Pipecat l'importe au niveau du module, pas nous.
       - run: python -c "import bot, server"
         working-directory: runtime
       - run: python -m unittest discover -s tests
@@ -75,6 +89,30 @@ jobs:
         working-directory: runtime
       - run: ruff check .
         working-directory: runtime
+
+  docker:
+    name: runtime — image (construction seule)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      # Le fichier compose doit rester analysable sans secrets : `runtime/.env`
+      # n'existe pas ici, d'où le `required: false` côté compose.
+      - name: compose.yaml est valide
+        run: docker compose config -q
+      # Construction SEULE, jamais de `push`, et aucune connexion à un registre.
+      # C'est délibéré et c'est une contrainte de licence, pas une économie de
+      # CI : construire chez soi ne distribue rien (GPL-3.0 §0 exclut
+      # « executing it on a computer »), pousser vers ghcr.io ou Docker Hub
+      # distribuerait. Voir l'issue #26 et runtime/README.md.
+      #
+      # Ce job sert surtout de garde-fou : l'étape finale du Dockerfile échoue
+      # si `piper-tts` (GPL-3.0-or-later) revenait dans l'image, et elle
+      # imprime l'inventaire des paquets GPL qui y restent.
+      - name: Construire l'image du runtime (sans push)
+        run: docker build -t dumbphone-voice-runtime:ci ./runtime
+      # Le service Piper n'est pas construit ici : son image vient de la source
+      # d'OHF-Voice, c'est une construction longue, et rien de ce dépôt n'en
+      # dépend à la compilation.
 
   scripts:
     name: scripts — tests
