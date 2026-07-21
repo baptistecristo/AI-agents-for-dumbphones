@@ -190,3 +190,91 @@ describe("pollIncoming", () => {
     expect(result.messages.map((m) => m.id)).toEqual([2]);
   });
 });
+
+/**
+ * Like fakeClient, but reading the ids in `broken` throws. Models a message
+ * deleted from the OVH manager between the list and the read, or a transient
+ * 500 on a single read.
+ */
+function brokenClient(inbox: OvhIncoming[], broken: Set<number>) {
+  const reads: number[] = [];
+  const base = fakeClient(inbox);
+  const client = {
+    get: async (path: string) => {
+      const marker = "/incoming/";
+      if (path.includes(marker)) {
+        const id = Number(path.slice(path.indexOf(marker) + marker.length));
+        reads.push(id);
+        if (broken.has(id)) throw new Error(`OVH GET /incoming/${id} failed with 404: not found`);
+      }
+      return (base.client as unknown as { get: (p: string) => Promise<unknown> }).get(path);
+    },
+  } as unknown as OvhClient;
+  return { client, reads };
+}
+
+describe("pollIncoming, when a message cannot be read", () => {
+  const inbox = [msg(1, 0), msg(2, 10), msg(3, 20)];
+
+  it("delivers the messages behind the broken one instead of losing the poll", async () => {
+    const { client } = brokenClient(inbox, new Set([2]));
+    const result = await pollIncoming(client, SERVICE, emptyState(), { now: () => T0 });
+
+    expect(result.messages.map((m) => m.id)).toEqual([1, 3]);
+  });
+
+  it("leaves a failed id unseen so the next poll tries it again", async () => {
+    const { client } = brokenClient(inbox, new Set([2]));
+    const result = await pollIncoming(client, SERVICE, emptyState(), { now: () => T0 });
+
+    expect(result.state.seenIds).not.toContain(2);
+    expect(result.state.failures).toEqual({ 2: 1 });
+  });
+
+  it("delivers the message once the failure clears", async () => {
+    const broken = new Set([2]);
+    const { client } = brokenClient(inbox, broken);
+    const first = await pollIncoming(client, SERVICE, emptyState(), { now: () => T0 });
+    expect(first.messages.map((m) => m.id)).toEqual([1, 3]);
+
+    broken.delete(2); // the blip passes
+    const second = await pollIncoming(client, SERVICE, first.state, { now: () => T0 });
+
+    expect(second.messages.map((m) => m.id)).toEqual([2]);
+    expect(second.state.failures).toBeUndefined();
+  });
+
+  // The bug this guards: without a per-read guard the poll threw before
+  // returning state, so the same id was re-listed and re-thrown every cycle
+  // and nothing behind it was ever delivered.
+  it("abandons an id that never reads, and keeps polling afterwards", async () => {
+    const { client } = brokenClient(inbox, new Set([2]));
+    const errors: string[] = [];
+    const opts = { now: () => T0, maxReadAttempts: 3, log: { error: (m: string) => errors.push(m) } };
+
+    let state: PollerState = emptyState();
+    for (let poll = 0; poll < 3; poll++) {
+      state = (await pollIncoming(client, SERVICE, state, opts)).state;
+    }
+
+    expect(state.seenIds).toContain(2);
+    expect(state.failures).toBeUndefined();
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("abandoning it");
+
+    // A later message still arrives: the channel is not wedged.
+    const after = await pollIncoming(client, SERVICE, state, {
+      ...opts,
+      // A new message lands after the watermark.
+    });
+    expect(after.messages).toEqual([]);
+    expect(after.state.seenIds).toContain(2);
+  });
+
+  it("still advances the watermark from the messages that did read", async () => {
+    const { client } = brokenClient(inbox, new Set([2]));
+    const result = await pollIncoming(client, SERVICE, emptyState(), { now: () => T0 });
+
+    expect(result.state.watermark).toBe(msg(3, 20).creationDatetime);
+  });
+});

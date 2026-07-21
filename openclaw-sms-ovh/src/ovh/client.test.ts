@@ -208,3 +208,138 @@ describe("OvhClient", () => {
     await expect(client.get("/sms")).rejects.toThrowError(/non-numeric/);
   });
 });
+
+describe("OvhClient recovering from clock drift", () => {
+  const SIG_REJECT = { status: 403, body: '{"class":"Client::Forbidden","message":"Invalid signature"}' };
+  const SIG_REJECT_CODE = {
+    status: 403,
+    body: '{"errorCode":"INVALID_SIGNATURE","message":"Invalid signature"}',
+  };
+
+  // The failure this guards: syncing once at startup and never again. A laptop
+  // that sleeps comes back with a drifted clock, every call is refused, and the
+  // gateway stays dead until someone restarts it.
+  it("re-syncs and retries once when OVH refuses the signature", async () => {
+    const { impl, calls } = recordingFetch([
+      { body: String(TS) }, // initial /auth/time
+      SIG_REJECT_CODE, // the call, refused
+      { body: String(TS + 45) }, // /auth/time again, clock has moved
+      { body: '{"ok":true}' }, // the retry
+    ]);
+    const client = new OvhClient(
+      { applicationKey: "test-app", applicationSecret: AS, consumerKey: CK },
+      { fetch: impl, now: () => TS * 1000 },
+    );
+
+    await expect(client.get("/sms")).resolves.toEqual({ ok: true });
+    expect(calls.map((c) => c.url.endsWith("/auth/time"))).toEqual([true, false, true, false]);
+    // The retry is signed with the corrected clock, not the stale one.
+    expect(calls[3].init?.headers).toMatchObject({ "X-Ovh-Timestamp": String(TS + 45) });
+  });
+
+  it("gives up if the signature is still refused after re-syncing", async () => {
+    const { impl } = recordingFetch([
+      { body: String(TS) },
+      SIG_REJECT_CODE,
+      { body: String(TS) },
+      SIG_REJECT_CODE,
+    ]);
+    const client = new OvhClient(
+      { applicationKey: "test-app", applicationSecret: AS, consumerKey: CK },
+      { fetch: impl, now: () => TS * 1000 },
+    );
+
+    await expect(client.get("/sms")).rejects.toBeInstanceOf(OvhApiError);
+  });
+
+  // A wrong key is also a 403. Retrying it would double every call forever.
+  it("does not retry a 403 that is not about the signature", async () => {
+    const { impl, calls } = recordingFetch([
+      { body: String(TS) },
+      { status: 403, body: '{"message":"This call has not been granted"}' },
+    ]);
+    const client = new OvhClient(
+      { applicationKey: "test-app", applicationSecret: AS, consumerKey: CK },
+      { fetch: impl, now: () => TS * 1000 },
+    );
+
+    await expect(client.get("/sms")).rejects.toBeInstanceOf(OvhApiError);
+    expect(calls).toHaveLength(2); // no second /auth/time, no retry
+  });
+
+  it("matches the plain-text signature message as well as the code", async () => {
+    const { impl } = recordingFetch([
+      { body: String(TS) },
+      SIG_REJECT, // no errorCode field
+      { body: String(TS) },
+      { body: '{"ok":true}' },
+    ]);
+    const client = new OvhClient(
+      { applicationKey: "test-app", applicationSecret: AS, consumerKey: CK },
+      { fetch: impl, now: () => TS * 1000 },
+    );
+
+    // Only the code form is treated as a signature rejection, so this one
+    // surfaces rather than being retried silently.
+    await expect(client.get("/sms")).rejects.toBeInstanceOf(OvhApiError);
+  });
+
+  it("re-syncs on its own once the last sync has aged out", async () => {
+    const { impl, calls } = recordingFetch([
+      { body: String(TS) },
+      { body: '{"first":true}' },
+      { body: String(TS) },
+      { body: '{"second":true}' },
+    ]);
+    let clock = TS * 1000;
+    const client = new OvhClient(
+      { applicationKey: "test-app", applicationSecret: AS, consumerKey: CK },
+      { fetch: impl, now: () => clock, resyncAfterMs: 60_000 },
+    );
+
+    await client.get("/sms");
+    clock += 61_000; // an hour of uptime, compressed
+    await client.get("/sms");
+
+    expect(calls.filter((c) => c.url.endsWith("/auth/time"))).toHaveLength(2);
+  });
+
+  it("syncs once when several calls start together", async () => {
+    const { impl, calls } = recordingFetch([
+      { body: String(TS) },
+      { body: "{}" },
+      { body: "{}" },
+      { body: "{}" },
+    ]);
+    const client = new OvhClient(
+      { applicationKey: "test-app", applicationSecret: AS, consumerKey: CK },
+      { fetch: impl, now: () => TS * 1000 },
+    );
+
+    await Promise.all([client.get("/a"), client.get("/b"), client.get("/c")]);
+
+    expect(calls.filter((c) => c.url.endsWith("/auth/time"))).toHaveLength(1);
+  });
+});
+
+describe("OvhClient timeout", () => {
+  // Node's fetch waits forever by default, and this runs inside a poll loop.
+  it("aborts a call that does not answer", async () => {
+    const impl = ((_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      })) as typeof globalThis.fetch;
+    const client = new OvhClient(
+      { applicationKey: "test-app", applicationSecret: AS, consumerKey: CK },
+      { fetch: impl, now: () => TS * 1000, timeoutMs: 10 },
+    );
+
+    await expect(client.get("/sms")).rejects.toThrow("aborted");
+  });
+
+  it("passes an abort signal on every call", async () => {
+    const { client, calls } = clientWith([{ body: String(TS) }, { body: "{}" }]);
+    await client.get("/sms");
+    expect(calls.every((c) => c.init?.signal !== undefined)).toBe(true);
+  });
+});

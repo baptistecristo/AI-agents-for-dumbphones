@@ -32,7 +32,27 @@ export interface OvhClientOptions {
   fetch?: typeof globalThis.fetch;
   /** Injected for tests; defaults to Date.now. */
   now?: () => number;
+  /**
+   * How long a single call may take before it is aborted, in milliseconds.
+   *
+   * This runs as a daemon on someone's own machine, so a connection that hangs
+   * hangs the poll loop with it: no messages in, none out, and nothing in the
+   * log to say why. Node's fetch has no default timeout of its own.
+   */
+  timeoutMs?: number;
+  /**
+   * How long a clock sync stays good, in milliseconds.
+   *
+   * Syncing once at startup is not enough for a process meant to run for
+   * weeks on a laptop that sleeps: the local clock drifts, every call starts
+   * failing with INVALID_SIGNATURE, and nothing recovers it short of a
+   * restart.
+   */
+  resyncAfterMs?: number;
 }
+
+const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_RESYNC_AFTER_MS = 60 * 60 * 1000;
 
 export class OvhApiError extends Error {
   constructor(
@@ -98,13 +118,33 @@ export function signRequest(params: {
   return `$1$${createHash("sha1").update(joined, "utf8").digest("hex")}`;
 }
 
+/**
+ * Does this error mean OVH refused the signature?
+ *
+ * 403 with INVALID_SIGNATURE is what a drifted clock produces. Matching on the
+ * code rather than the status alone keeps an ordinary permission error, also a
+ * 403, from triggering a pointless resync and retry.
+ */
+function isSignatureRejection(error: unknown): boolean {
+  return (
+    error instanceof OvhApiError &&
+    error.status === 403 &&
+    /INVALID_SIGNATURE/i.test(error.body)
+  );
+}
+
 export class OvhClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof globalThis.fetch;
   private readonly now: () => number;
+  private readonly timeoutMs: number;
+  private readonly resyncAfterMs: number;
   /** serverTime - localTime, in seconds. Applied to every signed request. */
   private clockDriftSeconds = 0;
-  private driftSynced = false;
+  /** When the drift above was measured, by the local clock. */
+  private driftSyncedAt: number | undefined;
+  /** In-flight sync, so concurrent callers wait on one request. */
+  private syncing: Promise<void> | undefined;
 
   constructor(
     private readonly credentials: OvhCredentials,
@@ -113,6 +153,19 @@ export class OvhClient {
     this.baseUrl = ENDPOINTS[credentials.region ?? "eu"];
     this.fetchImpl = options.fetch ?? globalThis.fetch;
     this.now = options.now ?? Date.now;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.resyncAfterMs = options.resyncAfterMs ?? DEFAULT_RESYNC_AFTER_MS;
+  }
+
+  /** Wraps fetch so no single call can hang the loop it runs in. */
+  private async fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      return await this.fetchImpl(url, { ...init, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**
@@ -123,16 +176,30 @@ export class OvhClient {
    * an error that says nothing about time. `/auth/time` is unauthenticated.
    */
   async syncTime(): Promise<void> {
-    const response = await this.fetchImpl(`${this.baseUrl}/auth/time`, { method: "GET" });
-    if (!response.ok) {
-      throw new OvhApiError(response.status, "GET", "/auth/time", await response.text());
-    }
-    const serverTime = Number(await response.text());
-    if (!Number.isFinite(serverTime)) {
-      throw new Error("OVH /auth/time returned a non-numeric response");
-    }
-    this.clockDriftSeconds = serverTime - Math.floor(this.now() / 1000);
-    this.driftSynced = true;
+    // One request even if several calls race into this at startup.
+    if (this.syncing !== undefined) return this.syncing;
+    this.syncing = (async () => {
+      try {
+        const response = await this.fetchWithTimeout(`${this.baseUrl}/auth/time`, { method: "GET" });
+        if (!response.ok) {
+          throw new OvhApiError(response.status, "GET", "/auth/time", await response.text());
+        }
+        const serverTime = Number(await response.text());
+        if (!Number.isFinite(serverTime)) {
+          throw new Error("OVH /auth/time returned a non-numeric response");
+        }
+        this.clockDriftSeconds = serverTime - Math.floor(this.now() / 1000);
+        this.driftSyncedAt = this.now();
+      } finally {
+        this.syncing = undefined;
+      }
+    })();
+    return this.syncing;
+  }
+
+  /** True once the last sync is old enough to be worth redoing. */
+  private driftIsStale(): boolean {
+    return this.driftSyncedAt === undefined || this.now() - this.driftSyncedAt >= this.resyncAfterMs;
   }
 
   private timestamp(): number {
@@ -140,9 +207,25 @@ export class OvhClient {
   }
 
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    // Sync once, lazily, so constructing a client costs nothing.
-    if (!this.driftSynced) await this.syncTime();
+    // Lazily, so constructing a client costs nothing, and again once the last
+    // sync has aged out.
+    if (this.driftIsStale()) await this.syncTime();
 
+    try {
+      return await this.send<T>(method, path, body);
+    } catch (error) {
+      // A signature rejection is what clock drift looks like from here: OVH
+      // says nothing about time, it just refuses. Re-syncing and retrying once
+      // turns a gateway that would stay dead until someone restarted it into
+      // one that recovers on its own. Only once, so a genuinely bad key fails
+      // fast instead of doubling every call.
+      if (!isSignatureRejection(error)) throw error;
+      await this.syncTime();
+      return this.send<T>(method, path, body);
+    }
+  }
+
+  private async send<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const serialized = body === undefined ? "" : escapeNonAscii(JSON.stringify(body));
     const timestamp = this.timestamp();
@@ -169,7 +252,7 @@ export class OvhClient {
     // different bytes from the ones just signed.
     if (serialized !== "") init.body = serialized;
 
-    const response = await this.fetchImpl(url, init);
+    const response = await this.fetchWithTimeout(url, init);
     const text = await response.text();
 
     if (!response.ok) {

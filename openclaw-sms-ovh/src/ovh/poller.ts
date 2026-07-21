@@ -30,6 +30,14 @@ export interface PollerState {
   watermark?: string;
   /** Ids already handled, most recent last. Bounded by `dedupeWindow`. */
   seenIds: number[];
+  /**
+   * Read attempts per id, for ids that have failed at least once.
+   *
+   * A message that cannot be read must not hold up the ones behind it. Keeping
+   * the count here lets a transient failure retry on the next poll while a
+   * permanent one is eventually abandoned instead of retried forever.
+   */
+  failures?: Record<number, number>;
 }
 
 export interface PollerOptions {
@@ -50,14 +58,26 @@ export interface PollerOptions {
    * provisioning would replay up to six months of history.
    */
   coldStartSeconds?: number;
+  /**
+   * How many times a single id may fail to read before it is abandoned.
+   *
+   * Abandoning means adding it to `seenIds`, so the poll stops asking. That
+   * loses one message, which is the lesser harm: the alternative is a poll
+   * that throws on the same id every cycle and never delivers anything behind
+   * it. Reaching this limit is logged as an error, not swallowed.
+   */
+  maxReadAttempts?: number;
   /** Injected for tests. */
   now?: () => number;
+  /** Optional sink for the abandonment notice. */
+  log?: { warn?: (message: string) => void; error?: (message: string) => void };
 }
 
 const DEFAULTS = {
   overlapSeconds: 120,
   dedupeWindow: 500,
   coldStartSeconds: 300,
+  maxReadAttempts: 5,
 };
 
 export function emptyState(): PollerState {
@@ -85,6 +105,7 @@ export async function pollIncoming(
   const overlapSeconds = options.overlapSeconds ?? DEFAULTS.overlapSeconds;
   const dedupeWindow = options.dedupeWindow ?? DEFAULTS.dedupeWindow;
   const coldStartSeconds = options.coldStartSeconds ?? DEFAULTS.coldStartSeconds;
+  const maxReadAttempts = options.maxReadAttempts ?? DEFAULTS.maxReadAttempts;
   const now = options.now ?? Date.now;
 
   const fromMs =
@@ -103,15 +124,53 @@ export async function pollIncoming(
   // than concurrent: this runs on a loop against an API with no published rate
   // limit, and a burst of parallel reads is the kind of thing that gets an
   // account throttled.
+  //
+  // Each read is guarded on its own. Letting one throw out of this loop would
+  // abandon the whole poll before the state is returned, so the failed id
+  // would never be marked seen, the watermark would never advance, and the
+  // next poll would list the same ids and throw on the same one. The channel
+  // would stop delivering while still looking alive: one log line per cycle,
+  // forever. A message deleted from the OVH manager between the list and the
+  // read is enough to trigger it.
   const messages: OvhIncoming[] = [];
+  const failures = { ...(state.failures ?? {}) };
+  const abandoned: number[] = [];
+
   for (const id of fresh) {
-    messages.push(await getIncoming(client, serviceName, id));
+    try {
+      messages.push(await getIncoming(client, serviceName, id));
+      delete failures[id];
+    } catch (error) {
+      const attempts = (failures[id] ?? 0) + 1;
+      const reason = error instanceof Error ? error.message : String(error);
+      if (attempts >= maxReadAttempts) {
+        // Give up on this one so the queue behind it moves. Loud, because a
+        // message addressed to someone is being dropped.
+        delete failures[id];
+        abandoned.push(id);
+        options.log?.error?.(
+          `message ${id} unreadable after ${attempts} attempts, abandoning it: ${reason}`,
+        );
+      } else {
+        failures[id] = attempts;
+        options.log?.warn?.(
+          `message ${id} could not be read (attempt ${attempts}/${maxReadAttempts}), retrying next poll: ${reason}`,
+        );
+      }
+    }
   }
 
   messages.sort((a, b) => Date.parse(a.creationDatetime) - Date.parse(b.creationDatetime));
 
-  const nextSeen = [...state.seenIds, ...fresh].slice(-dedupeWindow);
+  // Only ids that are done with count as seen: delivered, or abandoned. One
+  // still being retried stays out, so the next poll picks it up again.
+  const settled = [...messages.map((m) => m.id), ...abandoned];
+  const nextSeen = [...state.seenIds, ...settled].slice(-dedupeWindow);
   const nextState: PollerState = { seenIds: nextSeen };
+  // Drop counters for ids no longer in play, so a long-running gateway does
+  // not accumulate them.
+  const live = Object.fromEntries(Object.entries(failures).filter(([id]) => fresh.includes(Number(id))));
+  if (Object.keys(live).length > 0) nextState.failures = live;
 
   // Advance the watermark only on real messages, so an empty poll cannot push
   // it forward past something that had not arrived yet.
