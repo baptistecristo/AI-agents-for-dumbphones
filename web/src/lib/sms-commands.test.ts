@@ -46,6 +46,7 @@ const smsSession = (language: "fr" | "en" | "es" = "fr"): CallSession => ({
   userId: "user-1",
   callerNumber: "+33600000000",
   verified: false,
+  trustedCaller: false,
   language,
 });
 

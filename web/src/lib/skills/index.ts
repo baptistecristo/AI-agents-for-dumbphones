@@ -12,7 +12,7 @@ import { convert } from "./convert";
 import { define } from "./define";
 import { getDirections } from "./directions";
 import { reportGap } from "./gap";
-import { isClassified, requiresVerification, requiresVerificationOverSms } from "./gate";
+import { isClassified, personalReadsUnlocked, toolNeedsCode } from "./gate";
 import { recall, remember } from "./memory";
 import { placeCall } from "./outbound";
 import { didIAlready, listReminders, markDone, setReminder } from "./reminders";
@@ -68,9 +68,9 @@ export async function executeTool(name: string, args: any, session: CallSession)
     // Gate. En appel, tout outil "code" exige le code jetable ; par TEXTE, seules
     // les ÉCRITURES l'exigent (une lecture ne part qu'au numéro enregistré, cf.
     // gate.ts), et le "code" est le PIN du tableau de bord (voir text-pin.ts).
-    const needsVerify =
-      session.channel === "text" ? requiresVerificationOverSms(name) : requiresVerification(name);
-    if (needsVerify && !session.verified) {
+    // Un numéro de confiance (grant durable, révocable) satisfait le gate sur les
+    // lectures seulement : la décision entière est dans toolNeedsCode().
+    if (toolNeedsCode(name, session)) {
       // Canal texte : PIN, pas de code jetable, aucune dépendance à Twilio Verify.
       // Aucun PIN réglé -> on invite à en poser un ; sinon on renvoie vers
       // request_code/verify_code (adaptés au canal dans auth.ts).
@@ -129,10 +129,17 @@ export async function executeTool(name: string, args: any, session: CallSession)
         // jamais la ligne complète — ni au géocodeur, ni dans la réponse.
         return await getWeather(session, args, cityFromAddress(await homeAddressOf(session.userId)));
       case "get_directions":
-        // L'adresse du domicile ne sert d'origine/destination qu'une fois vérifié :
+        // L'adresse du domicile ne sert d'origine/destination qu'une fois débloqué :
         // un itinéraire « depuis chez moi » lu à voix haute nomme la rue de départ
-        // dès les premières étapes. Sans code, on demande le point de départ.
-        return await getDirections(session, args, session.verified ? await homeAddressOf(session.userId) : null);
+        // dès les premières étapes. Sans code ni grant, on demande le point de
+        // départ. Le grant vaut ici parce que c'est une lecture, et refuser la rue
+        // à un numéro de confiance qui peut déjà lire l'agenda et les contacts
+        // n'aurait protégé personne.
+        return await getDirections(
+          session,
+          args,
+          personalReadsUnlocked(session) ? await homeAddressOf(session.userId) : null,
+        );
       case "get_current_time":
         return await getCurrentTime(session, args);
       case "define":

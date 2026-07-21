@@ -6,6 +6,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { recordCallerTrust } from "@/lib/consent";
 import { siteLanguage } from "@/lib/site-i18n";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -35,6 +36,33 @@ export async function toggleConsent(formData: FormData): Promise<void> {
     granted: formData.get("granted") === "true",
     scope_note: DASHBOARD[await siteLanguage()].autorisations.scopeNote,
   });
+
+  revalidatePath("/tableau-de-bord/autorisations");
+}
+
+// Grant « appelant de confiance » : même registre, même append-only, mais porté
+// par un numéro (consents.subject) et non par le compte entier.
+//
+// Deux vérifications, pas une : le compte (une Server Action se poste
+// directement, l'authentification ne se déduit pas de la page qui l'a affichée),
+// puis le numéro lui-même, qui doit appartenir à ce compte et être vérifié.
+// recordCallerTrust s'en charge en base et n'écrit rien sinon.
+export async function toggleCallerTrust(formData: FormData): Promise<void> {
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/connexion");
+
+  const subject = String(formData.get("subject") ?? "");
+  if (!subject) return;
+
+  await recordCallerTrust(
+    user.id,
+    subject,
+    formData.get("granted") === "true",
+    DASHBOARD[await siteLanguage()].autorisations.trusted.scopeNote,
+  );
 
   revalidatePath("/tableau-de-bord/autorisations");
 }
