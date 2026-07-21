@@ -17,7 +17,7 @@
 //  2. Opt-in explicite : consents.source = 'call_recap', DÉFAUT ÉTEINT.
 //     L'absence de ligne vaut refus, et une lecture du registre en erreur aussi
 //     — un registre illisible n'est pas une autorisation.
-//  3. Le code jetable, comme relire une note (gate.ts : "code") — et sans que le
+//  3. Le code jetable, comme relire une note (gate.ts : "code"), et sans que le
 //     grant « appelant de confiance » puisse en dispenser, parce que ce résumé
 //     AGRÈGE (cf. AGGREGATE_READS dans gate.ts).
 //  4. Une borne d'ÂGE : au-delà de RECAP_MAX_AGE_DAYS, il n'y a plus de « dernier
@@ -44,7 +44,7 @@ export const RECAP_CONSENT_SOURCE = "call_recap";
 // cherche plus, et le résumé répondrait à côté. La borne fait aussi le travail
 // que personne d'autre ne fait ici : sans elle, un seul appel résumé suffisait à
 // coller l'offre dans TOUS les accueils suivants, à vie, et le seul moyen de
-// l'éteindre était une page web — dans un produit fait pour des gens sans écran.
+// l'éteindre était une page web, dans un produit fait pour des gens sans écran.
 // Passé la semaine, l'offre s'éteint toute seule.
 export const RECAP_MAX_AGE_DAYS = 7;
 export const RECAP_MAX_AGE_MS = RECAP_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
@@ -215,7 +215,7 @@ export async function getLastCallSummary(session: CallSession): Promise<SkillRes
   // texte n'est pas du contenu tiers ordinaire. `call_logs.user_id` est renseigné
   // depuis le caller-ID, qui est usurpable, et le résumé est fabriqué à partir de
   // ce qui a été DIT. Quelqu'un peut donc appeler en usurpant un numéro, parler,
-  // et faire écrire ses phrases dans la ligne de sa victime — qui les recevra
+  // et faire écrire ses phrases dans la ligne de sa victime, qui les recevra
   // dans son contexte au prochain résumé. Le préfixe suit la convention maison
   // des messages adressés au modèle dans un résultat d'outil (REFUS, PROPOSITION,
   // INDISPONIBLE : mot en capitales, puis deux-points).

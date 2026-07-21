@@ -401,7 +401,7 @@ describe("recapOfferAvailable — ce qu'on glisse dans l'accueil", () => {
 
   // Le reproche auquel répond la borne d'âge : sans elle, un seul appel résumé
   // collait l'offre dans TOUS les accueils suivants, à vie, et le seul moyen de
-  // l'éteindre était une page web — dans un produit fait pour des gens sans
+  // l'éteindre était une page web, dans un produit fait pour des gens sans
   // écran. Passé la semaine, l'accueil redevient celui d'avant, tout seul.
   it("stops offering once the last call is out of range", async () => {
     h.calls = [inboundCall({ started_at: daysAgo(RECAP_MAX_AGE_DAYS + 1) })];

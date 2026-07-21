@@ -121,7 +121,7 @@ export const CODE_TOOL_EFFECT = {
   recall: "read",
   // "read" est exact : rien ne persiste après la réponse, et par TEXTE le résumé
   // est une lecture comme les autres. En VOIX il est en plus exclu du grant
-  // durable, parce qu'il agrège — cf. AGGREGATE_READS plus bas.
+  // durable, parce qu'il agrège : cf. AGGREGATE_READS plus bas.
   get_last_call_summary: "read",
   create_event: "write",
   move_event: "write",
@@ -164,7 +164,7 @@ export function requiresVerificationOverSms(name: string): boolean {
 //
 // Ce que le grant NE couvre jamais : créer ou déplacer un rendez-vous, éteindre
 // un rappel, envoyer un SMS, passer un appel. Ces cinq-là redemandent le code, à
-// chaque appel, grant ou pas — et la lecture AGRÉGÉE ci-dessous avec eux.
+// chaque appel, grant ou pas, et la lecture AGRÉGÉE ci-dessous avec eux.
 //
 // ——— La lecture agrégée ———
 //
@@ -175,7 +175,7 @@ export function requiresVerificationOverSms(name: string): boolean {
 //
 // get_last_call_summary ne prend AUCUN argument. Il ne relit pas la donnée qu'on
 // lui a demandée : il rend le condensé de tout ce qui est passé dans l'appel
-// précédent — un créneau d'agenda, le numéro d'un contact, une note relue, une
+// précédent : un créneau d'agenda, le numéro d'un contact, une note relue, une
 // adresse prononcée, et par-dessus la parole libre. Un seul appel sans code rend
 // donc l'union de ce que trois lectures protégées séparément auraient donné,
 // sans que personne ait eu à formuler la moindre question.

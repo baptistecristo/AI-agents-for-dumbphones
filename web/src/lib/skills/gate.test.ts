@@ -93,7 +93,7 @@ const READS = ["list_events", "find_contact", "recall"];
 const CONSEQUENTIAL = ["create_event", "move_event", "mark_done", "send_sms", "place_call"];
 // La lecture AGRÉGÉE : une lecture, mais sans argument, donc sans question. Elle
 // rend d'un coup l'union de ce que les trois lectures ci-dessus auraient donné
-// séparément. Le grant ne la couvre pas — cf. AGGREGATE_READS dans gate.ts.
+// séparément. Le grant ne la couvre pas : cf. AGGREGATE_READS dans gate.ts.
 const AGGREGATE = ["get_last_call_summary"];
 
 describe("toolNeedsCode without a grant", () => {

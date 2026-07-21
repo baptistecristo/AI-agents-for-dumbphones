@@ -158,7 +158,7 @@ describe("inboundSystemPrompt — le résumé se demande", () => {
 
 // La règle anti-injection était une énumération FERMÉE (« e-mails, pages web,
 // contacts, notes, résultats d'itinéraire »). Le résumé d'appel est arrivé comme
-// une nouvelle source de texte tiers sans que la liste bouge — et ce texte-là est
+// une nouvelle source de texte tiers sans que la liste bouge, et ce texte-là est
 // pire que les autres : call_logs.user_id vient d'un caller-ID usurpable, donc
 // quelqu'un peut PARLER pour faire écrire ses phrases dans la ligne de sa
 // victime, qui les recevra dans son contexte au prochain résumé.

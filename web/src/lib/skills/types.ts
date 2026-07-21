@@ -10,7 +10,7 @@ export type CallSession = {
   channel: "voice" | "text";
   // Sens de l'appel. Un skill qui ne doit tourner que sur un appel ENTRANT le
   // vérifie ici, sur le tour en cours, plutôt que de compter sur son absence de
-  // la liste d'outils sortante — une liste se modifie, et l'oubli ne se voit
+  // la liste d'outils sortante : une liste se modifie, et l'oubli ne se voit
   // pas. Fail-closed chez l'appelant : tout ce qui n'est pas lisiblement
   // "inbound" est traité comme sortant (cf. api/vapi/webhook).
   direction: "inbound" | "outbound";
