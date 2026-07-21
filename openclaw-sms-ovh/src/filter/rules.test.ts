@@ -237,3 +237,38 @@ describe("is_group", () => {
     expect(matches({ action: "drop" }, note())).toBe(true);
   });
 });
+
+describe("a forwarding global rule reaches configured apps only", () => {
+  const otp = (app: string): Notification => ({
+    app,
+    title: "Banque",
+    body: "Your verification code is 481920",
+  });
+
+  // whatsapp is in DEFAULT_CONFIG.apps; "randomapp" is not.
+  it("still rushes a real code from an app the user configured", () => {
+    const verdict = evaluate(DEFAULT_CONFIG, otp("whatsapp"));
+    expect(verdict.action).toBe("send");
+    expect(verdict.priority).toBe("high");
+  });
+
+  // The hole: global rules ran before the unknown-app check, so anyone could
+  // write a message shaped like a security code from an app the user had never
+  // opted into and reach the phone at high priority, skipping the cooldown.
+  it("refuses the same code from an app the user never configured", () => {
+    const verdict = evaluate(DEFAULT_CONFIG, otp("randomapp"));
+    expect(verdict.action).toBe("drop");
+    expect(verdict.reason).toContain("unknown app");
+  });
+
+  // A kill switch must not become dodgeable in the process.
+  it("keeps a dropping global rule applying to every app", () => {
+    const group: Notification = {
+      app: "randomapp",
+      title: "Famille, Paul, Lea",
+      body: "coucou",
+      channel: "Famille",
+    };
+    expect(evaluate(DEFAULT_CONFIG, group).action).toBe("drop");
+  });
+});

@@ -88,8 +88,8 @@ describe("resolveAccount", () => {
     expect(account.allowFrom).toContain("+33612345678");
   });
 
-  it("defaults to a pairing policy rather than open", () => {
-    expect(resolveAccount({}).dmPolicy).toBe("pairing");
+  it("defaults to closed rather than open", () => {
+    expect(resolveAccount({}).dmPolicy).toBe("closed");
   });
 
   it("survives a malformed config instead of throwing", () => {
@@ -184,5 +184,30 @@ describe("maskPhone", () => {
   it("says something rather than nothing for an empty sender", () => {
     expect(maskPhone("")).toBe("(empty)");
     expect(maskPhone("  ")).toBe("(empty)");
+  });
+});
+
+describe("the retired pairing policy", () => {
+  const withPolicy = (policy: string): unknown => ({
+    channels: { "sms-ovh": { dmPolicy: policy, allowFrom: ["+33612345678"] } },
+  });
+
+  // Refused rather than dropped: a schema failure here falls back to an empty
+  // config, so quietly ignoring the value would also discard the credentials
+  // and the allow-list, and leave the operator guessing.
+  it("refuses it loudly, naming what to write instead", () => {
+    expect(() => resolveAccount(withPolicy("pairing"))).toThrowError(/closed/);
+  });
+
+  it("names the account that carries it", () => {
+    const cfg = {
+      channels: { "sms-ovh": { accounts: { perso: { dmPolicy: "pairing" } } } },
+    };
+    expect(() => resolveAccount(cfg, "perso")).toThrowError(/accounts\.perso/);
+  });
+
+  it("leaves the two real policies working", () => {
+    expect(resolveAccount(withPolicy("closed")).dmPolicy).toBe("closed");
+    expect(resolveAccount(withPolicy("open")).dmPolicy).toBe("open");
   });
 });

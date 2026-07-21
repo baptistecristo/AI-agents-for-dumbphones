@@ -77,7 +77,7 @@ describe("isSenderAllowed", () => {
     expect(isSenderAllowed(account({ dmPolicy: "open", allowFrom: [] }), "+33699999999")).toBe(true);
   });
 
-  it("admits a listed sender under pairing", () => {
+  it("admits a listed sender under closed", () => {
     expect(isSenderAllowed(account(), "+33612345678")).toBe(true);
   });
 

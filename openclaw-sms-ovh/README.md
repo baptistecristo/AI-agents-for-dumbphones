@@ -149,9 +149,11 @@ Not verified, and needing a real account:
 
 Known gaps:
 
-- **`dmPolicy: "pairing"` behaves as `closed`.** The allow-list is the whole
-  gate, with no pairing-code exchange. Real pairing needs the SDK's ingress
-  resolver and pairing adapter.
+- **There is no pairing flow.** `dmPolicy` is `closed` (only numbers in
+  `allowFrom` may write, the default) or `open` (anyone may, sensible only for a
+  number nobody knows). A `pairing` value used to be accepted and behaved
+  exactly like `closed`; it is now refused at startup with a message saying
+  which to use, rather than reading like a gate that was never built.
 - **No setup wizard**, so the channel cannot be configured through
   `openclaw channels add`.
 - **The notification bridge has never run against a live channel.** It is wired

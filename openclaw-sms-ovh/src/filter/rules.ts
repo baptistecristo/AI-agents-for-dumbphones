@@ -232,17 +232,31 @@ function toResult(rule: Rule, fallbackReason: string): RuleResult {
 /**
  * Decide what to do with one notification. First match wins, in this order:
  *
- *   1. global rules       (cross-app kill switches and escalations)
- *   2. app-specific rules
- *   3. unknown_apps       (only when the app has no config entry)
- *   4. the app's default
+ *   1. global rules that drop       (kill switches, for every app)
+ *   2. global rules that forward     (configured apps only, see below)
+ *   3. app-specific rules
+ *   4. unknown_apps                  (when the app has no config entry)
+ *   5. the app's default
  */
 export function evaluate(config: FilterConfig, notification: Notification): RuleResult {
+  const app = config.apps[notification.app];
+
   for (const rule of config.global.rules) {
-    if (matches(rule, notification)) return toResult(rule, "matched global rule");
+    if (!matches(rule, notification)) continue;
+    // A global rule that silences something applies to everything: a kill
+    // switch nobody can step around is the point of it.
+    //
+    // A global rule that FORWARDS is different, and only applies to apps the
+    // user configured. The one-time-code rule sends at `high`, which skips the
+    // cooldown, so leaving it open to any app meant a sender from an app the
+    // user never opted into could reach the phone by writing a message shaped
+    // like a security code. Narrowing the wording made that harder; it did not
+    // make it someone else's app. `unknown_apps` already says what to do with a
+    // stranger, and this used to run before anyone asked.
+    if (rule.action !== "drop" && app === undefined) continue;
+    return toResult(rule, "matched global rule");
   }
 
-  const app = config.apps[notification.app];
   if (app === undefined) {
     return {
       action: config.global.unknown_apps,

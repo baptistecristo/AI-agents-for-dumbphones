@@ -65,11 +65,10 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
  * allowed yet". Under `open` it admits anyone, which is only sensible for a
  * number nobody knows.
  *
- * Note that `pairing` currently behaves exactly like `closed`: the allow-list
- * is the whole gate, and there is no pairing-code exchange. Real pairing means
- * wiring the SDK's ingress resolver and pairing adapter, which is not done here.
- * The value is accepted so config written against it keeps working, but it does
- * not yet buy anything beyond the allow-list.
+ * There are two policies and no third: a number is on the list or it is not.
+ * A `pairing` value used to be accepted here and behaved exactly like `closed`,
+ * which is the sort of name that gets believed. It is refused at config load
+ * now, with a message saying what to write instead.
  */
 export function isSenderAllowed(account: ResolvedOvhSmsAccount, sender: string): boolean {
   if (account.dmPolicy === "open") return true;

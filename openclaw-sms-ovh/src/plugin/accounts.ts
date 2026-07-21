@@ -99,7 +99,7 @@ export const OvhSmsAccountSchema = z.object({
   maxReplySegments: z.number().int().positive().optional(),
   /** Phone numbers permitted to talk to the agent. */
   allowFrom: z.array(z.string()).optional(),
-  dmPolicy: z.enum(["open", "pairing", "closed"]).optional(),
+  dmPolicy: z.enum(["open", "closed"]).optional(),
 });
 
 export const OvhSmsChannelConfigSchema = OvhSmsAccountSchema.extend({
@@ -122,7 +122,7 @@ export interface ResolvedOvhSmsAccount {
   textChunkLimit: number;
   maxReplySegments: number;
   allowFrom: string[];
-  dmPolicy: "open" | "pairing" | "closed";
+  dmPolicy: "open" | "closed";
   notify: ResolvedNotifyConfig;
 }
 
@@ -136,9 +136,41 @@ export interface ResolvedNotifyConfig {
   limits: RateLimitConfig;
 }
 
+/**
+ * `pairing` was accepted as a dmPolicy and behaved exactly like `closed`: the
+ * allow-list was the whole gate and no pairing-code exchange was ever built.
+ * Reading the name and believing a stranger could pair their way in is the
+ * dangerous direction, so the value is gone.
+ *
+ * It has to be caught by hand rather than left to the schema, because a schema
+ * failure here falls back to an empty config: dropping the value quietly would
+ * also drop the credentials, the allow-list and everything else, and the
+ * operator would be left guessing why nothing worked.
+ */
+function rejectRetiredPolicy(raw: unknown): void {
+  const seen: string[] = [];
+  const visit = (node: unknown, where: string): void => {
+    if (typeof node !== "object" || node === null) return;
+    const record = node as Record<string, unknown>;
+    if (record.dmPolicy === "pairing") seen.push(where);
+    const accounts = record.accounts;
+    if (typeof accounts === "object" && accounts !== null) {
+      for (const [id, account] of Object.entries(accounts)) visit(account, `accounts.${id}`);
+    }
+  };
+  visit(raw, CHANNEL_ID);
+  if (seen.length === 0) return;
+  throw new Error(
+    `dmPolicy: "pairing" no longer exists (${seen.join(", ")}). It always behaved as "closed", ` +
+      `so set "closed" to keep the current behaviour, where only numbers in allowFrom may write. ` +
+      `Use "open" only for a number nobody else knows.`,
+  );
+}
+
 function readChannelConfig(cfg: unknown): OvhSmsChannelConfig {
   const channels = (cfg as { channels?: Record<string, unknown> } | undefined)?.channels;
   const raw = channels?.[CHANNEL_ID];
+  rejectRetiredPolicy(raw);
   const parsed = OvhSmsChannelConfigSchema.safeParse(raw ?? {});
   return parsed.success ? parsed.data : {};
 }
@@ -249,7 +281,7 @@ export function resolveAccount(cfg: unknown, accountId?: string | null): Resolve
     textChunkLimit: source.textChunkLimit ?? DEFAULT_TEXT_CHUNK_LIMIT,
     maxReplySegments: source.maxReplySegments ?? DEFAULT_MAX_REPLY_SEGMENTS,
     allowFrom: (source.allowFrom ?? []).map(normalizePhone).filter((n) => n !== ""),
-    dmPolicy: source.dmPolicy ?? "pairing",
+    dmPolicy: source.dmPolicy ?? "closed",
     notify: resolveNotify(source.notify),
   };
 }
