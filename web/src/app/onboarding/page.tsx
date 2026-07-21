@@ -3,6 +3,7 @@
 // (Plus de code PIN à choisir : l'auth en appel se fait par code jetable SMS.)
 
 import { redirect } from "next/navigation";
+import { shouldLeaveOnboarding } from "@/lib/auth/onboarding";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 import { siteLanguage } from "@/lib/site-i18n";
@@ -26,9 +27,8 @@ export default async function OnboardingPage() {
     .select("onboarding_step, preferred_name")
     .eq("id", user.id)
     .single();
+  if (shouldLeaveOnboarding(profile?.onboarding_step)) redirect("/tableau-de-bord");
   const rawStep = profile?.onboarding_step ?? "phone";
-  // "pin" est un état hérité (l'étape a été retirée) : on le traite comme terminé.
-  if (rawStep === "done" || rawStep === "pin") redirect("/tableau-de-bord");
   // onboarding_step n'a pas de contrainte CHECK : une valeur inattendue (migration
   // future, écriture manuelle) donnerait un stepIndex -1 et un écran vide sans
   // issue. On retombe alors sur la première étape plutôt que sur rien.
