@@ -44,6 +44,10 @@ const base: CallSession = {
   callerNumber: "+33123456789",
   verified: true,
   language: "en",
+  // Required since the trusted-caller grant landed. False here on purpose:
+  // these tests are about the recap, and a caller who is already verified
+  // should not have the grant standing in for that.
+  trustedCaller: false,
 };
 
 const inboundCall = (over: Record<string, unknown> = {}) => ({

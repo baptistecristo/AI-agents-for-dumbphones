@@ -63,7 +63,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
       </PageIntro>
 
       {saved && (
-        <p className="mb-6 flex items-center rounded-lg border border-ok/30 bg-ok/5 px-4 py-2.5 text-sm text-ok">
+        <p className="mb-6 flex items-center rounded-control border border-ok/30 bg-ok/5 px-4 py-2.5 text-sm text-ok">
           <span className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-ok align-middle" aria-hidden />
           {tr.saved}
         </p>
@@ -138,7 +138,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
 
       {pinNotice && (
         <p
-          className={`mt-6 flex items-center rounded-lg border px-4 py-2.5 text-sm ${
+          className={`mt-6 flex items-center rounded-control border px-4 py-2.5 text-sm ${
             pinNotice.ok ? "border-ok/30 bg-ok/5 text-ok" : "border-danger/30 bg-danger/5 text-danger"
           }`}
         >

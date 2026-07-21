@@ -41,7 +41,7 @@ export function CallScreen({
   const ss = String(secs % 60).padStart(2, "0");
 
   return (
-    <figure aria-label={ariaLabel} className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
+    <figure aria-label={ariaLabel} className="rounded-panel border border-line bg-surface p-6 sm:p-8">
       <div aria-hidden>
         <figcaption className="flex items-center justify-between gap-3 border-b border-line pb-4 text-sm text-muted">
           <span className="inline-flex min-w-0 items-center gap-2">

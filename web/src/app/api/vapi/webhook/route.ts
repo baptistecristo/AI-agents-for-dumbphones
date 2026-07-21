@@ -4,9 +4,11 @@
 
 import { NextResponse } from "next/server";
 import { buildInboundAssistant, CallerContext } from "@/lib/agents/inbound";
+import { callerIsTrusted } from "@/lib/consent";
 import { defaultLanguage, normalizeLanguage } from "@/lib/language";
 import { agentInstructionsOf } from "@/lib/profile";
 import { inboundRateVerdict, rateLimitMessage } from "@/lib/rate-limit";
+import { extractCallActionItems } from "@/lib/reports/action-items";
 import { executeTool } from "@/lib/skills";
 import { closeJobWithoutReport, handleReportOutcome } from "@/lib/skills/outbound-report";
 import { recapOfferAvailable } from "@/lib/skills/recap";
@@ -61,18 +63,27 @@ async function callerContextFor(phoneE164: string | null): Promise<CallerContext
   };
 }
 
+// Reconstruite à CHAQUE message tool-calls, jamais gardée entre deux. C'est ce
+// qui fait que le grant « appelant de confiance » se révoque pour de bon : il
+// est relu ici, en base, au même titre que le code jetable de l'appel. Rien de
+// ce grant n'est passé à l'assistant ni retenu ailleurs.
 async function sessionFor(callId: string): Promise<CallSession> {
   const { data } = await supabaseAdmin()
     .from("call_logs")
     .select("user_id, from_number, pin_verified, direction, language")
     .eq("vapi_call_id", callId)
     .maybeSingle();
+  const userId = data?.user_id ?? null;
+  const callerNumber = data?.from_number ?? null;
   return {
     callId,
     channel: "voice",
-    userId: data?.user_id ?? null,
-    callerNumber: data?.from_number ?? null,
+    userId,
+    callerNumber,
     verified: data?.pin_verified ?? false,
+    // user_id n'est renseigné que si le numéro correspond à un phones vérifié
+    // (callerContextFor) : un appelant inconnu n'a donc aucun grant à trouver.
+    trustedCaller: await callerIsTrusted(userId, callerNumber),
     language: normalizeLanguage(data?.language),
   };
 }
@@ -171,6 +182,17 @@ export async function POST(req: Request) {
       // remise en file ou abandon (logique partagée avec le runtime self-host).
       const jobId: string | undefined = call?.metadata?.outbound_job_id;
       if (jobId) await closeJobWithoutReport(jobId);
+
+      // Engagements pris pendant l'appel -> rappels. Ne lit le transcript que
+      // pour un appel ENTRANT dont l'appelant a explicitement autorisé la
+      // source « action_items » (défaut : refusé) — tout est décidé dans
+      // reports/action-items.ts. L'appel est terminé : cette étape ne doit
+      // jamais faire échouer le webhook, d'où le try/catch.
+      try {
+        await extractCallActionItems(callId);
+      } catch (err) {
+        console.error("Extraction des engagements en erreur", err);
+      }
       break;
     }
 

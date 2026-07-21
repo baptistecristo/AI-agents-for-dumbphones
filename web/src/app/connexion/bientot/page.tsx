@@ -21,7 +21,7 @@ export default async function BientotPage({
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16 text-center">
       <h1 className="font-display text-3xl text-ink">{name}</h1>
-      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+      <p className="mt-2 text-xs font-semibold uppercase tracking-eyebrow text-muted">
         <span className="mr-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-clay align-middle" aria-hidden />
         {tr.comingSoonBadge}
       </p>

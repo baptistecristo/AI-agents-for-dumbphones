@@ -3,6 +3,7 @@
 // (Plus de code PIN à choisir : l'auth en appel se fait par code jetable SMS.)
 
 import { redirect } from "next/navigation";
+import { shouldLeaveOnboarding } from "@/lib/auth/onboarding";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 import { siteLanguage } from "@/lib/site-i18n";
@@ -26,9 +27,8 @@ export default async function OnboardingPage() {
     .select("onboarding_step, preferred_name")
     .eq("id", user.id)
     .single();
+  if (shouldLeaveOnboarding(profile?.onboarding_step)) redirect("/tableau-de-bord");
   const rawStep = profile?.onboarding_step ?? "phone";
-  // "pin" est un état hérité (l'étape a été retirée) : on le traite comme terminé.
-  if (rawStep === "done" || rawStep === "pin") redirect("/tableau-de-bord");
   // onboarding_step n'a pas de contrainte CHECK : une valeur inattendue (migration
   // future, écriture manuelle) donnerait un stepIndex -1 et un écran vide sans
   // issue. On retombe alors sur la première étape plutôt que sur rien.
@@ -80,7 +80,7 @@ export default async function OnboardingPage() {
             {CONSENT_SOURCES.map((source) => (
               <label
                 key={source}
-                className="flex items-start gap-3 rounded-xl border border-line p-4 hover:bg-cream-deep"
+                className="flex items-start gap-3 rounded-card border border-line p-4 hover:bg-cream-deep"
               >
                 <input type="checkbox" name={source} defaultChecked={tr.consents.defaults[source]} className="mt-1 h-5 w-5 accent-clay" />
                 <span className="text-slate">{tr.consents.labels[source]}</span>

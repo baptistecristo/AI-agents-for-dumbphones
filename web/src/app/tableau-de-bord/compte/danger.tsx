@@ -15,7 +15,7 @@ import { inputCls } from "../ui";
 // Bouton de suppression : clairement une mise en garde, mais retenu — un contour
 // terracotta, jamais un aplat rouge criard. Le clay reste la seule couleur forte.
 const dangerBtn =
-  "inline-flex items-center justify-center rounded-lg border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/5 disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-control border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/5 disabled:pointer-events-none disabled:opacity-50";
 
 export function DeleteAccount({ lang }: { lang: Language }) {
   const tr = DASHBOARD[lang].compte.danger;

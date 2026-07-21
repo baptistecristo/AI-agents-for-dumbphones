@@ -180,7 +180,10 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
   the only working runtime today is a managed one. See
   [#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 - **EU / privacy-first.** Data in an EU Postgres, OAuth tokens encrypted at rest, an
-  append-only revocable consent registry, RLS everywhere.
+  append-only revocable consent registry, RLS everywhere. One exception, stated rather
+  than buried: the public pages report Web Vitals to Vercel Speed Insights, in the US.
+  The signed-in area sends nothing, so which reminders or notes you open stays between
+  you and the EU database.
 - **The phone stays dumb.** No app, no account on the handset. Caller-ID identifies you,
   but anyone can spoof it, so on its own it unlocks nothing personal. Your calendar,
   contacts, saved notes, and anything that sends a text or places a call need a
@@ -194,6 +197,13 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
   The weather only ever gets your city, and a route "from home" asks where you're
   starting from until you've given the code. Anything that sends or commits also gets a
   two-step voice confirmation.
+- **Trusted numbers, and taking it back.** From the dashboard you can mark one of your
+  own verified numbers trusted, so the agent stops asking for a code on every call to
+  **read** your calendar, contacts, saved notes or home address. It still asks for one to
+  send a text, place a call, create or move an appointment, or mark a reminder done.
+  Caller-ID is spoofable, so no standing grant covers an action that leaves something
+  behind. Numbers start untrusted, you grant them one at a time, and revoking writes a
+  new line in the same append-only register that the next call reads.
 - **External content is data, never instructions.** Tool outputs are returned to the model
   as data, never merged into the instruction channel.
 
@@ -203,6 +213,11 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
   two-way SMS command model inspired `sms-commands.ts`.
 - **[Omi](https://github.com/BasedHardware/omi)** — an open-source, wearable AI
   companion; a kindred bet that you keep the assistant and drop the screen.
+- **[OpenClaw](https://github.com/openclaw/openclaw)** (MIT) — a self-hosted gateway that
+  bridges chat apps to an LLM; a reference for the "one brain, swappable body" and
+  plugin-skill patterns, and for hardening third-party skills. Messaging-only, no telephony,
+  so it shapes the design rather than the runtime
+  ([docs/openclaw-inspiration.md](docs/openclaw-inspiration.md)).
 - **[Pipecat](https://github.com/pipecat-ai/pipecat)** / **[LiveKit Agents](https://github.com/livekit/agents)** — the self-hosted voice runtime.
 - **Open-Meteo** (free weather + geocoding), **OpenRouteService** (EU directions), **WorldTimeAPI** (free local time).
 

@@ -9,6 +9,7 @@ import { PHONES } from "@/lib/phones/data";
 import { filterPhones, priceFor, sortByPrice } from "@/lib/phones/filter";
 import { t } from "@/lib/phones/i18n";
 import type { FilterCriteria, FormFactor, Lang, Nav, Phone, Region } from "@/lib/phones/types";
+import { card } from "@/components/styles";
 
 const REGIONS: Region[] = ["europe", "america", "global"];
 const NAV_NEEDS: NonNullable<FilterCriteria["nav"]>[] = ["full-maps", "any-nav", "location-ok"];
@@ -53,7 +54,7 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
   }
 
   const selectClass =
-    "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink transition-colors focus:border-clay";
+    "w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-sm text-ink transition-colors focus:border-clay";
   const labelClass = "mb-1 block text-xs font-bold uppercase tracking-wide text-muted";
 
   return (
@@ -61,7 +62,7 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
       {/* Titre + bascule de langue */}
       <div className="mb-4 flex items-start justify-between gap-4">
         <h1 className="font-display text-3xl leading-tight text-ink md:text-4xl">{tr.pageTitle}</h1>
-        <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-line text-xs font-semibold">
+        <div className="inline-flex shrink-0 overflow-hidden rounded-control border border-line-strong text-xs font-semibold">
           {(["fr", "en", "es"] as Lang[]).map((l) => (
             <button
               key={l}
@@ -79,7 +80,7 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
       <p className="mb-8 max-w-2xl leading-relaxed text-slate">{tr.intro}</p>
 
       {/* Panneau de filtres — surface claire sur le fond, une seule hairline */}
-      <div className="rounded-xl border border-line bg-surface p-5 sm:p-6">
+      <div className={`${card} p-5 sm:p-6`}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className={labelClass} htmlFor="f-region">
@@ -195,7 +196,7 @@ export default function Finder({ initialLang = "fr" }: { initialLang?: Lang }) {
 
       {/* Résultats */}
       {results.length === 0 ? (
-        <p className="mt-8 rounded-xl border border-dashed border-line bg-surface p-8 text-center text-muted">
+        <p className="mt-8 rounded-card border border-dashed border-line bg-surface p-8 text-center text-muted">
           {tr.empty}
         </p>
       ) : (
@@ -218,7 +219,7 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
     phone.shops[0];
 
   return (
-    <li className="flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-clay/40">
+    <li className={`flex flex-col overflow-hidden ${card} transition-colors hover:border-clay/40`}>
       {/* Photo — silhouette selon le format tant qu'aucune image n'est fournie */}
       <div className="relative aspect-[4/3] border-b border-line bg-surface">
         {phone.image ? (
@@ -280,7 +281,7 @@ function PhoneCard({ phone, lang, region }: { phone: Phone; lang: Lang; region: 
           href={shop.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 flex items-center justify-center gap-1.5 rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-clay transition-colors hover:bg-cream-deep"
+          className="mt-4 flex items-center justify-center gap-1.5 rounded-control border border-line-strong px-4 py-2.5 text-sm font-medium text-clay transition-colors hover:bg-cream-deep"
         >
           {tr.shopAt} {shop.label}
           <span aria-hidden className="text-xs">

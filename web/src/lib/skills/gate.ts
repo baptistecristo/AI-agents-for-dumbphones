@@ -127,9 +127,62 @@ export const CODE_TOOL_EFFECT = {
   place_call: "write",
 } as const satisfies Record<CodeToolName, ToolEffect>;
 
-// Fail-closed comme au-dessus : un nom inconnu exige le code ici aussi.
-export function requiresVerificationOverSms(name: string): boolean {
+// La question que posent les deux paragraphes ci-dessus : l'effet de cet outil
+// SURVIT-IL à la réponse ? Une lecture s'épuise dans ce qu'elle renvoie ; une
+// écriture reste après, ou part vers un tiers.
+//
+// Fail-closed comme au-dessus : un nom inconnu est traité comme conséquent.
+export function isConsequential(name: string): boolean {
   if (!isClassified(name)) return true;
   if (TOOL_POLICY[name] !== "code") return false;
   return CODE_TOOL_EFFECT[name as CodeToolName] === "write";
+}
+
+// Par SMS : seules les écritures exigent le code, pour la raison écrite plus
+// haut (la réponse ne part qu'au numéro enregistré).
+export function requiresVerificationOverSms(name: string): boolean {
+  return isConsequential(name);
+}
+
+// ——— Le consentement durable posé pour un numéro ———
+//
+// Deuxième niveau à côté du code jetable : la personne déclare, depuis son
+// espace, qu'un de ses numéros vérifiés n'a plus à refaire le code à chaque
+// appel. C'est un consentement du registre, donc horodaté et révocable en
+// ajoutant une ligne (supabase/migrations/0014).
+//
+// Ce grant ne peut PAS tout couvrir, et la limite n'est pas un réglage. Le
+// caller-ID est usurpable : c'est la raison d'être du code jetable, et un grant
+// durable ne la fait pas disparaître. Il ne vaut donc que là où l'effet s'épuise
+// dans la réponse, c'est-à-dire exactement sur isConsequential() = false. La
+// frontière est la même que celle du canal texte, pour une raison différente,
+// mais elle répond à la même question, ce qui est la seule bonne raison de ne
+// pas en tenir deux versions.
+//
+// Ce que le grant NE couvre jamais : créer ou déplacer un rendez-vous, éteindre
+// un rappel, envoyer un SMS, passer un appel. Ces cinq-là redemandent le code, à
+// chaque appel, grant ou pas.
+export type GateContext = {
+  channel: "voice" | "text";
+  verified: boolean; // code jetable (ou PIN, par texte) validé sur ce tour
+  trustedCaller: boolean; // grant durable en cours pour CE numéro
+};
+
+// La décision de gate, en un seul endroit : ce tour doit-il refuser cet outil
+// faute de code ? index.ts ne fait plus que l'appeler, et gate.test.ts la couvre
+// dans les deux sens.
+export function toolNeedsCode(name: string, ctx: GateContext): boolean {
+  const gated = ctx.channel === "text" ? requiresVerificationOverSms(name) : requiresVerification(name);
+  if (!gated) return false;
+  if (ctx.verified) return false;
+  // Le grant ne rattrape que le non-conséquent. isConsequential() étant
+  // fail-closed, un outil inconnu reste refusé même pour un numéro de confiance.
+  return !(ctx.trustedCaller && !isConsequential(name));
+}
+
+// Une donnée personnelle peut aussi ENTRER dans un outil libre : l'adresse du
+// domicile injectée comme origine d'un itinéraire (voir index.ts). Ce n'est pas
+// le gate nominal, mais c'est une lecture, donc le grant vaut là aussi.
+export function personalReadsUnlocked(ctx: GateContext): boolean {
+  return ctx.verified || ctx.trustedCaller;
 }

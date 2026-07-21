@@ -14,6 +14,7 @@ const session: CallSession = {
   userId: "u1",
   callerNumber: "+33600000000",
   verified: false,
+  trustedCaller: false,
   language: "fr",
 };
 

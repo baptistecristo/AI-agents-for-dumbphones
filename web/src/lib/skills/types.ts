@@ -11,6 +11,11 @@ export type CallSession = {
   userId: string | null;
   callerNumber: string | null;
   verified: boolean; // code SMS (Twilio Verify) validé sur cet appel
+  // Grant durable posé depuis le tableau de bord pour CE numéro : il dispense du
+  // code jetable sur les lectures, jamais sur ce qui envoie, dépense ou éteint
+  // (gate.ts). Relu en base à chaque lot d'outils, jamais mémorisé, pour que
+  // révoquer prenne effet tout de suite (lib/consent.ts).
+  trustedCaller: boolean;
   language: Language; // langue de l'appel (profil, sinon DEFAULT_LANGUAGE)
 };
 
