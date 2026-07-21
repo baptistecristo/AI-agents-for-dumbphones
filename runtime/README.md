@@ -177,9 +177,20 @@ publier l'image le distribuerait.
 
 Rien n'est distribué aujourd'hui, puisque rien n'est poussé. Le problème est
 latent, de la même famille que l'import Piper en processus avant l'#28 : il
-faudra le trancher avant qu'une image parte vers un registre. L'étape
+faudrait le trancher avant qu'une image parte vers un registre. L'étape
 d'inventaire du `Dockerfile` l'imprime à chaque construction pour qu'il reste
 sous les yeux.
+
+**Ce dépôt ne publie donc pas d'image, et c'est un choix, pas un oubli.**
+Chacun construit la sienne, ce qui ne distribue rien. Publier une image toute
+faite serait le seul geste qui ferait basculer la question, et il n'apporterait
+qu'un `docker compose build` économisé à l'installation. Le rapport entre ce
+gain et une licence à trancher ne penche pas du bon côté.
+
+Concrètement, pour qui reprend ce fichier plus tard : n'ajoutez pas de job CI
+qui se connecte à un registre, et ne remplacez pas `build` par `build --push`.
+Si publier devient vraiment utile un jour, il faut d'abord régler
+`pyyaml-include` en amont chez `pipecat-ai`, pas contourner ici.
 
 ## Branchement opérateur
 
