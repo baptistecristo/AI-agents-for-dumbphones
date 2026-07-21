@@ -13,6 +13,7 @@
 
 import {
   isNotifyEnabled,
+  listAccountIds,
   resolveAccount,
   type ResolvedOvhSmsAccount,
 } from "../plugin/accounts.js";
@@ -43,10 +44,15 @@ export interface NotifyRouter {
 }
 
 /**
- * Route every inbound event to the bridge for its account.
+ * Route every inbound event to the bridge for each account that wants it.
  *
  * One bridge per account, built lazily. Each holds its own batch buffer and its
  * own spend state, so two numbers cannot spend each other's budget.
+ *
+ * Every notify-enabled account sees every event. An event arriving from
+ * WhatsApp or Telegram carries nothing that says which SMS number should
+ * forward it, so each account decides for itself, through its own
+ * `fromChannels` filter and against its own budget.
  */
 export function createNotifyRouter(params: NotifyRouterParams): NotifyRouter {
   const { runtime, readConfig, log } = params;
@@ -80,9 +86,14 @@ export function createNotifyRouter(params: NotifyRouterParams): NotifyRouter {
     handle: (event, ctx) => {
       try {
         const cfg = readConfig();
-        const account = resolveAccount(cfg, null);
-        if (!isNotifyEnabled(account)) return;
-        bridgeFor(account).handle(event, ctx);
+        // Resolved per event rather than cached, so a named account added to
+        // the config starts forwarding without a gateway restart, exactly as
+        // the default one does.
+        for (const accountId of listAccountIds(cfg)) {
+          const account = resolveAccount(cfg, accountId);
+          if (!isNotifyEnabled(account)) continue;
+          bridgeFor(account).handle(event, ctx);
+        }
       } catch (error) {
         log?.error?.(
           `notification routing failed: ${

@@ -41,6 +41,7 @@ export * from "./filter/pipeline.js";
 export * from "./filter/rules.js";
 export * from "./ovh/client.js";
 export * from "./ovh/poller.js";
+export * from "./ovh/state.js";
 export * from "./ovh/sms.js";
 export * from "./plugin/accounts.js";
 export * from "./plugin/gateway.js";
