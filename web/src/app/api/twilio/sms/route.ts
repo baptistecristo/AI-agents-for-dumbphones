@@ -120,6 +120,16 @@ export async function POST(req: Request) {
   let reply: string;
   if (looksLikeKeywordCommand(body)) {
     reply = await handleSmsCommand(session, body);
+  } else if (!userId) {
+    // Expéditeur inconnu : pas de boucle LLM. Chaque SMS entrant coûterait un
+    // appel Anthropic sans compte derrière et sans plafond (la ligne vocale,
+    // elle, est limitée par lib/rate-limit.ts). Le canal texte reste fermé par
+    // défaut ; les commandes à mot-clé au-dessus répondent, elles (AIDE).
+    reply = t(session, {
+      fr: "Je ne reconnais pas ce numéro. Crée un compte et vérifie ton numéro pour discuter ici. En attendant, envoie AIDE pour les commandes.",
+      en: "I don't recognize this number. Create an account and verify your number to chat here. In the meantime, send HELP for commands.",
+      es: "No reconozco este número. Crea una cuenta y verifica tu número para hablar aquí. Mientras tanto, envía AYUDA para los comandos.",
+    });
   } else {
     try {
       reply = await runTextTurn({ session, systemPrompt: inboundTextSystemPrompt(ctx), history, userText: body });
