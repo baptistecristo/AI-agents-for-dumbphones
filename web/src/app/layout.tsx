@@ -7,7 +7,7 @@ import "./globals.css";
 
 // Corps : Hanken Grotesk — une grotesque nette et très lisible, dans l'esprit
 // des sans neutres et chaleureuses. Pensée pour rester claire à petite taille,
-// pour un public qui quitte l'écran (parfois âgé, parfois en basse vision).
+// pour un public qui quitte l'écran, y compris en basse vision.
 const body = Hanken_Grotesk({
   variable: "--font-body",
   subsets: ["latin"],

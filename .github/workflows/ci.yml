@@ -19,6 +19,10 @@ jobs:
           node-version: 24
       - run: npm ci
         working-directory: web
+      # next build vérifie les types mais ne lint plus : sans cette étape,
+      # eslint n'était exécuté nulle part en CI.
+      - run: npm run lint
+        working-directory: web
       - run: npm run build
         working-directory: web
       # web/ shipped vitest and two suites that nothing ran — the skills gate

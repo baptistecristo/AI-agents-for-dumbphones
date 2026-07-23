@@ -49,11 +49,12 @@ export async function GET() {
     db.from("google_connections").select("google_email, scopes, connected_at").eq("user_id", uid).maybeSingle(),
   ]);
 
-  // Le profil part en entier, sauf le pin_hash : c'est l'empreinte du code parlé,
-  // un secret, pas une donnée à rendre. On le retire de la copie renvoyée.
+  // Le profil part en entier, sauf text_pin_hash : c'est l'empreinte du PIN du
+  // canal texte, un secret, pas une donnée à rendre. On le retire de la copie
+  // renvoyée. (L'ancien pin_hash, lui, n'existe plus depuis la migration 0007.)
   const rawProfile = (profile.data ?? null) as Record<string, unknown> | null;
   const profiles = rawProfile
-    ? Object.fromEntries(Object.entries(rawProfile).filter(([key]) => key !== "pin_hash"))
+    ? Object.fromEntries(Object.entries(rawProfile).filter(([key]) => key !== "text_pin_hash"))
     : null;
 
   const data = {
