@@ -15,5 +15,12 @@ describe("safeNext", () => {
     expect(safeNext("https://evil.example/steal")).toBe("/onboarding");
     expect(safeNext("//evil.example")).toBe("/onboarding");
     expect(safeNext("/\\evil.example")).toBe("/onboarding");
+    // Le parseur WHATWG ignore les caractères de contrôle : sans nettoyage,
+    // "/\t/evil.example" devient https://evil.example dans new URL().
+    expect(safeNext("/\t/evil.example")).toBe("/onboarding");
+    expect(safeNext("/\r/evil.example")).toBe("/onboarding");
+    expect(safeNext("/\n/evil.example")).toBe("/onboarding");
+    expect(safeNext("/" + String.fromCharCode(0) + "/evil.example")).toBe("/onboarding");
+    expect(safeNext("/" + String.fromCharCode(127) + "/evil.example")).toBe("/onboarding");
   });
 });
