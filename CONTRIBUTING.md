@@ -37,8 +37,8 @@ cd runtime && pip install -r requirements.txt && cp .env.example .env
 uvicorn server:app --port 8000
 ```
 
-- Database: run the files in `supabase/migrations/` (in order) in a Supabase project
-  (**EU region**).
+- Database: run the files in `supabase/migrations/` (in order; the numbering skips 0013
+  on purpose, nothing is missing) in a Supabase project (**EU region**).
 - Weather (Open-Meteo) needs no key. Directions need a free OpenRouteService key.
 - LLM defaults to **fully local via Ollama** (`LLM_PROVIDER=ollama`). Set
   `mistral` or `anthropic` for higher quality.
@@ -53,23 +53,32 @@ A *skill* is one thing the agent can do on a call (look something up, set someth
 send something). Adding one is **five small edits**: four to make it run, one to say who
 is allowed to use it. Say you want a `define` skill — "what does *ephemeral* mean?":
 
+> That exact skill has since been merged (`web/src/lib/skills/define.ts`, plus one guard
+> the walkthrough skips: it only defines English words, so it declines non-EN sessions).
+> Read it as the finished worked example, and pick a fresh name for yours.
+
 **1. Write the logic** — `web/src/lib/skills/define.ts`. A skill is an async function that
 takes the call `session` + the model's `args` and returns a **short string the agent will
 read aloud**. Return data, not instructions. Every caller-facing string goes through
-`t(session, { fr, en })`: one skill serves both FR and EN calls.
+`t(session, { fr, en, es })`: one skill serves FR, EN and ES calls.
 
 ```ts
 import { CallSession, SkillResult, t } from "./types";
 
 export async function define(session: CallSession, args: { word?: string }): Promise<SkillResult> {
   if (!args.word)
-    return t(session, { fr: "Quel mot dois-je définir ?", en: "Which word should I define?" });
+    return t(session, {
+      fr: "Quel mot dois-je définir ?",
+      en: "Which word should I define?",
+      es: "¿Qué palabra debo definir?",
+    });
 
   const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(args.word)}`);
   if (!res.ok)
     return t(session, {
       fr: `Je ne trouve pas de définition pour « ${args.word} ».`,
       en: `I couldn't find a definition for "${args.word}".`,
+      es: `No encuentro una definición para «${args.word}».`,
     });
 
   const data = (await res.json()) as { meanings?: { definitions?: { definition?: string }[] }[] }[];
@@ -78,8 +87,13 @@ export async function define(session: CallSession, args: { word?: string }): Pro
     return t(session, {
       fr: `Aucune définition pour « ${args.word} ».`,
       en: `No definition found for "${args.word}".`,
+      es: `Ninguna definición para «${args.word}».`,
     });
-  return t(session, { fr: `${args.word} : ${first}`, en: `${args.word}: ${first}` });
+  return t(session, {
+    fr: `${args.word} : ${first}`,
+    en: `${args.word}: ${first}`,
+    es: `${args.word}: ${first}`,
+  });
 }
 ```
 
@@ -174,12 +188,15 @@ curl -s localhost:3000/api/tools/execute \
 
 That doubles as a check on step 5: a `"code"` tool refuses on an unverified session instead
 of running, and an unclassified one comes back as `Unknown tool`. Locally, with no SMS
-provider configured, that refusal reads UNAVAILABLE rather than REFUSED. Then `npm test`
+provider configured, that refusal reads UNAVAILABLE rather than REFUSED. One more thing
+this exact curl shows: the merged `define` answers in French that it only defines English
+words, because the unknown `call_id` gives a default-FR session and the shipped skill
+declines non-EN sessions. Your own skill answers with its result. Then `npm test`
 and `npm run lint` in `web/`.
 
-> **Good first skills:** unit / currency conversion, a transit departure lookup, "read me
-> the top headline," a countdown timer. Prefer free, keyless APIs where possible (like
-> Open-Meteo). To read a real one first, `skills/time.ts` is the shortest in the tree.
+> **Good first skills:** a transit departure lookup, "read me the top headline," a
+> countdown timer. Prefer free, keyless APIs where possible (like Open-Meteo). To read a
+> real one first, `skills/define.ts` is the shortest in the tree.
 
 ---
 
@@ -236,10 +253,11 @@ itself in your language too, extend the site dictionaries (`web/src/app/*/copy.t
 
 Every PR runs a Semgrep static scan (`.github/workflows/security-scan.yml`) over a
 small, precise rulepack in [`security/opengrep/`](security/opengrep/precise.yml).
-It fails the build on hardcoded secrets, `eval` / `new Function`, an outbound URL
-built from request input (SSRF), and flags tool output flowing into a prompt. The
-rules also run against `security/opengrep/precise.js` via `semgrep --test`, so the
-seeded findings prove the rulepack still bites.
+It fails the build on hardcoded secrets, `eval` / `new Function`, and an outbound URL
+built from request input (SSRF). The tool-output-into-a-prompt rule is WARNING
+severity: the PR gate keeps ERROR findings only, so that rule surfaces in local scans
+without failing the build. The rules also run against `security/opengrep/precise.js`
+via `semgrep --test`, so the seeded findings prove the rulepack still bites.
 
 To run it locally: `pipx install semgrep`, then
 `semgrep scan --config security/opengrep/precise.yml`. When you add a rule, add a

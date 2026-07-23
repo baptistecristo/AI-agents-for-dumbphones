@@ -56,7 +56,7 @@ export const LANDING: Record<Language, LandingCopy> = {
     how: {
       title: "Comment ça marche",
       steps: [
-        { n: "1", title: "Tu crées ton compte", text: "Sur ce site : ton numéro, ton agenda Google si tu veux, un code secret à quatre chiffres. Dix minutes, une seule fois." },
+        { n: "1", title: "Tu crées ton compte", text: "Sur ce site : ton numéro, ton agenda Google si tu veux. Dix minutes, une seule fois." },
         { n: "2", title: "Tu appelles ton numéro", text: "Depuis ton dumbphone — ou n'importe quel téléphone. L'assistant décroche, te reconnaît, et va droit au but." },
         { n: "3", title: "Les choses se font", text: "Itinéraire par SMS, rappel programmé, table réservée. Tout ce qui engage est relu à voix haute et confirmé avant d'être fait. Compte-rendu par SMS." },
       ],
@@ -81,7 +81,7 @@ export const LANDING: Record<Language, LandingCopy> = {
     trust: {
       title: "Conçu pour être sûr, pas pour te retenir",
       items: [
-        { title: "Un code secret, à l'oral", text: "Envoyer un message ou passer un appel à ta place exige ton code à quatre chiffres. Un numéro d'appelant peut être usurpé ; le code, non." },
+        { title: "Un code à usage unique, à l'oral", text: "Envoyer un message ou passer un appel à ta place exige un code reçu par SMS sur ton numéro, pendant l'appel. Un numéro d'appelant peut être usurpé ; le code qui arrive sur ton téléphone, non." },
         { title: "Rien ne part sans un « oui »", text: "Chaque action est relue à voix haute et attend une confirmation claire. Une hésitation vaut non." },
         { title: "Des données en Europe", text: "Consentements enregistrés et révocables, données hébergées en Europe, droit à l'effacement. Tu vois tout sur ton tableau de bord. Et le code est open-source." },
       ],
@@ -119,7 +119,7 @@ export const LANDING: Record<Language, LandingCopy> = {
     how: {
       title: "How it works",
       steps: [
-        { n: "1", title: "You create your account", text: "On this site: your number, your Google calendar if you want, a four-digit secret code. Ten minutes, once." },
+        { n: "1", title: "You create your account", text: "On this site: your number, your Google calendar if you want. Ten minutes, once." },
         { n: "2", title: "You call your number", text: "From your dumbphone — or any phone. The assistant picks up, recognizes you, and gets to the point." },
         { n: "3", title: "Things get done", text: "Directions by SMS, reminder scheduled, table booked. Anything that commits you is read back out loud and confirmed first. Report by SMS." },
       ],
@@ -144,7 +144,7 @@ export const LANDING: Record<Language, LandingCopy> = {
     trust: {
       title: "Built to be safe, not to keep you hooked",
       items: [
-        { title: "A secret code, spoken", text: "Sending a message or placing a call on your behalf requires your four-digit code. A caller ID can be spoofed; the code can't." },
+        { title: "A one-time code, spoken", text: "Sending a message or placing a call on your behalf requires a code texted to your number during the call. A caller ID can be spoofed; the code that lands on your phone can't." },
         { title: "Nothing goes out without a \"yes\"", text: "Every action is read back out loud and waits for clear confirmation. Hesitation counts as no." },
         { title: "Data in Europe", text: "Recorded, revocable consents, data hosted in Europe, right to erasure. You see everything on your dashboard. And the code is open-source." },
       ],
@@ -182,7 +182,7 @@ export const LANDING: Record<Language, LandingCopy> = {
     how: {
       title: "Cómo funciona",
       steps: [
-        { n: "1", title: "Creas tu cuenta", text: "En esta web: tu número, tu agenda de Google si quieres, un código secreto de cuatro cifras. Diez minutos, una sola vez." },
+        { n: "1", title: "Creas tu cuenta", text: "En esta web: tu número, tu agenda de Google si quieres. Diez minutos, una sola vez." },
         { n: "2", title: "Llamas a tu número", text: "Desde tu dumbphone — o cualquier teléfono. El asistente descuelga, te reconoce y va al grano." },
         { n: "3", title: "Las cosas se hacen", text: "Ruta por SMS, recordatorio programado, mesa reservada. Todo lo que compromete se relee en voz alta y se confirma antes de hacerse. Resumen por SMS." },
       ],
@@ -207,7 +207,7 @@ export const LANDING: Record<Language, LandingCopy> = {
     trust: {
       title: "Diseñado para ser seguro, no para retenerte",
       items: [
-        { title: "Un código secreto, de viva voz", text: "Enviar un mensaje o hacer una llamada en tu nombre exige tu código de cuatro cifras. Un número de llamada puede suplantarse; el código, no." },
+        { title: "Un código de un solo uso, de viva voz", text: "Enviar un mensaje o hacer una llamada en tu nombre exige un código recibido por SMS en tu número, durante la llamada. Un número de llamada puede suplantarse; el código que llega a tu teléfono, no." },
         { title: "Nada sale sin un «sí»", text: "Cada acción se relee en voz alta y espera una confirmación clara. Una duda cuenta como no." },
         { title: "Datos en Europa", text: "Consentimientos registrados y revocables, datos alojados en Europa, derecho al olvido. Lo ves todo en tu panel. Y el código es open-source." },
       ],

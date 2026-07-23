@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/baptistecristo/AI-agents-for-dumbphones/actions/workflows/ci.yml/badge.svg)](https://github.com/baptistecristo/AI-agents-for-dumbphones/actions/workflows/ci.yml)
 
-**Live site:** [ai-agents-for-dumbphones.vercel.app](https://ai-agents-for-dumbphones.vercel.app). Create an account and set up your agent from the browser.
+**Live site:** [ai-agents-for-dumbphones.vercel.app](https://ai-agents-for-dumbphones.vercel.app). Create an account and set up your agent from the browser. One caveat: phone verification sends a code by SMS, no SMS provider is connected right now, so onboarding stops at that step.
 
 **Ditch the smartphone without losing the useful stuff.** Instead of an app, you
 **call a number and ask** — weather, directions, a reminder, your calendar, a quick
@@ -54,8 +54,8 @@ will never come.
 
 That second gap costs more than the SMS skills. A one-time code **texted to the caller**
 unlocks every sensitive action, and the gate fails closed, so with no Twilio the code never
-arrives and everything behind it stays locked: calendar, contacts, reading back reminders
-and notes, the recap of your previous call, marking a reminder done, dictated texts,
+arrives and everything behind it stays locked: calendar, contacts, reading back saved
+notes, the recap of your previous call, marking a reminder done, dictated texts,
 outbound calls. A caller today reaches
 only the ungated set: weather, local time, directions, setting and listing reminders,
 taking a note. Connecting a Twilio account unlocks the rest, and it's a small first
@@ -127,7 +127,7 @@ is drawn the way it is.
 | Inbound agent | Trilingual (FR/EN/ES) system prompt + greeting, one-time-SMS-code gate before sensitive actions, two-step voice confirmation, per-caller speaking rate. On Vapi the voice/STT/LLM are **ElevenLabs + Deepgram + Anthropic** — managed, and none of them EU | `web/src/lib/agents/inbound.ts` |
 | Public-number guard | 180s per call, plus three limits that stack: **5 calls per caller per hour** and **20 per caller per day** stop one person redialling in a loop, and **60 calls a day across everyone** caps the bill even if the abuse comes from fifty different numbers. Over any of them, Vapi speaks a refusal and hangs up | `web/src/lib/rate-limit.ts` |
 | Outbound calling | Generalized engine — the agent can **call a place for you** (booking, appointment), handle DTMF menus and voicemail, retry, then text you the result | `web/src/lib/agents/outbound.ts` |
-| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, spoken recap of your previous call (opt-in, off by default), call auth (`request_code` / `verify_code`) | `web/src/lib/skills/` |
+| Skills | calendar, reminders (+ "did I already…?"), weather (Open-Meteo, free), directions-by-SMS (OpenRouteService), local time (Open-Meteo geocoding + WorldTimeAPI, free), contacts, dictated SMS, memory, word definitions (EN), unit and currency conversion, spoken recap of your previous call (opt-in, off by default), flagging requests nothing covers yet, call auth (`request_code` / `verify_code`) | `web/src/lib/skills/` |
 | SMS commands | `WEATHER`, `AGENDA`, `REMIND 18:30 …`, `REMINDERS`, `ALREADY`, `ROUTE`, `HELP`, `STOP/START` — inspired by [Sift](https://github.com/edleeman17/sift), with French and Spanish aliases (`METEO`/`TIEMPO`, `RECUERDA`, `AYUDA`…). `DONE` is phone-only — marking a reminder done needs the call | `web/src/lib/sms-commands.ts` |
 | Data (EU) | Supabase Postgres: profiles (incl. `preferred_language`, `voice_speed`), phones, OAuth tokens **encrypted AES-256-GCM**, append-only consent registry, reminders, memory, call/SMS logs — RLS everywhere | `supabase/migrations/` |
 | Web app | Next.js: landing, magic-link sign-in, onboarding (phone OTP → Google OAuth → consent), dashboard with language and speaking-rate settings — the site itself is FR/EN/ES (cookie-backed switcher) | `web/src/app/` |
@@ -137,8 +137,8 @@ is drawn the way it is.
 1. **Add a skill** — a new thing the agent can do on a call (a fact lookup, a timer, a
    transit query…). It's one small TypeScript function plus a tool schema. Walkthrough in
    [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skill).
-2. **Add a *third* language (ES / DE / …)** — EN and FR ship already; a new language is
-   the same four touch points, additive. Walkthrough in
+2. **Add a *fourth* language (DE / IT / …)** — FR, EN and ES ship already; a new language
+   is the same four touch points, additive. Walkthrough in
    [CONTRIBUTING.md](CONTRIBUTING.md#add-a-language-or-voice).
 
 Honest caveat: you can test both against the web API, but not against a live call —
@@ -169,7 +169,8 @@ uvicorn server:app --port 8000
 
 Database: create your own Supabase project in an **EU region**, then apply the schema with
 `supabase link --project-ref <your-ref>` and `supabase db push` (or paste the files in
-`supabase/migrations/` in order into the SQL editor). Weather (Open-Meteo) needs no key;
+`supabase/migrations/` in order into the SQL editor; the numbering skips 0013 on
+purpose, nothing is missing). Weather (Open-Meteo) needs no key;
 directions use a free OpenRouteService key. The default LLM is fully local via Ollama — set
 `LLM_PROVIDER=mistral|anthropic` for higher quality at a few cents per call.
 
