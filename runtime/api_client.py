@@ -62,7 +62,7 @@ async def end_call(
     job_id: str | None = None,
 ) -> None:
     async with httpx.AsyncClient(timeout=15) as client:
-        await client.post(
+        res = await client.post(
             f"{config.NEXT_API_URL}/api/runtime/end",
             headers=_HEADERS,
             json={
@@ -72,3 +72,6 @@ async def end_call(
                 "job_id": job_id,
             },
         )
+        # Sans ça, un 4xx/5xx passerait inaperçu et le transcript serait
+        # perdu en silence — bot.py loggue déjà l'exception, autant la lever.
+        res.raise_for_status()
