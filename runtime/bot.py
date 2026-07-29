@@ -10,6 +10,7 @@ tout le reste est en processus.
 Testé avec pipecat-ai 1.5 (voir la version épinglée dans requirements.txt).
 """
 
+import asyncio
 import os
 import sys
 
@@ -40,6 +41,15 @@ logger.remove()
 # LOG_LEVEL=DEBUG fait parler tout Pipecat : VAD, transcriptions, trames LLM.
 # C'est l'outil de diagnostic quand un appel reste muet — voir runtime/README.md.
 logger.add(sys.stderr, level=os.getenv("LOG_LEVEL", "INFO"))
+
+# Annonce de fin quand MAX_CALL_SECONDS est atteint : dite dans la langue de la
+# session, PUIS on laisse le temps de la prononcer avant de raccrocher.
+_TIMEOUT_GOODBYE = {
+    "fr": "On arrive à la limite de durée de cet appel. Merci, à bientôt !",
+    "en": "We are reaching this call's time limit. Thank you, talk soon!",
+    "es": "Llegamos al límite de duración de esta llamada. ¡Gracias, hasta pronto!",
+}
+_TIMEOUT_GOODBYE_SECONDS = 8  # marge pour que l'annonce parte sur la ligne avant la coupure
 
 
 def _build_llm():
@@ -180,10 +190,30 @@ async def run_call(
     async def on_client_disconnected(_transport, _client) -> None:
         await runner.cancel()
 
+    # Limite de durée (MAX_CALL_SECONDS, 0 = sans limite) : l'agent annonce la
+    # fin dans la langue de la session, puis raccroche — le pendant self-host du
+    # maxDurationSeconds de Vapi. L'annonce part AVANT la coupure : la marge
+    # _TIMEOUT_GOODBYE_SECONDS laisse au TTS et à la ligne le temps de la dire.
+    async def _enforce_max_duration(max_seconds: int) -> None:
+        await asyncio.sleep(max(1, max_seconds - _TIMEOUT_GOODBYE_SECONDS))
+        goodbye = _TIMEOUT_GOODBYE.get(language, _TIMEOUT_GOODBYE["fr"])
+        logger.info(f"Appel {call_id} : limite de {max_seconds}s atteinte, annonce puis raccrochage")
+        await worker.queue_frames([TTSSpeakFrame(goodbye)])
+        await asyncio.sleep(_TIMEOUT_GOODBYE_SECONDS)
+        await hangup()
+
+    watchdog = (
+        asyncio.create_task(_enforce_max_duration(config.MAX_CALL_SECONDS))
+        if config.MAX_CALL_SECONDS > 0
+        else None
+    )
+
     try:
         await runner.add_workers(worker)
         await runner.run()
     finally:
+        if watchdog:
+            watchdog.cancel()
         # 3. Fin d'appel : transcript + clôture éventuelle de la mission
         try:
             await api_client.end_call(call_id, _transcript_from(context), "hangup", job_id)

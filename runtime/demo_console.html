@@ -57,6 +57,7 @@
       <span>vous</span><div class="meter"><i id="meter-mic"></i></div>
       <span>l'agent</span><div class="meter agent"><i id="meter-agent"></i></div>
     </div>
+    <p class="note" id="cap-note" hidden></p>
   </div>
 
   <div class="card">
@@ -164,6 +165,12 @@ function meter(id, rms) { $(id).style.width = Math.min(100, rms * 400) + "%"; }
 
 /* ---------------------------------------------------------- lecture agent */
 function playUlaw(bytes) {
+  // Filet : si la sortie audio est restée suspendue (activation expirée), on la
+  // relance et on le dit — plutôt qu'un agent qui parle dans le vide.
+  if (ctx && ctx.state === "suspended") {
+    ctx.resume();
+    log("⚠ sortie audio suspendue par le navigateur — reprise demandée");
+  }
   const f32 = new Float32Array(bytes.length);
   for (let i = 0; i < bytes.length; i++) f32[i] = ULAW_TO_FLOAT[bytes[i]];
   const buffer = ctx.createBuffer(1, f32.length, 8000);
@@ -192,19 +199,31 @@ async function pickUp() {
   const seq = ++callSeq;
   $("call").disabled = true;
   try {
+    // La sortie audio d'ABORD, pendant que le clic est encore une « activation
+    // utilisateur » fraîche : si l'invite de permission micro prend quelques
+    // secondes, l'activation expire et un AudioContext créé après resterait
+    // suspendu — l'accueil de l'agent arriverait alors en silence.
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    log("· sortie audio : " + ctx.state);
+
     const caller = $("caller").value.trim();
     const tokenRes = await fetch("/demo/token?caller=" + encodeURIComponent(caller));
     if (!tokenRes.ok) {
       const detail = await tokenRes.json().catch(() => ({}));
       throw new Error(detail.error || ("jeton refusé (HTTP " + tokenRes.status + ")"));
     }
-    const customParameters = await tokenRes.json();
+    const { params: customParameters, max_seconds: maxSeconds } = await tokenRes.json();
+    if (maxSeconds > 0) {
+      const capNote = $("cap-note");
+      capNote.hidden = false;
+      capNote.textContent = "Appel limité à " + Math.round(maxSeconds / 60) +
+        " min — l'agent prévient avant de raccrocher. Demo calls are capped.";
+    }
 
     micStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     });
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    await ctx.resume();
 
     const workletUrl = URL.createObjectURL(new Blob([`
       registerProcessor("capture", class extends AudioWorkletProcessor {

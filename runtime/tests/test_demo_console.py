@@ -24,10 +24,12 @@ class DemoConsoleTests(unittest.TestCase):
         self.client = TestClient(server.app)
         self._console = config.DEMO_CONSOLE
         self._callers = config.DEMO_CALLERS
+        self._max_seconds = config.MAX_CALL_SECONDS
 
     def tearDown(self) -> None:
         config.DEMO_CONSOLE = self._console
         config.DEMO_CALLERS = self._callers
+        config.MAX_CALL_SECONDS = self._max_seconds
 
     def test_disabled_by_default(self) -> None:
         config.DEMO_CONSOLE = False
@@ -42,15 +44,25 @@ class DemoConsoleTests(unittest.TestCase):
 
     def test_anonymous_token_opens_ws_like_a_twiml_would(self) -> None:
         config.DEMO_CONSOLE = True
-        payload = self.client.get("/demo/token").json()
-        tok = payload.pop("tok")
-        self.assertEqual(payload, {"direction": "inbound", "caller": ""})
-        self.assertEqual(tok, server._stream_token(payload))
+        params = self.client.get("/demo/token").json()["params"]
+        tok = params.pop("tok")
+        self.assertEqual(params, {"direction": "inbound", "caller": ""})
+        self.assertEqual(tok, server._stream_token(params))
         # Et le faux opérateur en Python signe pareil : trois implémentations,
         # un seul calcul.
         self.assertEqual(
             twilio_media.signed_parameters(config.RUNTIME_API_SECRET)["tok"], tok
         )
+
+    def test_token_reply_separates_signed_params_from_metadata(self) -> None:
+        # La page envoie `params` TELS QUELS en customParameters : tout champ
+        # non signé qui s'y glisserait invaliderait le jeton à l'ouverture du
+        # flux. max_seconds vit donc À CÔTÉ, jamais dedans.
+        config.DEMO_CONSOLE = True
+        config.MAX_CALL_SECONDS = 120
+        payload = self.client.get("/demo/token").json()
+        self.assertEqual(payload["max_seconds"], 120)
+        self.assertEqual(set(payload["params"]), {"direction", "caller", "tok"})
 
     def test_caller_outside_allow_list_is_refused(self) -> None:
         config.DEMO_CONSOLE = True
@@ -61,10 +73,10 @@ class DemoConsoleTests(unittest.TestCase):
     def test_caller_on_allow_list_gets_a_signed_token(self) -> None:
         config.DEMO_CONSOLE = True
         config.DEMO_CALLERS = ["+33612345678"]
-        payload = self.client.get("/demo/token", params={"caller": "+33612345678"}).json()
-        self.assertEqual(payload["caller"], "+33612345678")
+        params = self.client.get("/demo/token", params={"caller": "+33612345678"}).json()["params"]
+        self.assertEqual(params["caller"], "+33612345678")
         self.assertEqual(
-            payload["tok"],
+            params["tok"],
             server._stream_token({"direction": "inbound", "caller": "+33612345678"}),
         )
 

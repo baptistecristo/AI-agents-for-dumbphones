@@ -226,6 +226,10 @@ heure, conversion…) : c'est le comportement normal du produit, pas une
 restriction de la démo. Premier appel lent : faster-whisper télécharge son
 modèle (~460 Mo en `small`) et Ollama charge le sien en mémoire.
 
+`MAX_CALL_SECONDS` (0 = sans limite) borne chaque appel : l'agent annonce la
+fin dans la langue de la session puis raccroche, et la console l'affiche sous
+les vumètres. `120` est un bon réglage de démo.
+
 ## Branchement opérateur
 
 - **Twilio** : sur le numéro, webhook Voice → `POST https://HOTE/twilio/inbound`.

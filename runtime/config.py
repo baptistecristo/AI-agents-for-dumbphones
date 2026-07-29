@@ -112,6 +112,23 @@ def _as_bool(value: str) -> bool:
     return value.strip().lower() in ("1", "true", "yes", "on")
 
 
+def _as_seconds(name: str, value: str) -> int:
+    try:
+        seconds = int(value.strip())
+    except ValueError as err:
+        raise RuntimeError(f"{name} doit être un nombre entier de secondes (reçu : {value!r})") from err
+    if seconds < 0:
+        raise RuntimeError(f"{name} doit être positif ou nul (reçu : {seconds})")
+    return seconds
+
+
+# Durée maximale d'un appel, en secondes. 0 (défaut) = pas de limite. Au-delà,
+# l'agent annonce la fin poliment puis raccroche (bot.py). C'est le pendant du
+# maxDurationSeconds du chemin Vapi : sans lui, un appel oublié occupe le CPU
+# (ou brûle des crédits LLM) sans fin.
+MAX_CALL_SECONDS = _as_seconds("MAX_CALL_SECONDS", env("MAX_CALL_SECONDS", "0"))
+
+
 # Console démo navigateur (GET /demo) : joue l'opérateur depuis un micro, sans
 # numéro ni compte Twilio. OFF par défaut — la page distribue un jeton de flux
 # valide à quiconque la charge, donc une ligne gratuite vers l'agent. Machine

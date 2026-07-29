@@ -265,7 +265,15 @@ async def demo_token(caller: str = "") -> JSONResponse:
             {"error": "numéro hors DEMO_CALLERS : appel anonyme seulement"}, status_code=403
         )
     params = {"direction": "inbound", "caller": caller}
-    return JSONResponse({**params, "tok": _stream_token(params)})
+    # `params` séparé du reste : la page les envoie TELS QUELS en
+    # customParameters, et le jeton ne signe qu'eux. Y mélanger max_seconds
+    # casserait la vérification du flux.
+    return JSONResponse(
+        {
+            "params": {**params, "tok": _stream_token(params)},
+            "max_seconds": config.MAX_CALL_SECONDS,
+        }
+    )
 
 
 @app.get("/health")
