@@ -10,6 +10,7 @@ Routes :
 Lancement :  uvicorn server:app --host 0.0.0.0 --port 8000
 """
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -170,6 +171,31 @@ async def outbound(request: Request) -> JSONResponse:
 
 
 # ---------------------------------------------------------------- média WS
+# Bornes de la phase pré-authentification du websocket : l'opérateur envoie
+# « connected » puis « start » en quelques millisecondes. Au-delà, c'est autre
+# chose qu'un opérateur.
+_START_EVENT_TIMEOUT = 10.0
+_START_EVENT_MAX_MESSAGES = 8
+
+
+async def _await_start_event(websocket: WebSocket) -> dict:
+    """Attend l'événement « start » de l'opérateur, dans des bornes strictes.
+
+    Lève TimeoutError, ValueError ou une erreur de décodage : l'appelant ferme
+    alors proprement, sans jamais laisser remonter une exception nue.
+    """
+    async with asyncio.timeout(_START_EVENT_TIMEOUT):
+        for _ in range(_START_EVENT_MAX_MESSAGES):
+            message = json.loads(await websocket.receive_text())
+            if not isinstance(message, dict):
+                raise ValueError("message JSON qui n'est pas un objet")
+            if message.get("event") == "start":
+                if not isinstance(message.get("start"), dict):
+                    raise ValueError("événement « start » sans objet « start »")
+                return message
+    raise ValueError(f"aucun « start » en {_START_EVENT_MAX_MESSAGES} messages")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
@@ -194,12 +220,18 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     else:
         from pipecat.serializers.twilio import TwilioFrameSerializer
 
-        # Twilio envoie d'abord {"event":"connected"} puis {"event":"start"}
-        start = json.loads(await websocket.receive_text())
-        while start.get("event") != "start":
-            start = json.loads(await websocket.receive_text())
-        stream_sid = start["start"]["streamSid"]
-        call_sid = start["start"]["callSid"]
+        # Twilio envoie d'abord {"event":"connected"} puis {"event":"start"}.
+        # Lecture bornée : tout ceci précède la vérification du jeton, donc un
+        # client non authentifié ne doit pouvoir ni tenir la socket ouverte
+        # indéfiniment, ni la faire tomber sur une exception nue.
+        try:
+            start = await _await_start_event(websocket)
+        except (TimeoutError, ValueError, KeyError, json.JSONDecodeError) as err:
+            logger.warning(f"WS refusé : événement « start » invalide ou absent ({err})")
+            await websocket.close(code=1008)
+            return
+        stream_sid = str(start["start"]["streamSid"])
+        call_sid = str(start["start"]["callSid"])
         custom = start["start"].get("customParameters", {}) or {}
         # Raccrochage automatique (API REST Twilio) seulement si les identifiants
         # existent : pipecat >= 1.6 refuse de CONSTRUIRE le sérialiseur quand
@@ -238,6 +270,11 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             # la session (prompt, Whisper, voix). L'appelant reste anonyme.
             demo_name=custom.get("demo_name"),
             demo_lang=custom.get("demo_lang"),
+            # Accueil immédiat (avant chargement de Whisper) : il faut le
+            # stream_sid pour fabriquer les événements média à la main. Telnyx
+            # a un autre format d'événements sortants, non vérifié : pas de
+            # stream_sid -> bot repasse par l'accueil pipeline.
+            stream_sid=stream_sid if config.TELEPHONY_PROVIDER != "telnyx" else None,
         )
     except Exception as err:  # noqa: BLE001
         logger.exception(f"Appel {call_id} en erreur : {err}")
@@ -258,7 +295,18 @@ async def demo_console() -> Response:
     if not config.DEMO_CONSOLE:
         return Response(status_code=404)
     page = (Path(__file__).parent / "demo_console.html").read_text(encoding="utf-8")
-    return HTMLResponse(page)
+    # Interdire l'encadrement : la page obtient elle-même un jeton de flux et
+    # demande le micro. Embarquée en iframe sous un bouton leurre, elle ouvrirait
+    # le micro de l'opérateur pour un tiers — et les websockets échappent au
+    # CORS, donc rien d'autre ne l'arrête.
+    return HTMLResponse(
+        page,
+        headers={
+            "X-Frame-Options": "DENY",
+            "Content-Security-Policy": "frame-ancestors 'none'",
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.get("/demo/token")

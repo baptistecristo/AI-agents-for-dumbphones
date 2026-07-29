@@ -14,6 +14,7 @@ import asyncio
 import os
 import sys
 
+import httpx
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import EndTaskFrame, TTSSpeakFrame
@@ -35,7 +36,8 @@ from pipecat.workers.runner import WorkerRunner
 import api_client
 import config
 import tools as tool_defs
-from piper_http import PiperHttpTTSService
+import twilio_media
+from piper_http import PiperHttpTTSService, speakable_text
 
 logger.remove()
 # LOG_LEVEL=DEBUG fait parler tout Pipecat : VAD, transcriptions, trames LLM.
@@ -83,6 +85,33 @@ def _transcript_from(context: LLMContext) -> str:
     return "\n".join(lines)
 
 
+async def _speak_greeting_now(websocket, stream_sid: str, text: str, voice: str) -> bool:
+    """Prononce l'accueil AVANT la construction du pipeline.
+
+    Décrocher, c'est parler tout de suite : entre l'ouverture du flux et le
+    premier mot du pipeline, il y a le chargement du modèle Whisper — plusieurs
+    secondes de silence au décroché, que l'appelant prend pour une ligne morte.
+    Ici on synthétise l'accueil en un POST Piper direct et on l'envoie sur la
+    ligne immédiatement ; Whisper charge PENDANT que l'accueil se joue.
+    En échec (Piper pas prêt), on rend False et l'accueil repasse par le
+    pipeline, comme avant : plus lent, jamais muet.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            res = await client.post(
+                f"{config.PIPER_BASE_URL}{config.PIPER_SYNTHESIZE_PATH}",
+                json={"text": speakable_text(text), "voice": voice},
+            )
+            res.raise_for_status()
+            ulaw = twilio_media.wav_to_ulaw(res.content)
+        for frame in twilio_media.iter_frames(ulaw):
+            await websocket.send_text(twilio_media.dumps(twilio_media.media_event(stream_sid, frame)))
+        return True
+    except Exception as err:  # noqa: BLE001 — l'accueil ne doit jamais tuer l'appel
+        logger.warning(f"Accueil immédiat impossible ({err}) : il repassera par le pipeline.")
+        return False
+
+
 async def run_call(
     websocket,
     serializer,
@@ -92,6 +121,7 @@ async def run_call(
     job_id: str | None = None,
     demo_name: str | None = None,
     demo_lang: str | None = None,
+    stream_sid: str | None = None,
 ) -> None:
     """Fait tourner un appel complet (entrant ou mission sortante)."""
 
@@ -106,6 +136,14 @@ async def run_call(
     # exige une langue concrète — run_stt fait assert_given(settings.language).
     language = session.get("language", "fr")
     stt_language = {"en": Language.EN, "es": Language.ES}.get(language, Language.FR)
+
+    # Accueil immédiat, avant que Whisper ne charge (voir _speak_greeting_now).
+    first = session.get("first_message")
+    greeted = False
+    if first and direction == "inbound" and stream_sid:
+        greeted = await _speak_greeting_now(
+            websocket, stream_sid, first, config.piper_voice_for(language)
+        )
 
     transport = FastAPIWebsocketTransport(
         websocket=websocket,
@@ -142,7 +180,10 @@ async def run_call(
     llm = _build_llm()
 
     context = LLMContext(
-        messages=[{"role": "system", "content": session["system_prompt"]}],
+        # Accueil déjà prononcé hors pipeline : l'agrégateur assistant ne l'a
+        # pas vu passer, on le pose donc dans le contexte à la main.
+        messages=[{"role": "system", "content": session["system_prompt"]}]
+        + ([{"role": "assistant", "content": first}] if greeted else []),
         # Appelant sans compte : schéma d'outils réduit au périmètre public
         # (tools.PUBLIC_TOOLS), en face du prompt compact renvoyé par l'API.
         tools=(
@@ -182,12 +223,11 @@ async def run_call(
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(_transport, _client) -> None:
-        # Entrant : l'agent parle en premier. Sortant : on attend l'interlocuteur.
-        # Pas de context.add_message ici : l'agrégateur assistant enregistre déjà
-        # ce que le TTS prononce — l'ajouter à la main doublait l'accueil dans le
-        # contexte envoyé au LLM.
-        first = session.get("first_message")
-        if first:
+        # Entrant : l'agent parle en premier. Chemin de repli seulement — en
+        # temps normal l'accueil est déjà parti AVANT le pipeline (greeted).
+        # Pas de context.add_message ici : l'agrégateur assistant enregistre ce
+        # que le TTS prononce — l'ajouter à la main doublerait l'accueil.
+        if first and not greeted:
             await worker.queue_frames([TTSSpeakFrame(first)])
 
     @transport.event_handler("on_client_disconnected")

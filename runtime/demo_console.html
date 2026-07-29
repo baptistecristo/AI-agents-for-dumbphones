@@ -162,8 +162,17 @@ function pushMicSamples(f32, srcRate) {
     bytes.push(pcmToUlaw(Math.max(-32768, Math.min(32767, Math.round(sample * 32768)))));
     pos += step;
   }
-  resampleTail = src.subarray(Math.floor(pos));
-  resamplePos = pos - Math.floor(pos);
+  // Le report doit garder la PARTIE ENTIÈRE de la position, pas seulement sa
+  // fraction : quand `pos` dépasse la fin du bloc (dernier pas trop long), ne
+  // garder que la fraction fait repartir le bloc suivant de l'index 0 et
+  // produit ~3 % d'échantillons en trop à 48 kHz. Le tampon d'émission saturait
+  // alors en une vingtaine de secondes et jetait en continu le plus ancien
+  // audio : latence figée à ~600 ms, débuts de mots coupés, transcription
+  // dégradée. On coupe donc à la borne réellement consommée et on reporte le
+  // reliquat, entier compris.
+  const consumed = Math.min(Math.floor(pos), src.length);
+  resampleTail = src.subarray(consumed);
+  resamplePos = pos - consumed;
   sendQueue.push(...bytes);
   // Dérive : si le tampon dépasse ~0,6 s, on jette le plus ancien.
   if (sendQueue.length > 4800) sendQueue.splice(0, sendQueue.length - 4800);
@@ -254,7 +263,13 @@ async function pickUp() {
       });`], { type: "application/javascript" }));
     await ctx.audioWorklet.addModule(workletUrl);
     workletNode = new AudioWorkletNode(ctx, "capture");
-    workletNode.port.onmessage = (e) => pushMicSamples(e.data, ctx.sampleRate);
+    URL.revokeObjectURL(workletUrl); // le module est chargé : l'URL blob ne sert plus
+    // `ctx` est relu à chaque message : hangUp() le met à null, et un message
+    // du worklet posté juste avant arrive juste après. Sans ce garde, chaque
+    // raccrochage laissait une TypeError dans la console.
+    workletNode.port.onmessage = (e) => {
+      if (ctx) pushMicSamples(e.data, ctx.sampleRate);
+    };
     ctx.createMediaStreamSource(micStream).connect(workletNode);
 
     const streamSid = "MZdemo" + crypto.randomUUID().replaceAll("-", "").slice(0, 24);
@@ -287,7 +302,11 @@ async function pickUp() {
         if (ws.readyState !== WebSocket.OPEN) return;
         if (!micOpen) {
           const greetingPlayed = playHead > 0 && ctx && ctx.currentTime > playHead + 0.15;
-          if (greetingPlayed || Date.now() > micOpenFallbackAt) {
+          // Le filet ne s'applique QUE si rien n'est jamais arrivé (accueil en
+          // échec) : sinon il ouvrirait le micro pendant que l'agent parle, et
+          // sa propre voix, revenue en µ-law 8 kHz, l'interromprait lui-même.
+          const nothingEverCame = playHead === 0 && Date.now() > micOpenFallbackAt;
+          if (greetingPlayed || nothingEverCame) {
             micOpen = true;
             sendQueue.length = 0; // le bruit accumulé pendant l'accueil part à la poubelle
             log("· micro ouvert — à vous");
@@ -342,6 +361,7 @@ function hangUp(silent) {
   micOpen = false;
   flushPlayback();
   if (micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
+  if (workletNode) { workletNode.port.onmessage = null; workletNode.disconnect(); workletNode = null; }
   if (ctx) { ctx.close(); ctx = null; }
   sendQueue = []; resampleTail = null; resamplePos = 0;
   if (!silent) log("→ raccroché");

@@ -176,11 +176,15 @@ async def _wait_agent_done(
 ) -> bool:
     """Attend que l'agent ait parlé (au moins ~0,3 s) puis se soit tu `gap` secondes."""
     loop = asyncio.get_running_loop()
-    baseline = len(call.agent_track)
+    # received_bytes, et non len(agent_track) : la piste est rembourrée de
+    # silence pour rester synchrone avec l'horloge d'émission, donc 20 ms de
+    # parole réelle après un long silence y ressemblaient à des secondes de
+    # parole — le harnais déclarait « l'agent a fini » sans qu'il ait parlé.
+    baseline = call.received_bytes
     deadline = loop.time() + timeout
     spoken = False
     while loop.time() < deadline and not call.closed.is_set():
-        if not spoken and len(call.agent_track) - baseline >= 0.3 * tm.SAMPLE_RATE:
+        if not spoken and call.received_bytes - baseline >= 0.3 * tm.SAMPLE_RATE:
             spoken = True
             _log(started, f"← l'agent parle ({label})")
         if spoken and loop.time() - call.last_agent_audio >= gap:
