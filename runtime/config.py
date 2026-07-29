@@ -108,6 +108,20 @@ PIPER_SYNTHESIZE_PATH = check_piper_synthesize_path(
     env("PIPER_SYNTHESIZE_PATH", piper_http.SYNTHESIZE_PATH_AUTO)
 )
 
+def _as_bool(value: str) -> bool:
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+# Console démo navigateur (GET /demo) : joue l'opérateur depuis un micro, sans
+# numéro ni compte Twilio. OFF par défaut — la page distribue un jeton de flux
+# valide à quiconque la charge, donc une ligne gratuite vers l'agent. Machine
+# de dev ou accès contrôlé seulement (voir server.py).
+DEMO_CONSOLE = _as_bool(env("DEMO_CONSOLE", "false"))
+# Caller-ID que la console a le droit de présenter (numéros séparés par des
+# virgules). Vide : seul l'appelant anonyme est permis. Y mettre un numéro
+# vérifié permet de tester le chemin « appelant connu » depuis le navigateur.
+DEMO_CALLERS = [n.strip() for n in env("DEMO_CALLERS", "").split(",") if n.strip()]
+
 # Cerveau : ollama (100 % local) | mistral (API EU) | anthropic (qualité max)
 LLM_PROVIDER = env("LLM_PROVIDER", "ollama")
 OLLAMA_MODEL = env("OLLAMA_MODEL", "qwen2.5:7b")  # bon compromis FR + tool-calling

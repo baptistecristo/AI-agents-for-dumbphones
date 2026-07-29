@@ -15,10 +15,11 @@ import hashlib
 import hmac
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Request, WebSocket
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from loguru import logger
 
 import bot
@@ -200,11 +201,18 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         stream_sid = start["start"]["streamSid"]
         call_sid = start["start"]["callSid"]
         custom = start["start"].get("customParameters", {}) or {}
+        # Raccrochage automatique (API REST Twilio) seulement si les identifiants
+        # existent : pipecat >= 1.6 refuse de CONSTRUIRE le sérialiseur quand
+        # auto_hang_up est actif sans identifiants complets. Sans ce garde, une
+        # installation sans compte Twilio — fake_carrier.py, console /demo —
+        # perdrait chaque flux à l'ouverture, sur une ValueError.
+        hangup_ready = bool(config.TWILIO_ACCOUNT_SID and config.TWILIO_AUTH_TOKEN)
         serializer = TwilioFrameSerializer(
             stream_sid=stream_sid,
             call_sid=call_sid,
-            account_sid=config.TWILIO_ACCOUNT_SID,
-            auth_token=config.TWILIO_AUTH_TOKEN,  # permet le raccrochage automatique
+            account_sid=config.TWILIO_ACCOUNT_SID or None,
+            auth_token=config.TWILIO_AUTH_TOKEN or None,
+            params=TwilioFrameSerializer.InputParams(auto_hang_up=hangup_ready),
         )
         call_id = call_sid
 
@@ -228,6 +236,36 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         )
     except Exception as err:  # noqa: BLE001
         logger.exception(f"Appel {call_id} en erreur : {err}")
+
+
+# ---------------------------------------------------------------- console démo
+# GET /demo sert une page qui joue l'opérateur DANS le navigateur : le micro
+# part en µ-law 8 kHz sur /ws, même protocole et même jeton signé qu'un TwiML.
+# Désactivée par défaut, parce que /demo/token remet un jeton de flux valide à
+# quiconque peut charger la page : l'activer (DEMO_CONSOLE=true) revient à
+# ouvrir une ligne téléphonique gratuite vers l'agent à tous ceux qui joignent
+# ce port. Machine de dev ou accès contrôlé seulement. Le caller-ID simulé est
+# borné par DEMO_CALLERS ; vide, seul l'appelant anonyme passe.
+
+
+@app.get("/demo")
+async def demo_console() -> Response:
+    if not config.DEMO_CONSOLE:
+        return Response(status_code=404)
+    page = (Path(__file__).parent / "demo_console.html").read_text(encoding="utf-8")
+    return HTMLResponse(page)
+
+
+@app.get("/demo/token")
+async def demo_token(caller: str = "") -> JSONResponse:
+    if not config.DEMO_CONSOLE:
+        return JSONResponse({"error": "console démo désactivée (DEMO_CONSOLE)"}, status_code=404)
+    if caller and caller not in config.DEMO_CALLERS:
+        return JSONResponse(
+            {"error": "numéro hors DEMO_CALLERS : appel anonyme seulement"}, status_code=403
+        )
+    params = {"direction": "inbound", "caller": caller}
+    return JSONResponse({**params, "tok": _stream_token(params)})
 
 
 @app.get("/health")

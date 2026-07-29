@@ -192,6 +192,40 @@ qui se connecte à un registre, et ne remplacez pas `build` par `build --push`.
 Si publier devient vraiment utile un jour, il faut d'abord régler
 `pyyaml-include` en amont chez `pipecat-ai`, pas contourner ici.
 
+## Tester sans opérateur : le faux opérateur et la console navigateur
+
+L'opérateur téléphonique est la seule pièce qui coûte de l'argent — et il n'est
+pas nécessaire pour faire tourner un appel. Deux outils jouent son rôle au bout
+du websocket `/ws`, avec le même protocole (media stream Twilio : µ-law 8 kHz,
+trames de 20 ms) et le même jeton signé qu'un TwiML. Le serveur ne voit pas la
+différence ; seul le tronçon opérateur→numéro reste non testé.
+
+**`fake_carrier.py`** — un appel scripté, reproductible, sans micro. Les
+répliques sont du texte (synthétisé par le serveur Piper déjà lancé) ou vos
+propres WAV ; il attend que l'agent ait fini de parler pour poser la question
+suivante, et laisse un enregistrement stéréo appelant/agent :
+
+```bash
+docker compose exec runtime python fake_carrier.py \
+    --ask "Quelle heure est-il à Tokyo ?" \
+    --ask "Et quel temps fait-il à Lyon ?"
+docker compose cp runtime:/app/calls ./calls   # récupérer les WAV
+```
+
+**`GET /demo`** — la même chose depuis un navigateur, au micro : la page
+encode le micro en µ-law et parle le protocole Twilio en JavaScript. Elle est
+**désactivée par défaut** : `/demo/token` remet un jeton de flux valide à
+quiconque charge la page, l'activer revient à ouvrir une ligne gratuite vers
+l'agent à tous ceux qui joignent le port. `DEMO_CONSOLE=true` dans `.env`,
+machine de dev ou accès contrôlé seulement, puis http://localhost:8000/demo.
+Par défaut la console appelle en anonyme ; pour présenter un caller-ID (et
+tester le chemin « appelant connu »), listez-le dans `DEMO_CALLERS`.
+
+L'appelant anonyme n'a accès qu'aux skills sans données personnelles (météo,
+heure, conversion…) : c'est le comportement normal du produit, pas une
+restriction de la démo. Premier appel lent : faster-whisper télécharge son
+modèle (~460 Mo en `small`) et Ollama charge le sien en mémoire.
+
 ## Branchement opérateur
 
 - **Twilio** : sur le numéro, webhook Voice → `POST https://HOTE/twilio/inbound`.
