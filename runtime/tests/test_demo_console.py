@@ -64,6 +64,23 @@ class DemoConsoleTests(unittest.TestCase):
         self.assertEqual(payload["max_seconds"], 120)
         self.assertEqual(set(payload["params"]), {"direction", "caller", "tok"})
 
+    def test_demo_name_is_signed_and_bounded(self) -> None:
+        # Le prénom finit dans un prompt : espaces normalisés, longueur bornée,
+        # et signé avec le reste — un paramètre non signé invaliderait le flux.
+        config.DEMO_CONSOLE = True
+        params = self.client.get(
+            "/demo/token", params={"name": "  Baptiste\ndu  29  " + "x" * 60}
+        ).json()["params"]
+        tok = params.pop("tok")
+        self.assertEqual(tok, server._stream_token(params))
+        self.assertLessEqual(len(params["demo_name"]), 40)
+        self.assertNotIn("\n", params["demo_name"])
+
+    def test_blank_demo_name_stays_out_of_the_signature(self) -> None:
+        config.DEMO_CONSOLE = True
+        params = self.client.get("/demo/token", params={"name": "   "}).json()["params"]
+        self.assertNotIn("demo_name", params)
+
     def test_caller_outside_allow_list_is_refused(self) -> None:
         config.DEMO_CONSOLE = True
         config.DEMO_CALLERS = ["+33612345678"]

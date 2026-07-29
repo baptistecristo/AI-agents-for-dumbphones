@@ -21,6 +21,7 @@ async def open_session(
     direction: str,
     caller_number: str | None = None,
     job_id: str | None = None,
+    demo_name: str | None = None,
 ) -> dict[str, Any]:
     """Ouvre la session d'appel et récupère prompt système + message d'accueil."""
     async with httpx.AsyncClient(timeout=15) as client:
@@ -32,6 +33,8 @@ async def open_session(
                 "direction": direction,
                 "caller_number": caller_number,
                 "job_id": job_id,
+                # Console démo : prénom auto-déclaré, uniquement pour saluer.
+                "demo_name": demo_name,
             },
         )
         res.raise_for_status()

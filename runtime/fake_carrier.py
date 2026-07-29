@@ -201,7 +201,7 @@ async def run_call(args, utterances: list[bytes]) -> int:
 
     stream_sid = f"MZfake{uuid.uuid4().hex[:24]}"
     call_sid = f"demo-{uuid.uuid4()}"
-    custom = tm.signed_parameters(secret, caller=args.caller)
+    custom = tm.signed_parameters(secret, caller=args.caller, demo_name=args.name)
 
     started = time.monotonic()
     call = Call()
@@ -267,6 +267,7 @@ def main() -> int:
     )
     parser.add_argument("--server", default="ws://localhost:8000/ws", help="websocket média du runtime")
     parser.add_argument("--caller", default="", help="numéro présenté (vide = appelant inconnu)")
+    parser.add_argument("--name", default="", help="prénom auto-déclaré : l'agent salue par ce prénom")
     parser.add_argument("--lang", choices=("fr", "en", "es"), default="fr", help="voix des --ask texte")
     parser.add_argument("--secret", default="", help="RUNTIME_API_SECRET (défaut : environnement)")
     parser.add_argument(

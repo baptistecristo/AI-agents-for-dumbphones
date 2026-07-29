@@ -91,6 +91,14 @@ class StreamTokenTests(unittest.TestCase):
         received_tok = signed.pop("tok")
         self.assertEqual(received_tok, server._stream_token(signed))
 
+    def test_signed_parameters_with_demo_name_verify_like_server_does(self) -> None:
+        import server
+
+        signed = tm.signed_parameters(os.environ["RUNTIME_API_SECRET"], demo_name="Baptiste")
+        received_tok = signed.pop("tok")
+        self.assertEqual(signed["demo_name"], "Baptiste")
+        self.assertEqual(received_tok, server._stream_token(signed))
+
 
 class EventShapeTests(unittest.TestCase):
     def test_start_event_carries_what_server_reads(self) -> None:

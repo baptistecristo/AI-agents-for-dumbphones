@@ -169,9 +169,18 @@ def stream_token(secret: str, params: dict[str, str]) -> str:
     return hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).hexdigest()
 
 
-def signed_parameters(secret: str, caller: str = "", direction: str = "inbound") -> dict[str, str]:
-    """Les customParameters complets (jeton compris) d'un appel entrant simulé."""
+def signed_parameters(
+    secret: str, caller: str = "", direction: str = "inbound", demo_name: str = ""
+) -> dict[str, str]:
+    """Les customParameters complets (jeton compris) d'un appel entrant simulé.
+
+    `demo_name` (optionnel) : prénom auto-déclaré que l'agent utilisera pour
+    saluer — inclus dans la signature seulement s'il est non vide, comme le
+    fait /demo/token côté serveur.
+    """
     params = {"direction": direction, "caller": caller}
+    if demo_name:
+        params["demo_name"] = demo_name
     return {**params, "tok": stream_token(secret, params)}
 
 

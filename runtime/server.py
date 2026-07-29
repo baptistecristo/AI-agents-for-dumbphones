@@ -233,6 +233,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             direction=direction,
             caller_number=custom.get("caller"),
             job_id=custom.get("jobId"),
+            # Prénom de démo (console /demo) : signé comme le reste des
+            # paramètres, il ne sert qu'à saluer — l'appelant reste anonyme.
+            demo_name=custom.get("demo_name"),
         )
     except Exception as err:  # noqa: BLE001
         logger.exception(f"Appel {call_id} en erreur : {err}")
@@ -257,7 +260,7 @@ async def demo_console() -> Response:
 
 
 @app.get("/demo/token")
-async def demo_token(caller: str = "") -> JSONResponse:
+async def demo_token(caller: str = "", name: str = "") -> JSONResponse:
     if not config.DEMO_CONSOLE:
         return JSONResponse({"error": "console démo désactivée (DEMO_CONSOLE)"}, status_code=404)
     if caller and caller not in config.DEMO_CALLERS:
@@ -265,6 +268,13 @@ async def demo_token(caller: str = "") -> JSONResponse:
             {"error": "numéro hors DEMO_CALLERS : appel anonyme seulement"}, status_code=403
         )
     params = {"direction": "inbound", "caller": caller}
+    # Prénom de démo : l'agent salue par ce prénom, et c'est TOUT ce que ça
+    # débloque (l'appelant reste anonyme : outils publics, aucun compte lu).
+    # Signé avec le reste — un paramètre non signé invaliderait le flux — et
+    # borné : c'est du texte qui finit dans un prompt.
+    demo_name = " ".join(name.split())[:40]
+    if demo_name:
+        params["demo_name"] = demo_name
     # `params` séparé du reste : la page les envoie TELS QUELS en
     # customParameters, et le jeton ne signe qu'eux. Y mélanger max_seconds
     # casserait la vérification du flux.

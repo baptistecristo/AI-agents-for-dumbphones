@@ -46,7 +46,10 @@
   <em>This page speaks the Twilio media-stream protocol from your browser.</em></p>
 
   <div class="card">
-    <label for="caller">Numéro présenté (optionnel — doit figurer dans <code>DEMO_CALLERS</code>)</label>
+    <label for="name">Votre prénom (optionnel — l'agent vous salue par ce prénom)</label>
+    <input id="name" type="text" placeholder="anonyme" autocomplete="off">
+    <label for="caller" style="margin-top:.8rem">Numéro présenté (avancé — un numéro, pas un prénom ;
+      doit figurer dans <code>DEMO_CALLERS</code>)</label>
     <input id="caller" type="text" placeholder="vide = appelant anonyme" autocomplete="off">
     <div class="row">
       <button id="call">Décrocher · Pick up</button>
@@ -113,6 +116,11 @@ const FRAME_BYTES = 160;             // 20 ms de µ-law à 8 kHz
 // génération périmée ne touchent plus à rien.
 let callSeq = 0;
 let ctx, ws, micStream, workletNode, sendTimer, clockTimer;
+// Micro fermé tant que l'accueil n'a pas été entendu : au décroché, un clic ou
+// un souffle suffisent à déclencher le VAD, et Whisper HALLUCINE sur ce
+// presque-rien (« Au revoir. » a réellement raccroché un appel de test avant
+// même l'accueil). La ligne envoie du silence jusqu'à la fin de l'accueil.
+let micOpen = false, micOpenFallbackAt = 0;
 let sendQueue = [];                  // octets µ-law en attente d'envoi
 let resamplePos = 0, resampleTail = null;
 let playHead = 0, liveSources = [];
@@ -208,7 +216,10 @@ async function pickUp() {
     log("· sortie audio : " + ctx.state);
 
     const caller = $("caller").value.trim();
-    const tokenRes = await fetch("/demo/token?caller=" + encodeURIComponent(caller));
+    const tokenRes = await fetch(
+      "/demo/token?caller=" + encodeURIComponent(caller) +
+      "&name=" + encodeURIComponent($("name").value.trim())
+    );
     if (!tokenRes.ok) {
       const detail = await tokenRes.json().catch(() => ({}));
       throw new Error(detail.error || ("jeton refusé (HTTP " + tokenRes.status + ")"));
@@ -259,11 +270,22 @@ async function pickUp() {
       clockTimer = setInterval(() => {
         $("clock").textContent = Math.floor((Date.now() - startedAt) / 1000) + " s";
       }, 1000);
-      // La cadence de la ligne : une trame de 20 ms, silence si le micro n'a rien.
+      // La cadence de la ligne : une trame de 20 ms, silence si le micro n'a
+      // rien — ou tant qu'il n'est pas ouvert (voir micOpen plus haut).
+      micOpen = false;
+      micOpenFallbackAt = Date.now() + 15000; // filet si l'accueil n'arrive pas
       sendTimer = setInterval(() => {
         if (ws.readyState !== WebSocket.OPEN) return;
+        if (!micOpen) {
+          const greetingPlayed = playHead > 0 && ctx && ctx.currentTime > playHead + 0.15;
+          if (greetingPlayed || Date.now() > micOpenFallbackAt) {
+            micOpen = true;
+            sendQueue.length = 0; // le bruit accumulé pendant l'accueil part à la poubelle
+            log("· micro ouvert — à vous");
+          }
+        }
         let frame;
-        if (sendQueue.length >= FRAME_BYTES) {
+        if (micOpen && sendQueue.length >= FRAME_BYTES) {
           frame = new Uint8Array(sendQueue.splice(0, FRAME_BYTES));
         } else {
           frame = new Uint8Array(FRAME_BYTES).fill(0xff);
@@ -308,6 +330,7 @@ function hangUp(silent) {
     ws.close();
   }
   ws = null;
+  micOpen = false;
   flushPlayback();
   if (micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
   if (ctx) { ctx.close(); ctx = null; }

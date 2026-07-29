@@ -25,6 +25,8 @@ export async function POST(req: Request) {
     direction: "inbound" | "outbound";
     caller_number?: string;
     job_id?: string;
+    // Console démo du runtime : prénom auto-déclaré, uniquement pour saluer.
+    demo_name?: string;
   };
   const db = supabaseAdmin();
 
@@ -87,6 +89,12 @@ export async function POST(req: Request) {
     agentInstructions: null as string | null,
     recapOffer: false, // appelant inconnu -> rien à lui résumer
   };
+  // Prénom auto-déclaré (console démo du runtime) : il personnalise l'accueil
+  // et RIEN d'autre — l'appelant reste inconnu, prompt compact et outils
+  // publics. Borné : ce texte finit dans un prompt. Un vrai profil (numéro
+  // vérifié ci-dessous) l'écrase.
+  const demoName = (body.demo_name ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
+  if (demoName) ctx = { ...ctx, preferredName: demoName };
   if (caller) {
     const { data: phone } = await db
       .from("phones")
