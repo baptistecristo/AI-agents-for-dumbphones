@@ -91,11 +91,14 @@ async def run_call(
     caller_number: str | None = None,
     job_id: str | None = None,
     demo_name: str | None = None,
+    demo_lang: str | None = None,
 ) -> None:
     """Fait tourner un appel complet (entrant ou mission sortante)."""
 
     # 1. Session côté Next.js : prompt système personnalisé + message d'accueil
-    session = await api_client.open_session(call_id, direction, caller_number, job_id, demo_name)
+    session = await api_client.open_session(
+        call_id, direction, caller_number, job_id, demo_name, demo_lang
+    )
     job_id = session.get("job_id") or job_id
 
     # Langue de la session ("fr" | "en" | "es") : pilote la voix Piper ET la langue

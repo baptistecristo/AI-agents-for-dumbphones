@@ -25,6 +25,10 @@
   button.hangup { background:var(--ink); }
   #status { font-size:.92rem; color:#6b6156; }
   #status.live { color:var(--ok); font-weight:600; }
+  .langs { display:flex; gap:.5rem; margin-bottom:.9rem; }
+  .langs button { background:var(--ivory); color:var(--ink); border:1px solid var(--clay-soft);
+                  font-weight:600; padding:.4rem 1rem; }
+  .langs button.on { background:var(--clay); color:#fff; border-color:var(--clay); }
   .meters { display:grid; grid-template-columns:5.5rem 1fr; gap:.4rem .6rem;
             align-items:center; margin-top:1rem; font-size:.8rem; color:#6b6156; }
   .meter { height:8px; background:var(--ivory); border-radius:4px; overflow:hidden; }
@@ -46,11 +50,14 @@
   <em>This page speaks the Twilio media-stream protocol from your browser.</em></p>
 
   <div class="card">
+    <label>Langue de l'appel · Call language · Idioma</label>
+    <div class="langs" id="langs">
+      <button type="button" data-lang="fr" class="on">Français</button>
+      <button type="button" data-lang="en">English</button>
+      <button type="button" data-lang="es">Español</button>
+    </div>
     <label for="name">Votre prénom (optionnel — l'agent vous salue par ce prénom)</label>
     <input id="name" type="text" placeholder="anonyme" autocomplete="off">
-    <label for="caller" style="margin-top:.8rem">Numéro présenté (avancé — un numéro, pas un prénom ;
-      doit figurer dans <code>DEMO_CALLERS</code>)</label>
-    <input id="caller" type="text" placeholder="vide = appelant anonyme" autocomplete="off">
     <div class="row">
       <button id="call">Décrocher · Pick up</button>
       <span id="status">prêt</span>
@@ -215,10 +222,11 @@ async function pickUp() {
     await ctx.resume();
     log("· sortie audio : " + ctx.state);
 
-    const caller = $("caller").value.trim();
+    // La console appelle toujours en anonyme. Le chemin « appelant connu »
+    // (caller-ID + compte) se teste avec fake_carrier.py --caller.
     const tokenRes = await fetch(
-      "/demo/token?caller=" + encodeURIComponent(caller) +
-      "&name=" + encodeURIComponent($("name").value.trim())
+      "/demo/token?name=" + encodeURIComponent($("name").value.trim()) +
+      "&lang=" + selectedLang
     );
     if (!tokenRes.ok) {
       const detail = await tokenRes.json().catch(() => ({}));
@@ -266,7 +274,8 @@ async function pickUp() {
       }));
       startedAt = Date.now();
       setStatus("en ligne", true);
-      log("→ décroché (" + callSid + (caller ? ", caller " + caller : ", anonyme") + ")");
+      const who = $("name").value.trim() || "anonyme";
+      log("→ décroché (" + callSid + ", " + who + ")");
       clockTimer = setInterval(() => {
         $("clock").textContent = Math.floor((Date.now() - startedAt) / 1000) + " s";
       }, 1000);
@@ -344,6 +353,16 @@ function hangUp(silent) {
   button.onclick = pickUp;
   button.disabled = false;
 }
+
+/* Choix de langue avant l'appel : signé dans les paramètres du flux, il pilote
+   toute la session (prompt, transcription Whisper, voix Piper). */
+let selectedLang = "fr";
+$("langs").addEventListener("click", (e) => {
+  const button = e.target.closest("button[data-lang]");
+  if (!button) return;
+  selectedLang = button.dataset.lang;
+  for (const b of $("langs").querySelectorAll("button")) b.classList.toggle("on", b === button);
+});
 
 $("call").onclick = pickUp;
 if (!window.isSecureContext)

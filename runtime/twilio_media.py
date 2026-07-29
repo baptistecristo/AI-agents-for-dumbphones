@@ -170,17 +170,23 @@ def stream_token(secret: str, params: dict[str, str]) -> str:
 
 
 def signed_parameters(
-    secret: str, caller: str = "", direction: str = "inbound", demo_name: str = ""
+    secret: str,
+    caller: str = "",
+    direction: str = "inbound",
+    demo_name: str = "",
+    demo_lang: str = "",
 ) -> dict[str, str]:
     """Les customParameters complets (jeton compris) d'un appel entrant simulé.
 
-    `demo_name` (optionnel) : prénom auto-déclaré que l'agent utilisera pour
-    saluer — inclus dans la signature seulement s'il est non vide, comme le
-    fait /demo/token côté serveur.
+    `demo_name` (prénom pour saluer) et `demo_lang` (langue de session) sont
+    inclus dans la signature seulement s'ils sont non vides, comme le fait
+    /demo/token côté serveur.
     """
     params = {"direction": direction, "caller": caller}
     if demo_name:
         params["demo_name"] = demo_name
+    if demo_lang:
+        params["demo_lang"] = demo_lang
     return {**params, "tok": stream_token(secret, params)}
 
 

@@ -218,8 +218,10 @@ encode le micro en µ-law et parle le protocole Twilio en JavaScript. Elle est
 quiconque charge la page, l'activer revient à ouvrir une ligne gratuite vers
 l'agent à tous ceux qui joignent le port. `DEMO_CONSOLE=true` dans `.env`,
 machine de dev ou accès contrôlé seulement, puis http://localhost:8000/demo.
-Par défaut la console appelle en anonyme ; pour présenter un caller-ID (et
-tester le chemin « appelant connu »), listez-le dans `DEMO_CALLERS`.
+La console appelle toujours en anonyme — un prénom optionnel personnalise
+l'accueil, rien d'autre. Le chemin « appelant connu » se teste avec
+`fake_carrier.py --caller +33…` ; `/demo/token?caller=` reste borné par
+l'allow-list `DEMO_CALLERS`.
 
 L'appelant anonyme n'a accès qu'aux skills sans données personnelles (météo,
 heure, conversion…) : c'est le comportement normal du produit, pas une

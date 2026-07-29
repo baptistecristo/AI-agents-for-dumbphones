@@ -27,6 +27,8 @@ export async function POST(req: Request) {
     job_id?: string;
     // Console démo du runtime : prénom auto-déclaré, uniquement pour saluer.
     demo_name?: string;
+    // Console démo : langue choisie avant l'appel ("fr" | "en" | "es").
+    demo_lang?: string;
   };
   const db = supabaseAdmin();
 
@@ -95,6 +97,11 @@ export async function POST(req: Request) {
   // vérifié ci-dessous) l'écrase.
   const demoName = (body.demo_name ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
   if (demoName) ctx = { ...ctx, preferredName: demoName };
+  // Langue choisie sur la console : elle pilote toute la session (prompt,
+  // langue Whisper, voix Piper). Un profil vérifié (ci-dessous) l'écrase.
+  if (body.demo_lang === "fr" || body.demo_lang === "en" || body.demo_lang === "es") {
+    ctx = { ...ctx, language: body.demo_lang };
+  }
   if (caller) {
     const { data: phone } = await db
       .from("phones")

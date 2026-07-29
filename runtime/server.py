@@ -233,9 +233,11 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             direction=direction,
             caller_number=custom.get("caller"),
             job_id=custom.get("jobId"),
-            # Prénom de démo (console /demo) : signé comme le reste des
-            # paramètres, il ne sert qu'à saluer — l'appelant reste anonyme.
+            # Prénom et langue de démo (console /demo) : signés comme le reste
+            # des paramètres. Le prénom ne sert qu'à saluer ; la langue choisit
+            # la session (prompt, Whisper, voix). L'appelant reste anonyme.
             demo_name=custom.get("demo_name"),
+            demo_lang=custom.get("demo_lang"),
         )
     except Exception as err:  # noqa: BLE001
         logger.exception(f"Appel {call_id} en erreur : {err}")
@@ -260,7 +262,7 @@ async def demo_console() -> Response:
 
 
 @app.get("/demo/token")
-async def demo_token(caller: str = "", name: str = "") -> JSONResponse:
+async def demo_token(caller: str = "", name: str = "", lang: str = "") -> JSONResponse:
     if not config.DEMO_CONSOLE:
         return JSONResponse({"error": "console démo désactivée (DEMO_CONSOLE)"}, status_code=404)
     if caller and caller not in config.DEMO_CALLERS:
@@ -275,6 +277,11 @@ async def demo_token(caller: str = "", name: str = "") -> JSONResponse:
     demo_name = " ".join(name.split())[:40]
     if demo_name:
         params["demo_name"] = demo_name
+    # Langue choisie avant l'appel : pilote la session entière (prompt, langue
+    # Whisper, voix Piper). Hors des trois langues servies, on n'envoie rien et
+    # la session retombe sur DEFAULT_LANGUAGE côté web.
+    if lang in ("fr", "en", "es"):
+        params["demo_lang"] = lang
     # `params` séparé du reste : la page les envoie TELS QUELS en
     # customParameters, et le jeton ne signe qu'eux. Y mélanger max_seconds
     # casserait la vérification du flux.

@@ -81,6 +81,17 @@ class DemoConsoleTests(unittest.TestCase):
         params = self.client.get("/demo/token", params={"name": "   "}).json()["params"]
         self.assertNotIn("demo_name", params)
 
+    def test_language_choice_is_signed_and_bounded_to_the_served_three(self) -> None:
+        config.DEMO_CONSOLE = True
+        params = self.client.get("/demo/token", params={"lang": "en"}).json()["params"]
+        tok = params.pop("tok")
+        self.assertEqual(params["demo_lang"], "en")
+        self.assertEqual(tok, server._stream_token(params))
+        # Une langue non servie n'est pas signée : la session retombera sur
+        # DEFAULT_LANGUAGE côté web.
+        off_menu = self.client.get("/demo/token", params={"lang": "de"}).json()["params"]
+        self.assertNotIn("demo_lang", off_menu)
+
     def test_caller_outside_allow_list_is_refused(self) -> None:
         config.DEMO_CONSOLE = True
         config.DEMO_CALLERS = ["+33612345678"]

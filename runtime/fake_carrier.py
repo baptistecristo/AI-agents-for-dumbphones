@@ -92,7 +92,7 @@ def synthesize_question(text: str, voice: str, base_url: str, path_hint: str, ra
 # commence pile sur le premier phonème, ce tampon contient la fin d'une autre
 # trame et le début du mot se perd (« Quel temps » entendu « Qu'est-ce qu'en »).
 # En queue : l'analyseur de fin de tour veut du silence franc pour conclure.
-_LEAD_SILENCE = bytes([tm.SILENCE_BYTE]) * (tm.SAMPLE_RATE * 300 // 1000)
+_LEAD_SILENCE = bytes([tm.SILENCE_BYTE]) * (tm.SAMPLE_RATE * 500 // 1000)
 _TAIL_SILENCE = bytes([tm.SILENCE_BYTE]) * (tm.SAMPLE_RATE * 400 // 1000)
 
 
@@ -201,7 +201,11 @@ async def run_call(args, utterances: list[bytes]) -> int:
 
     stream_sid = f"MZfake{uuid.uuid4().hex[:24]}"
     call_sid = f"demo-{uuid.uuid4()}"
-    custom = tm.signed_parameters(secret, caller=args.caller, demo_name=args.name)
+    # --lang choisit à la fois la voix des questions synthétisées ET la langue
+    # de session (prompt, Whisper, voix de l'agent), comme sur la console /demo.
+    custom = tm.signed_parameters(
+        secret, caller=args.caller, demo_name=args.name, demo_lang=args.lang
+    )
 
     started = time.monotonic()
     call = Call()
