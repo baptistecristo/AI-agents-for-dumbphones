@@ -26,8 +26,22 @@ END_CALL = _schema(
 )
 
 
-def inbound_tools() -> ToolsSchema:
+# Les outils qu'un appelant SANS compte peut réellement utiliser. Les autres
+# refusent côté API (pas d'utilisateur, pas de code possible) : les décrire au
+# modèle ne ferait que l'inviter à les tenter — et, sur un LLM local compact,
+# un schéma de 22 outils noie la consigne « appelle l'outil » au point qu'il
+# répond de tête. Pendant : le prompt compact de l'appelant inconnu, côté
+# web/src/lib/agents/inbound.ts. La session (known_caller) choisit.
+PUBLIC_TOOLS = frozenset(
+    {"get_weather", "get_current_time", "define", "convert", "report_unsupported_request", "end_call"}
+)
+
+
+def inbound_tools(known_caller: bool = True) -> ToolsSchema:
     """Outils de l'agent entrant (assistant personnel)."""
+    if not known_caller:
+        full = inbound_tools(known_caller=True).standard_tools
+        return ToolsSchema(standard_tools=[t for t in full if t.name in PUBLIC_TOOLS])
     return ToolsSchema(
         standard_tools=[
             _schema(

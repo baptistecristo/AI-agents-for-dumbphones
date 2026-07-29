@@ -128,5 +128,9 @@ export async function POST(req: Request) {
     system_prompt: inboundSystemPrompt(ctx),
     first_message: inboundFirstMessage(ctx),
     language: ctx.language,
+    // Appelant sans compte -> le runtime réduit le schéma d'outils au périmètre
+    // public (runtime/tools.py, PUBLIC_TOOLS) : les outils personnels refusent
+    // de toute façon, autant ne pas les décrire au modèle.
+    known_caller: Boolean(ctx.userId),
   });
 }

@@ -10,6 +10,7 @@ tout le reste est en processus.
 Testé avec pipecat-ai 1.5 (voir la version épinglée dans requirements.txt).
 """
 
+import os
 import sys
 
 from loguru import logger
@@ -36,7 +37,9 @@ import tools as tool_defs
 from piper_http import PiperHttpTTSService
 
 logger.remove()
-logger.add(sys.stderr, level="INFO")
+# LOG_LEVEL=DEBUG fait parler tout Pipecat : VAD, transcriptions, trames LLM.
+# C'est l'outil de diagnostic quand un appel reste muet — voir runtime/README.md.
+logger.add(sys.stderr, level=os.getenv("LOG_LEVEL", "INFO"))
 
 
 def _build_llm():
@@ -126,7 +129,13 @@ async def run_call(
 
     context = LLMContext(
         messages=[{"role": "system", "content": session["system_prompt"]}],
-        tools=tool_defs.inbound_tools() if direction == "inbound" else tool_defs.outbound_tools(),
+        # Appelant sans compte : schéma d'outils réduit au périmètre public
+        # (tools.PUBLIC_TOOLS), en face du prompt compact renvoyé par l'API.
+        tools=(
+            tool_defs.inbound_tools(known_caller=session.get("known_caller", True))
+            if direction == "inbound"
+            else tool_defs.outbound_tools()
+        ),
     )
     aggregators = LLMContextAggregatorPair(
         context,
@@ -160,9 +169,11 @@ async def run_call(
     @transport.event_handler("on_client_connected")
     async def on_client_connected(_transport, _client) -> None:
         # Entrant : l'agent parle en premier. Sortant : on attend l'interlocuteur.
+        # Pas de context.add_message ici : l'agrégateur assistant enregistre déjà
+        # ce que le TTS prononce — l'ajouter à la main doublait l'accueil dans le
+        # contexte envoyé au LLM.
         first = session.get("first_message")
         if first:
-            context.add_message({"role": "assistant", "content": first})
             await worker.queue_frames([TTSSpeakFrame(first)])
 
     @transport.event_handler("on_client_disconnected")

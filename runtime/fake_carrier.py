@@ -59,17 +59,21 @@ def _log(started: float, message: str) -> None:
     print(f"[{time.monotonic() - started:6.1f}s] {message}", flush=True)
 
 
-def synthesize_question(text: str, voice: str, base_url: str, path_hint: str) -> bytes:
+def synthesize_question(text: str, voice: str, base_url: str, path_hint: str, rate: float) -> bytes:
     """Fait dire `text` au serveur Piper et rend l'audio en µ-law 8 kHz.
 
     La route de synthèse dépend de la version de piper-tts (voir piper_http.py) :
     si elle n'est pas épinglée, on tente `/synthesize` (>= 1.5.0) puis `/`.
+    `rate` est le length_scale de Piper : > 1 ralentit. Une question posée un
+    peu lentement transcrit nettement mieux à travers le codec téléphonique.
     """
     paths = [path_hint] if path_hint and path_hint != "auto" else ["/synthesize", "/"]
     last = None
     for path in paths:
         response = httpx.post(
-            f"{base_url}{path}", json={"text": text, "voice": voice}, timeout=120
+            f"{base_url}{path}",
+            json={"text": text, "voice": voice, "length_scale": rate},
+            timeout=120,
         )
         if response.status_code in (404, 405):
             last = response
@@ -83,14 +87,24 @@ def synthesize_question(text: str, voice: str, base_url: str, path_hint: str) ->
     )
 
 
-def build_utterances(asks: list[str], lang: str, piper_url: str, piper_path: str) -> list[bytes]:
+# Silence autour de chaque réplique. En tête : le VAD déclenche ~200 ms APRÈS le
+# début de la parole et repêche ce qui précède dans son tampon — si la réplique
+# commence pile sur le premier phonème, ce tampon contient la fin d'une autre
+# trame et le début du mot se perd (« Quel temps » entendu « Qu'est-ce qu'en »).
+# En queue : l'analyseur de fin de tour veut du silence franc pour conclure.
+_LEAD_SILENCE = bytes([tm.SILENCE_BYTE]) * (tm.SAMPLE_RATE * 300 // 1000)
+_TAIL_SILENCE = bytes([tm.SILENCE_BYTE]) * (tm.SAMPLE_RATE * 400 // 1000)
+
+
+def build_utterances(asks: list[str], lang: str, piper_url: str, piper_path: str, rate: float) -> list[bytes]:
     """Chaque --ask devient de l'audio : WAV lu tel quel, texte synthétisé."""
     utterances = []
     for ask in asks:
         if ask.lower().endswith(".wav") and Path(ask).exists():
-            utterances.append(tm.load_wav_as_ulaw(ask))
+            audio = tm.load_wav_as_ulaw(ask)
         else:
-            utterances.append(synthesize_question(ask, _VOICES[lang], piper_url, piper_path))
+            audio = synthesize_question(ask, _VOICES[lang], piper_url, piper_path, rate)
+        utterances.append(_LEAD_SILENCE + audio + _TAIL_SILENCE)
     return utterances
 
 
@@ -102,6 +116,7 @@ class Call:
         self.caller_track = bytearray()
         self.agent_track = bytearray()
         self.sent_frames = 0
+        self.received_bytes = 0  # audio agent réellement reçu (sans les silences)
         self.last_agent_audio = 0.0  # temps monotone du dernier « media » reçu
         self.cleared = 0  # événements « clear » (interruptions) reçus
         self.closed = asyncio.Event()
@@ -145,6 +160,7 @@ async def _receiver(ws, call: Call, started: float) -> None:
                         bytes([tm.SILENCE_BYTE]) * (position - len(call.agent_track))
                     )
                 call.agent_track.extend(audio)
+                call.received_bytes += len(audio)
                 call.last_agent_audio = loop.time()
             elif message.get("event") == "clear":
                 call.cleared += 1
@@ -231,7 +247,7 @@ async def run_call(args, utterances: list[bytes]) -> int:
     tm.save_ulaw_as_wav(str(out_dir / "agent.wav"), bytes(call.agent_track))
     tm.save_ulaw_as_wav(str(out_dir / "appelant.wav"), bytes(call.caller_track))
 
-    agent_seconds = len(call.agent_track) / tm.SAMPLE_RATE
+    agent_seconds = call.received_bytes / tm.SAMPLE_RATE
     _log(started, f"◼ terminé : {agent_seconds:.1f} s de parole agent, "
                   f"{call.cleared} interruption(s), enregistrements dans {out_dir}")
     return 0 if ok and agent_seconds > 0 else 1
@@ -264,15 +280,27 @@ def main() -> int:
         help="route de synthèse Piper (auto | /synthesize | /)",
     )
     parser.add_argument("--out", default="calls", help="dossier des enregistrements")
-    parser.add_argument("--gap", type=float, default=1.2, help="silence (s) qui clôt un tour agent")
-    parser.add_argument("--turn-timeout", type=float, default=120, help="attente max (s) par tour")
-    parser.add_argument("--max-duration", type=float, default=600, help="durée max (s) de l'appel")
+    # 4 s par défaut, et non le 1,2 s d'un tour de parole humain : quand l'agent
+    # annonce « je vérifie » puis appelle un outil, le silence qui suit n'est pas
+    # une fin de tour, c'est l'outil (et parfois le LLM sur CPU) qui travaille.
+    # Un gap court coupe la parole en deux et vole la vraie réponse.
+    parser.add_argument("--gap", type=float, default=4.0, help="silence (s) qui clôt un tour agent")
+    parser.add_argument(
+        "--speech-rate",
+        type=float,
+        default=1.15,
+        help="length_scale Piper des --ask texte (> 1 = plus lent, mieux transcrit)",
+    )
+    parser.add_argument("--turn-timeout", type=float, default=240, help="attente max (s) par tour")
+    parser.add_argument("--max-duration", type=float, default=900, help="durée max (s) de l'appel")
     args = parser.parse_args()
 
     if not args.ask:
         parser.error("au moins un --ask (texte ou fichier WAV)")
 
-    utterances = build_utterances(args.ask, args.lang, args.piper_url, args.piper_path)
+    utterances = build_utterances(
+        args.ask, args.lang, args.piper_url, args.piper_path, args.speech_rate
+    )
     return asyncio.run(run_call(args, utterances))
 
 

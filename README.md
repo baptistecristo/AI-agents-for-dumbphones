@@ -35,17 +35,25 @@ Sift's SMS-command model in the codebase as a lighter fallback
 ## Status — early, honest about what runs, seeking founding co-builders
 
 **What works:** the agent has answered a real phone call and done the skills below,
-bilingual EN/FR — that happened, on a rented number. Inbound + outbound calling, auth,
-an EU database with encryption and a consent registry are built and deployed. CI builds
-the web app, runs its tests, and imports the runtime on every push.
+bilingual EN/FR — that happened, on a rented number. And since then, **the
+self-hosted runtime has carried its first full conversations, without an operator
+and without a cloud model.** A fake operator (`runtime/fake_carrier.py`) speaks the
+Twilio media-stream protocol to the same `/ws` endpoint a real carrier would reach,
+and everything runs on one laptop: Silero VAD → faster-whisper → qwen2.5:7b on
+Ollama → the skills API (live weather, live exchange rates) → Piper, back down the
+wire as 8 kHz µ-law, with a dual-channel recording at the end. A browser console
+(`GET /demo`, off by default) does the same from a microphone. Inbound + outbound
+calling, auth, an EU database with encryption and a consent registry are built and
+deployed. CI builds the web app, runs its tests, and imports the runtime on every push.
 
 **What's dead right now:** the demo number. It answered — then the maintainer ran out
 of **Vapi** credits. At the measured ~$0.14/minute, one person cannot keep a public
 demo breathing out of pocket. That is not a footnote, it's the whole argument: **the
 project's own demo is dead because of the exact dependency the project wants to remove.**
 
-**What has never worked:** the self-hosted Pipecat runtime in `runtime/` is
-**scaffolding that has never placed a call** — a starting point, not a pipeline. And
+**What has never worked:** a call that reaches the self-hosted runtime **through a
+real operator**. The Twilio/Telnyx webhooks and media-stream handling are written,
+but exercising them needs a number, so that last leg stays untested. And
 **no Twilio account is connected**, so anything that delivers by SMS (directions,
 dictated texts, the SMS command router) can't send. That also takes your calendar and
 contacts offline: reaching them needs a one-time code texted to you, and with no SMS
@@ -75,10 +83,14 @@ Those gaps *are* the invitation. The fun open problems:
 - 🧩 **Skills are a plugin surface.** Adding a **new skill** (a thing the agent can do on
   a call) is a small, self-contained PR. This is one of the two best on-ramps; a **fourth
   language** is the other.
-- 🔌 **Getting off Vapi** — the biggest one, and now the loudest. `runtime/` has the
-  shape of a Pipecat pipeline (Silero VAD → faster-whisper → local LLM → Piper) but has
-  never carried a real call. Make it carry one and the demo stops being rented. If you
-  self-host voice, this is the problem:
+- 🔌 **Getting off Vapi** — the biggest one, and it just moved. `runtime/` is no
+  longer scaffolding: the Pipecat pipeline (Silero VAD → faster-whisper → local LLM →
+  Piper) carries full tool-calling conversations against the fake operator and from
+  the browser console (`runtime/README.md`). Two things still separate that from a
+  rented-demo replacement: the **real operator leg** (written, never exercised: it
+  needs a number), and **latency**: a tool-using turn takes 15–30 s warm on a
+  laptop CPU, most of it Whisper and the local LLM. A GPU, smaller models or a
+  faster STT would cut it down. If you self-host voice, this is the problem:
   [Discussion #9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 - 📞 **The number is capped and rate-limited now** — 180s per call, 5 calls per caller
   per hour, 20 per caller per day, and 60 a day across everyone. That was the last thing
@@ -96,9 +108,11 @@ smartphone without going off-grid — **we'd love a few founding co-builders.** 
 Dumbphone ──call──▶ Phone number
                           │  media
                           ▼
-        Voice runtime  ──  TODAY: Vapi (managed, RUNTIME=vapi)
-                       └─  GOAL: runtime/ (Pipecat, self-hosted, not working yet)
+        Voice runtime  ──  Vapi (managed, RUNTIME=vapi) — carried the live number
+                       └─  runtime/ (Pipecat, self-hosted, RUNTIME=selfhost)
                            Silero VAD → faster-whisper → LLM → Piper
+                           carries conversations via the fake operator and /demo;
+                           the real-operator leg is written but untested
                           │  every tool-call is forwarded, never executed here
                           ▼
         Next.js API (web/)  ──▶  skills  ──▶  Open-Meteo · OpenRouteService
@@ -110,10 +124,11 @@ Dumbphone ──call──▶ Phone number
 
 **One brain, swappable body.** All business logic — skills, prompts, the code gate,
 consent — lives in `web/src/lib/` and is served over an API. The voice runtime is meant
-to be interchangeable: [Vapi](https://vapi.ai) managed (`RUNTIME=vapi`) is what runs today;
-[Pipecat](https://github.com/pipecat-ai/pipecat) self-hosted (`runtime/`) is the
-scaffolded alternative that needs finishing;
-[LiveKit Agents](https://github.com/livekit/agents) would be another. Adding a skill
+to be interchangeable: [Vapi](https://vapi.ai) managed (`RUNTIME=vapi`) is what carried
+the live number; [Pipecat](https://github.com/pipecat-ai/pipecat) self-hosted
+(`runtime/`) carries conversations today without an operator and still needs the
+operator leg proven; [LiveKit Agents](https://github.com/livekit/agents) would be
+another. Adding a skill
 once makes it work on either runtime — that part is real, and it's why the diagram above
 is drawn the way it is.
 
@@ -121,7 +136,7 @@ is drawn the way it is.
 
 | Layer | Choice | Where |
 |---|---|---|
-| Voice runtime | **Vapi** (`RUNTIME=vapi`) — the only one that has ever carried a call, and it's out of credit. Self-hosted Pipecat + faster-whisper + Piper + Ollama is scaffolded but has never placed one ([#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9)) | `web/src/lib/vapi.ts` + `runtime/` |
+| Voice runtime | **Vapi** (`RUNTIME=vapi`) carried the live number, and it's out of credit. **Self-hosted Pipecat** (faster-whisper + Ollama + Piper) carries full tool-calling conversations without an operator: a fake-carrier CLI and a browser demo console speak the Twilio media-stream protocol to the production `/ws`. The real Twilio/Telnyx leg has still never taken a call ([#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9)) | `web/src/lib/vapi.ts` + `runtime/` |
 | Telephony | Vapi's number today. A **Twilio**/Telnyx trunk is what the self-hosted path needs — a phone number is the one thing you can't self-host | `runtime/server.py` |
 | SMS + OTP | **Twilio** (Messages + Verify) — coded, but **no Twilio account is connected**, so nothing actually sends yet | `web/src/lib/twilio.ts` |
 | Inbound agent | Trilingual (FR/EN/ES) system prompt + greeting, one-time-SMS-code gate before sensitive actions, two-step voice confirmation, per-caller speaking rate. On Vapi the voice/STT/LLM are **ElevenLabs + Deepgram + Anthropic** — managed, and none of them EU | `web/src/lib/agents/inbound.ts` |
@@ -141,17 +156,20 @@ is drawn the way it is.
    is the same four touch points, additive. Walkthrough in
    [CONTRIBUTING.md](CONTRIBUTING.md#add-a-language-or-voice).
 
-Honest caveat: you can test both against the web API, but not against a live call —
-calls run on the maintainer's rented Vapi account, which is out of credit. One more
-reason the self-hosted runtime matters: it's the version you could run yourself.
+And you can hear your skill on a call without a phone number: the self-hosted runtime
+plus the fake operator (`runtime/README.md`) runs the whole voice loop on your machine.
+The rented number itself is out of credit, so live-call testing stays out of reach.
+That is one more reason the self-hosted runtime is the version that matters.
 
 ## Run it locally
 
 The web API and skills run without buying a phone number, and that's where the
-contributor on-ramps live. The voice runtime starts but has never carried a call — see
-the status section before you count on it. Full setup, accounts, and the "day the number
-arrives" checklist are in the sections below and in
-[`runtime/README.md`](runtime/README.md).
+contributor on-ramps live. The voice runtime runs without one too: `docker compose up
+--build`, then call the agent with the fake operator
+(`docker compose exec runtime python fake_carrier.py --ask "Quelle heure est-il à
+Tokyo ?"`) or from your microphone on http://localhost:8000/demo (`DEMO_CONSOLE=true`).
+Full setup, accounts, and the "day the number arrives" checklist are in the sections
+below and in [`runtime/README.md`](runtime/README.md).
 
 ```bash
 # Web API + skills
@@ -177,8 +195,9 @@ directions use a free OpenRouteService key. The default LLM is fully local via O
 ## Design principles
 
 - **Own your stack.** The goal is a path that is 100% self-hosted and local (Whisper +
-  Piper + Ollama), with managed providers opt-in and never required. We are not there:
-  the only working runtime today is a managed one. See
+  Piper + Ollama), with managed providers opt-in and never required. That path now
+  carries conversations end to end on one machine; the operator is the only piece
+  still rented. See
   [#9](https://github.com/baptistecristo/AI-agents-for-dumbphones/discussions/9).
 - **EU / privacy-first.** Data in an EU Postgres, OAuth tokens encrypted at rest, an
   append-only revocable consent registry, RLS everywhere. One exception, stated rather
