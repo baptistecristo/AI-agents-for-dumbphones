@@ -542,7 +542,16 @@ export function buildInboundAssistant(ctx: CallerContext) {
       model: envOr("AGENT_MODEL", "claude-haiku-4-5-20251001"),
       temperature: 0.3,
       messages: [{ role: "system", content: inboundSystemPrompt(ctx) }],
-      tools: agentTools(),
+      // endCall est un outil INTÉGRÉ de Vapi, pas une de nos fonctions : il
+      // n'est donc pas dans agentTools() — qui sert aussi à construire le
+      // schéma Anthropic du runtime auto-hébergé (anthropic-tools.ts), où une
+      // entrée sans `function` n'aurait aucun sens. Il se déclare ici, comme
+      // dans la mission sortante (outbound.ts).
+      //
+      // Sans cette ligne, les six prompts demandaient « appelle end_call »
+      // pour un outil que l'assistant n'avait pas : l'agent ne raccrochait
+      // jamais et l'appel courait jusqu'à maxDurationSeconds.
+      tools: [{ type: "endCall" }, ...agentTools()],
     },
     firstMessage: inboundFirstMessage(ctx),
     firstMessageMode: "assistant-speaks-first",

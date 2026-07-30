@@ -4,6 +4,7 @@ import {
   VOICE_SPEED_DEFAULT,
   VOICE_SPEED_MAX,
   VOICE_SPEED_MIN,
+  buildInboundAssistant,
   clampVoiceSpeed,
   inboundFirstMessage,
   inboundSystemPrompt,
@@ -47,6 +48,24 @@ const ctx = (over: Partial<CallerContext> = {}): CallerContext => ({
   agentInstructions: null,
   recapOffer: false,
   ...over,
+});
+
+// Les six prompts entrants disent « appelle end_call ». Pendant un moment
+// l'assistant ne l'avait pas : l'agent ne pouvait pas raccrocher, et l'appel
+// courait jusqu'à maxDurationSeconds. Un prompt qui nomme un outil absent ne
+// produit aucune erreur visible — d'où ce test.
+describe("buildInboundAssistant — l'agent peut raccrocher", () => {
+  it("déclare l'outil endCall que les prompts demandent d'appeler", () => {
+    const tools = buildInboundAssistant(ctx()).model.tools;
+    expect(tools.some((tool) => tool.type === "endCall")).toBe(true);
+  });
+
+  it("garde toutes les fonctions métier à côté", () => {
+    const tools = buildInboundAssistant(ctx()).model.tools;
+    const names = tools.map((tool) => ("function" in tool ? tool.function.name : tool.type));
+    for (const expected of ["get_weather", "request_code", "verify_code", "send_sms"])
+      expect(names).toContain(expected);
+  });
 });
 
 describe("inboundSystemPrompt — consignes de la personne", () => {

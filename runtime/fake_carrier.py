@@ -27,6 +27,7 @@ import asyncio
 import json
 import os
 import sys
+import tempfile
 import time
 import uuid
 from collections import deque
@@ -57,6 +58,25 @@ _FRAME_S = tm.FRAME_MS / 1000
 
 def _log(started: float, message: str) -> None:
     print(f"[{time.monotonic() - started:6.1f}s] {message}", flush=True)
+
+
+def _recordings_dir(parent: Path, started: float) -> Path:
+    """Dossier des enregistrements, avec repli sur /tmp si `parent` est interdit.
+
+    Dans le conteneur du runtime — le mode d'emploi de ce fichier — /app
+    appartient à root et le processus tourne sous `runtime` : le défaut relatif
+    (`calls/`) n'y est pas créable. Perdre l'appel qu'on vient de passer pour un
+    dossier serait absurde : on écrit ailleurs et on le dit.
+    """
+    out_dir = parent / time.strftime("appel-%Y%m%d-%H%M%S")
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        return out_dir
+    except OSError as err:
+        fallback = Path(tempfile.gettempdir()) / "fake-carrier" / out_dir.name
+        fallback.mkdir(parents=True, exist_ok=True)
+        _log(started, f"⚠ {parent} non inscriptible ({err.strerror}) : repli sur {fallback}")
+        return fallback
 
 
 def synthesize_question(text: str, voice: str, base_url: str, path_hint: str, rate: float) -> bytes:
@@ -249,8 +269,7 @@ async def run_call(args, utterances: list[bytes]) -> int:
             receiver.cancel()
             await asyncio.gather(sender, receiver, return_exceptions=True)
 
-    out_dir = Path(args.out) / time.strftime("appel-%Y%m%d-%H%M%S")
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = _recordings_dir(Path(args.out), started)
     tm.save_stereo_wav(str(out_dir / "mixte.wav"), bytes(call.caller_track), bytes(call.agent_track))
     tm.save_ulaw_as_wav(str(out_dir / "agent.wav"), bytes(call.agent_track))
     tm.save_ulaw_as_wav(str(out_dir / "appelant.wav"), bytes(call.caller_track))

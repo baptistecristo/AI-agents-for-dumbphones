@@ -85,6 +85,57 @@ def _transcript_from(context: LLMContext) -> str:
     return "\n".join(lines)
 
 
+# Whisper charge ses poids dans __init__ (WhisperSTTService._load), et il le fait
+# en bloquant. Appelée depuis la boucle asyncio, cette construction fige TOUT le
+# processus le temps du chargement — y compris la lecture du websocket : les
+# premiers mots de l'appelant ne sont pas mis en attente, ils sont perdus. D'où
+# deux corrections, l'une sans l'autre ne suffit pas :
+#   - construire le service dans un thread, pour que la boucle continue de
+#     servir le websocket pendant le chargement (audio mis en file, pas perdu) ;
+#   - précharger au démarrage du serveur (preload_stt), pour que le premier
+#     appel relise des poids déjà chauds au lieu de les lire depuis le disque.
+# Le verrou sérialise les chargements : deux modèles `medium` chargés en
+# parallèle, ce sont 3 Go de RSS pour un seul résultat utile.
+_stt_load_lock = asyncio.Lock()
+
+
+def _build_stt(stt_language: Language) -> WhisperSTTService:
+    return WhisperSTTService(
+        device=config.WHISPER_DEVICE,
+        settings=WhisperSTTService.Settings(
+            model=config.WHISPER_MODEL,
+            language=stt_language,
+        ),
+    )
+
+
+async def build_stt(stt_language: Language) -> WhisperSTTService:
+    """Construit le service STT hors de la boucle asyncio (voir _stt_load_lock)."""
+    async with _stt_load_lock:
+        return await asyncio.to_thread(_build_stt, stt_language)
+
+
+async def preload_stt() -> None:
+    """Charge les poids Whisper au démarrage plutôt qu'au décroché.
+
+    Le service construit ici est jeté : ce qu'on garde, c'est le téléchargement
+    fait et le cache disque chaud. Un service Pipecat est attaché à son pipeline
+    (gestionnaires d'événements, tâches, parent) — le partager entre deux appels
+    n'est pas sûr, chaque appel reconstruit donc le sien, mais à partir de poids
+    déjà lus une fois.
+
+    Jamais fatal : sans réseau ni modèle en cache, le runtime doit démarrer quand
+    même. L'appel paiera alors le chargement, comme avant.
+    """
+    try:
+        await build_stt(Language.FR)
+        logger.info(f"Modèle Whisper « {config.WHISPER_MODEL} » préchargé.")
+    except Exception as err:  # noqa: BLE001
+        logger.warning(
+            f"Préchargement Whisper impossible ({err}) : le premier appel chargera le modèle."
+        )
+
+
 async def _speak_greeting_now(websocket, stream_sid: str, text: str, voice: str) -> bool:
     """Prononce l'accueil AVANT la construction du pipeline.
 
@@ -155,13 +206,7 @@ async def run_call(
         ),
     )
 
-    stt = WhisperSTTService(
-        device=config.WHISPER_DEVICE,
-        settings=WhisperSTTService.Settings(
-            model=config.WHISPER_MODEL,
-            language=stt_language,
-        ),
-    )
+    stt = await build_stt(stt_language)
 
     # Voix Piper monolingue : elle reste fixe pendant tout l'appel (voir README).
     # La synthèse tourne dans un serveur Piper séparé (config.PIPER_BASE_URL) :

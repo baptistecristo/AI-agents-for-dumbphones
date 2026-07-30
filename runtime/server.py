@@ -65,7 +65,16 @@ async def lifespan(_app: FastAPI):
                 f"Route de synthèse non détectée : "
                 f"POST {config.PIPER_SYNTHESIZE_PATH} (défaut piper-tts >= 1.5.0)."
             )
-    yield
+
+    # Whisper : charger les poids maintenant, pas au décroché du premier appel
+    # (voir bot.preload_stt). En tâche de fond, à dessein — sur un conteneur
+    # neuf le modèle se télécharge (~1,5 Go en `medium`), et attendre ici
+    # retarderait d'autant le healthcheck comme les webhooks.
+    preload = asyncio.create_task(bot.preload_stt())
+    try:
+        yield
+    finally:
+        preload.cancel()
 
 
 app = FastAPI(title="runtime-vocal", lifespan=lifespan)
