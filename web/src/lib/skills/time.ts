@@ -1,4 +1,13 @@
-// Skill Heure locale — Open-Meteo geocoding + WorldTimeAPI (gratuits, sans clé API).
+// Skill Heure locale : géocodage Open-Meteo (gratuit, sans clé API), puis
+// conversion locale.
+//
+// Il y avait ici un second appel réseau, à worldtimeapi.org, pour demander
+// l'heure qu'il est. Il ne servait à rien : Intl.DateTimeFormat convertit
+// n'importe quel instant vers le fuseau qu'on lui donne, et le fuseau, le
+// géocodage vient de le rendre. L'instant à convertir, c'est maintenant, et le
+// serveur le sait. Ce deuxième appel n'apportait donc que sa latence et ses
+// pannes : worldtimeapi.org refusait la connexion TLS le 30/07/2026 et le skill
+// tombait avec lui, alors que tout ce qu'il fallait était déjà là.
 
 import { safeFetch } from "../net";
 import { CallSession, SkillResult, t } from "./types";
@@ -40,36 +49,26 @@ export async function getCurrentTime(
       es: `No encuentro la ciudad «${city}».`,
     });
 
-  const timeRes = await safeFetch(
-    `https://worldtimeapi.org/api/timezone/${place.timezone}`,
-  );
-
-  if (!timeRes.ok)
+  // Un fuseau inconnu d'Intl ferait lever un RangeError, qui remonterait à
+  // l'appelant en « ce service ne répond pas ». Open-Meteo rend des noms IANA,
+  // mais c'est une donnée tierce : on la traite comme telle.
+  let localTime: string;
+  try {
+    localTime = new Intl.DateTimeFormat(
+      session.language === "fr" ? "fr-FR" : session.language === "es" ? "es-ES" : "en-US",
+      {
+        timeZone: place.timezone,
+        hour: "numeric",
+        minute: "2-digit",
+      },
+    ).format(new Date());
+  } catch {
     return t(session, {
-      fr: "Le service d'heure locale ne répond pas, réessayez plus tard.",
-      en: "The local time service isn't responding, try again later.",
-      es: "El servicio de hora local no responde, inténtalo más tarde.",
+      fr: `Je ne connais pas le fuseau horaire de « ${city} ».`,
+      en: `I don't know the time zone for "${city}".`,
+      es: `No conozco la zona horaria de «${city}».`,
     });
-
-  const data = (await timeRes.json()) as {
-    datetime?: string;
-  };
-
-  if (!data.datetime)
-    return t(session, {
-      fr: "Le service d'heure locale ne répond pas, réessayez plus tard.",
-      en: "The local time service isn't responding, try again later.",
-      es: "El servicio de hora local no responde, inténtalo más tarde.",
-    });
-
-  const localTime = new Intl.DateTimeFormat(
-    session.language === "fr" ? "fr-FR" : session.language === "es" ? "es-ES" : "en-US",
-    {
-      timeZone: place.timezone,
-      hour: "numeric",
-      minute: "2-digit",
-    },
-  ).format(new Date(data.datetime));
+  }
 
   return t(session, {
     fr: `À ${place.name}, il est ${localTime}.`,

@@ -8,7 +8,13 @@
 # variante HTTP de Pipecat. Le runtime parle au serveur Piper en HTTP
 # (piper_http.py), l'opérateur lance ce serveur à part (voir README).
 # La CI vérifie que piper-tts reste hors de l'arbre de dépendances.
-pipecat-ai[silero,whisper,anthropic,openai]>=1.5,<2
+#
+# Version FIGÉE, pas une borne. `whisper_stt.py` recopie le `run_stt` de
+# WhisperSTTService pour pouvoir enrichir son appel à transcribe : une copie
+# qui doit suivre l'amont. La borne précédente (>=1.5,<2) a laissé passer
+# 1.5.0 -> 1.6.0 en cours de session, sur la même étiquette d'image et sans
+# rien annoncer. Relever ce numéro à la main, et relire `run_stt` en le faisant.
+pipecat-ai[silero,whisper,anthropic,openai,deepgram]==1.6.0
 aiohttp>=3.9
 fastapi>=0.115
 uvicorn[standard]>=0.30

@@ -107,8 +107,9 @@ docker compose up --build
 
 Le premier démarrage est long : construction de l'image de Piper depuis la
 source, téléchargement des trois voix, puis du modèle faster-whisper (~1,5 Go
-en `medium`) au premier appel. Les deux derniers atterrissent dans des volumes,
-donc une seule fois.
+en `medium`). Le runtime récupère et charge ce modèle à son démarrage, pas au
+premier appel : il répond au healthcheck pendant ce temps. Voix et modèle
+atterrissent dans des volumes, donc une seule fois.
 
 | Service | Rôle | Exposé |
 |---|---|---|
@@ -191,6 +192,52 @@ Concrètement, pour qui reprend ce fichier plus tard : n'ajoutez pas de job CI
 qui se connecte à un registre, et ne remplacez pas `build` par `build --push`.
 Si publier devient vraiment utile un jour, il faut d'abord régler
 `pyyaml-include` en amont chez `pipecat-ai`, pas contourner ici.
+
+## Tester sans opérateur : le faux opérateur et la console navigateur
+
+L'opérateur téléphonique est la seule pièce qui coûte de l'argent — et il n'est
+pas nécessaire pour faire tourner un appel. Deux outils jouent son rôle au bout
+du websocket `/ws`, avec le même protocole (media stream Twilio : µ-law 8 kHz,
+trames de 20 ms) et le même jeton signé qu'un TwiML. Le serveur ne voit pas la
+différence ; seul le tronçon opérateur→numéro reste non testé.
+
+**`fake_carrier.py`** — un appel scripté, reproductible, sans micro. Les
+répliques sont du texte (synthétisé par le serveur Piper déjà lancé) ou vos
+propres WAV ; il attend que l'agent ait fini de parler pour poser la question
+suivante, et laisse un enregistrement stéréo appelant/agent :
+
+```bash
+docker compose exec runtime python fake_carrier.py \
+    --ask "Quelle heure est-il à Tokyo ?" \
+    --ask "Et quel temps fait-il à Lyon ?"
+docker compose cp runtime:/tmp/fake-carrier ./calls   # récupérer les WAV
+```
+
+Le dossier par défaut (`--out calls`) n'est pas inscriptible dans le conteneur,
+dont le système de fichiers est en lecture seule : l'outil se replie alors sur
+`/tmp/fake-carrier` et écrit le chemin retenu dans sa dernière ligne. Lancé
+depuis l'hôte, il écrit bien dans `./calls`.
+
+**`GET /demo`** — la même chose depuis un navigateur, au micro : la page
+encode le micro en µ-law et parle le protocole Twilio en JavaScript. Elle est
+**désactivée par défaut** : `/demo/token` remet un jeton de flux valide à
+quiconque charge la page, l'activer revient à ouvrir une ligne gratuite vers
+l'agent à tous ceux qui joignent le port. `DEMO_CONSOLE=true` dans `.env`,
+machine de dev ou accès contrôlé seulement, puis http://localhost:8000/demo.
+La console appelle toujours en anonyme — un prénom optionnel personnalise
+l'accueil, rien d'autre. Le chemin « appelant connu » se teste avec
+`fake_carrier.py --caller +33…` ; `/demo/token?caller=` reste borné par
+l'allow-list `DEMO_CALLERS`.
+
+L'appelant anonyme n'a accès qu'aux skills sans données personnelles (météo,
+heure, conversion…) : c'est le comportement normal du produit, pas une
+restriction de la démo. Le modèle faster-whisper est déjà chargé (le runtime
+s'en occupe à son démarrage) ; avec `LLM_PROVIDER=ollama`, le premier appel
+attend quand même qu'Ollama charge le sien en mémoire.
+
+`MAX_CALL_SECONDS` (0 = sans limite) borne chaque appel : l'agent annonce la
+fin dans la langue de la session puis raccroche, et la console l'affiche sous
+les vumètres. `120` est un bon réglage de démo.
 
 ## Branchement opérateur
 

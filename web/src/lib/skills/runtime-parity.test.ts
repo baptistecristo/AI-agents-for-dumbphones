@@ -20,8 +20,10 @@ const toolsPy = () => readFileSync(fileURLToPath(new URL("../../../../runtime/to
 
 // Le corps de inbound_tools(), jusqu'à la prochaine définition de premier niveau.
 function inboundToolsBody(source: string): string {
-  const start = source.indexOf("def inbound_tools()");
-  expect(start, "runtime/tools.py ne déclare plus inbound_tools()").toBeGreaterThan(-1);
+  // Parenthèse ouverte sans la fermer : la signature accepte des paramètres
+  // (known_caller depuis le schéma réduit des appelants anonymes).
+  const start = source.indexOf("def inbound_tools(");
+  expect(start, "runtime/tools.py ne déclare plus inbound_tools(").toBeGreaterThan(-1);
   const rest = source.slice(start);
   const end = rest.indexOf("\ndef ", 1);
   return end === -1 ? rest : rest.slice(0, end);

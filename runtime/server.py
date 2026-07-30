@@ -10,15 +10,17 @@ Routes :
 Lancement :  uvicorn server:app --host 0.0.0.0 --port 8000
 """
 
+import asyncio
 import base64
 import hashlib
 import hmac
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Request, WebSocket
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from loguru import logger
 
 import bot
@@ -63,7 +65,16 @@ async def lifespan(_app: FastAPI):
                 f"Route de synthèse non détectée : "
                 f"POST {config.PIPER_SYNTHESIZE_PATH} (défaut piper-tts >= 1.5.0)."
             )
-    yield
+
+    # Whisper : charger les poids maintenant, pas au décroché du premier appel
+    # (voir bot.stock_stt_spare). En tâche de fond, à dessein : sur un conteneur
+    # neuf le modèle se télécharge (~1,5 Go en `medium`), et attendre ici
+    # retarderait d'autant le healthcheck comme les webhooks.
+    preload = asyncio.create_task(bot.preload_stt())
+    try:
+        yield
+    finally:
+        preload.cancel()
 
 
 app = FastAPI(title="runtime-vocal", lifespan=lifespan)
@@ -169,6 +180,31 @@ async def outbound(request: Request) -> JSONResponse:
 
 
 # ---------------------------------------------------------------- média WS
+# Bornes de la phase pré-authentification du websocket : l'opérateur envoie
+# « connected » puis « start » en quelques millisecondes. Au-delà, c'est autre
+# chose qu'un opérateur.
+_START_EVENT_TIMEOUT = 10.0
+_START_EVENT_MAX_MESSAGES = 8
+
+
+async def _await_start_event(websocket: WebSocket) -> dict:
+    """Attend l'événement « start » de l'opérateur, dans des bornes strictes.
+
+    Lève TimeoutError, ValueError ou une erreur de décodage : l'appelant ferme
+    alors proprement, sans jamais laisser remonter une exception nue.
+    """
+    async with asyncio.timeout(_START_EVENT_TIMEOUT):
+        for _ in range(_START_EVENT_MAX_MESSAGES):
+            message = json.loads(await websocket.receive_text())
+            if not isinstance(message, dict):
+                raise ValueError("message JSON qui n'est pas un objet")
+            if message.get("event") == "start":
+                if not isinstance(message.get("start"), dict):
+                    raise ValueError("événement « start » sans objet « start »")
+                return message
+    raise ValueError(f"aucun « start » en {_START_EVENT_MAX_MESSAGES} messages")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
@@ -193,18 +229,31 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     else:
         from pipecat.serializers.twilio import TwilioFrameSerializer
 
-        # Twilio envoie d'abord {"event":"connected"} puis {"event":"start"}
-        start = json.loads(await websocket.receive_text())
-        while start.get("event") != "start":
-            start = json.loads(await websocket.receive_text())
-        stream_sid = start["start"]["streamSid"]
-        call_sid = start["start"]["callSid"]
+        # Twilio envoie d'abord {"event":"connected"} puis {"event":"start"}.
+        # Lecture bornée : tout ceci précède la vérification du jeton, donc un
+        # client non authentifié ne doit pouvoir ni tenir la socket ouverte
+        # indéfiniment, ni la faire tomber sur une exception nue.
+        try:
+            start = await _await_start_event(websocket)
+        except (TimeoutError, ValueError, KeyError, json.JSONDecodeError) as err:
+            logger.warning(f"WS refusé : événement « start » invalide ou absent ({err})")
+            await websocket.close(code=1008)
+            return
+        stream_sid = str(start["start"]["streamSid"])
+        call_sid = str(start["start"]["callSid"])
         custom = start["start"].get("customParameters", {}) or {}
+        # Raccrochage automatique (API REST Twilio) seulement si les identifiants
+        # existent : pipecat >= 1.6 refuse de CONSTRUIRE le sérialiseur quand
+        # auto_hang_up est actif sans identifiants complets. Sans ce garde, une
+        # installation sans compte Twilio — fake_carrier.py, console /demo —
+        # perdrait chaque flux à l'ouverture, sur une ValueError.
+        hangup_ready = bool(config.TWILIO_ACCOUNT_SID and config.TWILIO_AUTH_TOKEN)
         serializer = TwilioFrameSerializer(
             stream_sid=stream_sid,
             call_sid=call_sid,
-            account_sid=config.TWILIO_ACCOUNT_SID,
-            auth_token=config.TWILIO_AUTH_TOKEN,  # permet le raccrochage automatique
+            account_sid=config.TWILIO_ACCOUNT_SID or None,
+            auth_token=config.TWILIO_AUTH_TOKEN or None,
+            params=TwilioFrameSerializer.InputParams(auto_hang_up=hangup_ready),
         )
         call_id = call_sid
 
@@ -225,9 +274,80 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             direction=direction,
             caller_number=custom.get("caller"),
             job_id=custom.get("jobId"),
+            # Prénom et langue de démo (console /demo) : signés comme le reste
+            # des paramètres. Le prénom ne sert qu'à saluer ; la langue choisit
+            # la session (prompt, Whisper, voix). L'appelant reste anonyme.
+            demo_name=custom.get("demo_name"),
+            demo_lang=custom.get("demo_lang"),
+            # Accueil immédiat (avant chargement de Whisper) : il faut le
+            # stream_sid pour fabriquer les événements média à la main. Telnyx
+            # a un autre format d'événements sortants, non vérifié : pas de
+            # stream_sid -> bot repasse par l'accueil pipeline.
+            stream_sid=stream_sid if config.TELEPHONY_PROVIDER != "telnyx" else None,
         )
     except Exception as err:  # noqa: BLE001
         logger.exception(f"Appel {call_id} en erreur : {err}")
+
+
+# ---------------------------------------------------------------- console démo
+# GET /demo sert une page qui joue l'opérateur DANS le navigateur : le micro
+# part en µ-law 8 kHz sur /ws, même protocole et même jeton signé qu'un TwiML.
+# Désactivée par défaut, parce que /demo/token remet un jeton de flux valide à
+# quiconque peut charger la page : l'activer (DEMO_CONSOLE=true) revient à
+# ouvrir une ligne téléphonique gratuite vers l'agent à tous ceux qui joignent
+# ce port. Machine de dev ou accès contrôlé seulement. Le caller-ID simulé est
+# borné par DEMO_CALLERS ; vide, seul l'appelant anonyme passe.
+
+
+@app.get("/demo")
+async def demo_console() -> Response:
+    if not config.DEMO_CONSOLE:
+        return Response(status_code=404)
+    page = (Path(__file__).parent / "demo_console.html").read_text(encoding="utf-8")
+    # Interdire l'encadrement : la page obtient elle-même un jeton de flux et
+    # demande le micro. Embarquée en iframe sous un bouton leurre, elle ouvrirait
+    # le micro de l'opérateur pour un tiers — et les websockets échappent au
+    # CORS, donc rien d'autre ne l'arrête.
+    return HTMLResponse(
+        page,
+        headers={
+            "X-Frame-Options": "DENY",
+            "Content-Security-Policy": "frame-ancestors 'none'",
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@app.get("/demo/token")
+async def demo_token(caller: str = "", name: str = "", lang: str = "") -> JSONResponse:
+    if not config.DEMO_CONSOLE:
+        return JSONResponse({"error": "console démo désactivée (DEMO_CONSOLE)"}, status_code=404)
+    if caller and caller not in config.DEMO_CALLERS:
+        return JSONResponse(
+            {"error": "numéro hors DEMO_CALLERS : appel anonyme seulement"}, status_code=403
+        )
+    params = {"direction": "inbound", "caller": caller}
+    # Prénom de démo : l'agent salue par ce prénom, et c'est TOUT ce que ça
+    # débloque (l'appelant reste anonyme : outils publics, aucun compte lu).
+    # Signé avec le reste — un paramètre non signé invaliderait le flux — et
+    # borné : c'est du texte qui finit dans un prompt.
+    demo_name = " ".join(name.split())[:40]
+    if demo_name:
+        params["demo_name"] = demo_name
+    # Langue choisie avant l'appel : pilote la session entière (prompt, langue
+    # Whisper, voix Piper). Hors des trois langues servies, on n'envoie rien et
+    # la session retombe sur DEFAULT_LANGUAGE côté web.
+    if lang in ("fr", "en", "es"):
+        params["demo_lang"] = lang
+    # `params` séparé du reste : la page les envoie TELS QUELS en
+    # customParameters, et le jeton ne signe qu'eux. Y mélanger max_seconds
+    # casserait la vérification du flux.
+    return JSONResponse(
+        {
+            "params": {**params, "tok": _stream_token(params)},
+            "max_seconds": config.MAX_CALL_SECONDS,
+        }
+    )
 
 
 @app.get("/health")

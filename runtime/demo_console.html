@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Console démo — appeler l'agent sans opérateur</title>
+<style>
+  /* Ivoire et argile, comme le site — en plus sobre : c'est une console de dev. */
+  :root { --ivory:#faf6ef; --ink:#2b2620; --clay:#b4552d; --clay-soft:#e8d9c8; --ok:#3d7a4f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--ivory); color:var(--ink);
+         font:16px/1.5 ui-sans-serif, system-ui, sans-serif; }
+  main { max-width:600px; margin:0 auto; padding:2.5rem 1.25rem; }
+  h1 { font-size:1.35rem; margin:0 0 .25rem; }
+  p.sub { margin:0 0 1.5rem; color:#6b6156; font-size:.92rem; }
+  .card { background:#fff; border:1px solid var(--clay-soft); border-radius:12px;
+          padding:1.25rem; margin-bottom:1rem; }
+  label { display:block; font-size:.85rem; color:#6b6156; margin-bottom:.3rem; }
+  input[type=text] { width:100%; padding:.55rem .7rem; border:1px solid var(--clay-soft);
+          border-radius:8px; font:inherit; background:var(--ivory); }
+  .row { display:flex; gap:.75rem; align-items:center; margin-top:1rem; }
+  button { padding:.6rem 1.4rem; border:0; border-radius:999px; font:inherit; font-weight:600;
+           cursor:pointer; background:var(--clay); color:#fff; }
+  button[disabled] { opacity:.45; cursor:default; }
+  button.hangup { background:var(--ink); }
+  #status { font-size:.92rem; color:#6b6156; }
+  #status.live { color:var(--ok); font-weight:600; }
+  .langs { display:flex; gap:.5rem; margin-bottom:.9rem; }
+  .langs button { background:var(--ivory); color:var(--ink); border:1px solid var(--clay-soft);
+                  font-weight:600; padding:.4rem 1rem; }
+  .langs button.on { background:var(--clay); color:#fff; border-color:var(--clay); }
+  .meters { display:grid; grid-template-columns:5.5rem 1fr; gap:.4rem .6rem;
+            align-items:center; margin-top:1rem; font-size:.8rem; color:#6b6156; }
+  .meter { height:8px; background:var(--ivory); border-radius:4px; overflow:hidden; }
+  .meter > i { display:block; height:100%; width:0; background:var(--clay);
+               transition:width .06s linear; }
+  .meter.agent > i { background:var(--ok); }
+  #log { font:12px/1.6 ui-monospace, monospace; white-space:pre-wrap; color:#6b6156;
+         max-height:12rem; overflow-y:auto; margin:0; }
+  ul.hints { margin:.4rem 0 0; padding-left:1.2rem; font-size:.92rem; }
+  ul.hints li { margin:.15rem 0; }
+  .note { font-size:.8rem; color:#8a7f72; margin-top:1rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Appeler l'agent — sans numéro, sans opérateur</h1>
+  <p class="sub">Cette page joue l'opérateur téléphonique : votre micro part en µ-law
+  8&nbsp;kHz sur le même websocket <code>/ws</code> qu'un vrai appel.
+  <em>This page speaks the Twilio media-stream protocol from your browser.</em></p>
+
+  <div class="card">
+    <label>Langue de l'appel · Call language · Idioma</label>
+    <div class="langs" id="langs">
+      <button type="button" data-lang="fr" class="on">Français</button>
+      <button type="button" data-lang="en">English</button>
+      <button type="button" data-lang="es">Español</button>
+    </div>
+    <label for="name">Votre prénom (optionnel — l'agent vous salue par ce prénom)</label>
+    <input id="name" type="text" placeholder="anonyme" autocomplete="off">
+    <div class="row">
+      <button id="call">Décrocher · Pick up</button>
+      <span id="status">prêt</span>
+      <span id="clock"></span>
+    </div>
+    <div class="meters">
+      <span>vous</span><div class="meter"><i id="meter-mic"></i></div>
+      <span>l'agent</span><div class="meter agent"><i id="meter-agent"></i></div>
+    </div>
+    <p class="note" id="cap-note" hidden></p>
+  </div>
+
+  <div class="card">
+    <strong>À essayer</strong> (sans compte, sans code — parlez dans la langue par
+    défaut de l'instance, <code>DEFAULT_LANGUAGE</code>&nbsp;: fr si rien n'est réglé)
+    <ul class="hints">
+      <li>« Quel temps fait-il à Lyon ? »</li>
+      <li>« Quelle heure est-il à Tokyo ? »</li>
+      <li>« Convertis 100 euros en dollars. »</li>
+      <li>Coupez-lui la parole : l'agent s'interrompt (barge-in).</li>
+    </ul>
+    <p class="note">L'appel est traité par le pipeline complet : VAD → Whisper → LLM →
+    Piper, et chaque outil passe par l'API Next.js. Le son a le grain d'un téléphone :
+    c'est le vrai codec de la ligne (G.711, 8&nbsp;kHz).</p>
+  </div>
+
+  <div class="card"><pre id="log"></pre></div>
+</main>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const logEl = $("log");
+function log(line) {
+  logEl.textContent += line + "\n";
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* ---------------------------------------------------------- G.711 µ-law */
+const BIAS = 0x84, CLIP = 32635;
+function pcmToUlaw(sample) {
+  const sign = sample < 0 ? 0x80 : 0;
+  let magnitude = Math.min(sample < 0 ? -sample : sample, CLIP) + BIAS;
+  let exponent = 7;
+  for (let mask = 0x4000; exponent > 0 && !(magnitude & mask); mask >>= 1) exponent--;
+  const mantissa = (magnitude >> (exponent + 3)) & 0x0f;
+  return ~(sign | (exponent << 4) | mantissa) & 0xff;
+}
+const ULAW_TO_FLOAT = new Float32Array(256);
+for (let b = 0; b < 256; b++) {
+  const u = ~b & 0xff;
+  const exponent = (u >> 4) & 0x07;
+  let magnitude = ((((u & 0x0f) << 3) + BIAS) << exponent) - BIAS;
+  ULAW_TO_FLOAT[b] = ((u & 0x80) ? -magnitude : magnitude) / 32768;
+}
+
+/* ---------------------------------------------------------- état d'appel */
+const FRAME_BYTES = 160;             // 20 ms de µ-law à 8 kHz
+// Numéro de génération d'appel : un décroché resté bloqué (permission micro en
+// attente, par exemple) ne doit pas pouvoir raccrocher l'appel SUIVANT quand il
+// échoue enfin. Chaque tentative capture son numéro ; les callbacks d'une
+// génération périmée ne touchent plus à rien.
+let callSeq = 0;
+let ctx, ws, micStream, workletNode, sendTimer, clockTimer;
+// Micro fermé tant que l'accueil n'a pas été entendu : au décroché, un clic ou
+// un souffle suffisent à déclencher le VAD, et Whisper HALLUCINE sur ce
+// presque-rien (« Au revoir. » a réellement raccroché un appel de test avant
+// même l'accueil). La ligne envoie du silence jusqu'à la fin de l'accueil.
+let micOpen = false, micOpenFallbackAt = 0;
+let sendQueue = [];                  // octets µ-law en attente d'envoi
+let resamplePos = 0, resampleTail = null;
+let playHead = 0, liveSources = [];
+let startedAt = 0;
+
+function setStatus(text, live) {
+  $("status").textContent = text;
+  $("status").className = live ? "live" : "";
+}
+
+function b64FromBytes(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 8192)
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+  return btoa(s);
+}
+function bytesFromB64(b64) {
+  const s = atob(b64), out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+}
+
+/* Micro (fréquence native) -> 8 kHz par interpolation linéaire, en continu. */
+function pushMicSamples(f32, srcRate) {
+  const src = resampleTail ? Float32Array.of(...resampleTail, ...f32) : f32;
+  const step = srcRate / 8000;
+  const bytes = [];
+  let pos = resamplePos;
+  while (pos + 1 < src.length) {
+    const left = Math.floor(pos), frac = pos - left;
+    const sample = src[left] * (1 - frac) + src[left + 1] * frac;
+    bytes.push(pcmToUlaw(Math.max(-32768, Math.min(32767, Math.round(sample * 32768)))));
+    pos += step;
+  }
+  // Le report doit garder la PARTIE ENTIÈRE de la position, pas seulement sa
+  // fraction : quand `pos` dépasse la fin du bloc (dernier pas trop long), ne
+  // garder que la fraction fait repartir le bloc suivant de l'index 0 et
+  // produit ~3 % d'échantillons en trop à 48 kHz. Le tampon d'émission saturait
+  // alors en une vingtaine de secondes et jetait en continu le plus ancien
+  // audio : latence figée à ~600 ms, débuts de mots coupés, transcription
+  // dégradée. On coupe donc à la borne réellement consommée et on reporte le
+  // reliquat, entier compris.
+  const consumed = Math.min(Math.floor(pos), src.length);
+  resampleTail = src.subarray(consumed);
+  resamplePos = pos - consumed;
+  sendQueue.push(...bytes);
+  // Dérive : si le tampon dépasse ~0,6 s, on jette le plus ancien.
+  if (sendQueue.length > 4800) sendQueue.splice(0, sendQueue.length - 4800);
+  meter("meter-mic", rmsOfUlaw(bytes));
+}
+
+function rmsOfUlaw(bytes) {
+  if (!bytes.length) return 0;
+  let acc = 0;
+  for (const b of bytes) { const v = ULAW_TO_FLOAT[b]; acc += v * v; }
+  return Math.sqrt(acc / bytes.length);
+}
+function meter(id, rms) { $(id).style.width = Math.min(100, rms * 400) + "%"; }
+
+/* ---------------------------------------------------------- lecture agent */
+function playUlaw(bytes) {
+  // Filet : si la sortie audio est restée suspendue (activation expirée), on la
+  // relance et on le dit — plutôt qu'un agent qui parle dans le vide.
+  if (ctx && ctx.state === "suspended") {
+    ctx.resume();
+    log("⚠ sortie audio suspendue par le navigateur — reprise demandée");
+  }
+  const f32 = new Float32Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) f32[i] = ULAW_TO_FLOAT[bytes[i]];
+  const buffer = ctx.createBuffer(1, f32.length, 8000);
+  buffer.copyToChannel(f32, 0);
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  playHead = Math.max(playHead, ctx.currentTime + 0.08);
+  source.start(playHead);
+  playHead += f32.length / 8000;
+  liveSources.push(source);
+  source.onended = () => { liveSources = liveSources.filter((s) => s !== source); };
+  meter("meter-agent", rmsOfUlaw(bytes));
+}
+/* « clear » : l'agent est interrompu, il efface ce qu'il n'a pas encore dit. */
+function flushPlayback() {
+  for (const s of liveSources) { try { s.stop(); } catch (_) {} }
+  liveSources = [];
+  playHead = 0;
+  meter("meter-agent", 0);
+}
+
+/* ---------------------------------------------------------- l'appel */
+async function pickUp() {
+  if (ws) return; // un appel est déjà en ligne
+  const seq = ++callSeq;
+  $("call").disabled = true;
+  try {
+    // La sortie audio d'ABORD, pendant que le clic est encore une « activation
+    // utilisateur » fraîche : si l'invite de permission micro prend quelques
+    // secondes, l'activation expire et un AudioContext créé après resterait
+    // suspendu — l'accueil de l'agent arriverait alors en silence.
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    log("· sortie audio : " + ctx.state);
+
+    // La console appelle toujours en anonyme. Le chemin « appelant connu »
+    // (caller-ID + compte) se teste avec fake_carrier.py --caller.
+    const tokenRes = await fetch(
+      "/demo/token?name=" + encodeURIComponent($("name").value.trim()) +
+      "&lang=" + selectedLang
+    );
+    if (!tokenRes.ok) {
+      const detail = await tokenRes.json().catch(() => ({}));
+      throw new Error(detail.error || ("jeton refusé (HTTP " + tokenRes.status + ")"));
+    }
+    const { params: customParameters, max_seconds: maxSeconds } = await tokenRes.json();
+    if (maxSeconds > 0) {
+      const capNote = $("cap-note");
+      capNote.hidden = false;
+      capNote.textContent = "Appel limité à " + Math.round(maxSeconds / 60) +
+        " min — l'agent prévient avant de raccrocher. Demo calls are capped.";
+    }
+
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+
+    const workletUrl = URL.createObjectURL(new Blob([`
+      registerProcessor("capture", class extends AudioWorkletProcessor {
+        process(inputs) {
+          const ch = inputs[0] && inputs[0][0];
+          if (ch) this.port.postMessage(ch.slice(0));
+          return true;
+        }
+      });`], { type: "application/javascript" }));
+    await ctx.audioWorklet.addModule(workletUrl);
+    workletNode = new AudioWorkletNode(ctx, "capture");
+    URL.revokeObjectURL(workletUrl); // le module est chargé : l'URL blob ne sert plus
+    // `ctx` est relu à chaque message : hangUp() le met à null, et un message
+    // du worklet posté juste avant arrive juste après. Sans ce garde, chaque
+    // raccrochage laissait une TypeError dans la console.
+    workletNode.port.onmessage = (e) => {
+      if (ctx) pushMicSamples(e.data, ctx.sampleRate);
+    };
+    ctx.createMediaStreamSource(micStream).connect(workletNode);
+
+    const streamSid = "MZdemo" + crypto.randomUUID().replaceAll("-", "").slice(0, 24);
+    const callSid = "demo-" + crypto.randomUUID();
+    const proto = location.protocol === "https:" ? "wss://" : "ws://";
+    ws = new WebSocket(proto + location.host + "/ws");
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ event: "connected", protocol: "Call", version: "1.0.0" }));
+      ws.send(JSON.stringify({
+        event: "start", sequenceNumber: "1", streamSid,
+        start: {
+          streamSid, callSid, accountSid: "ACbrowserdemo", tracks: ["inbound"],
+          mediaFormat: { encoding: "audio/x-mulaw", sampleRate: 8000, channels: 1 },
+          customParameters,
+        },
+      }));
+      startedAt = Date.now();
+      setStatus("en ligne", true);
+      const who = $("name").value.trim() || "anonyme";
+      log("→ décroché (" + callSid + ", " + who + ")");
+      clockTimer = setInterval(() => {
+        $("clock").textContent = Math.floor((Date.now() - startedAt) / 1000) + " s";
+      }, 1000);
+      // La cadence de la ligne : une trame de 20 ms, silence si le micro n'a
+      // rien — ou tant qu'il n'est pas ouvert (voir micOpen plus haut).
+      micOpen = false;
+      micOpenFallbackAt = Date.now() + 15000; // filet si l'accueil n'arrive pas
+      sendTimer = setInterval(() => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        if (!micOpen) {
+          const greetingPlayed = playHead > 0 && ctx && ctx.currentTime > playHead + 0.15;
+          // Le filet ne s'applique QUE si rien n'est jamais arrivé (accueil en
+          // échec) : sinon il ouvrirait le micro pendant que l'agent parle, et
+          // sa propre voix, revenue en µ-law 8 kHz, l'interromprait lui-même.
+          const nothingEverCame = playHead === 0 && Date.now() > micOpenFallbackAt;
+          if (greetingPlayed || nothingEverCame) {
+            micOpen = true;
+            sendQueue.length = 0; // le bruit accumulé pendant l'accueil part à la poubelle
+            log("· micro ouvert — à vous");
+          }
+        }
+        let frame;
+        if (micOpen && sendQueue.length >= FRAME_BYTES) {
+          frame = new Uint8Array(sendQueue.splice(0, FRAME_BYTES));
+        } else {
+          frame = new Uint8Array(FRAME_BYTES).fill(0xff);
+        }
+        ws.send(JSON.stringify({
+          event: "media", streamSid, media: { payload: b64FromBytes(frame) },
+        }));
+      }, 20);
+      $("call").textContent = "Raccrocher · Hang up";
+      $("call").className = "hangup";
+      $("call").onclick = hangUp;
+      $("call").disabled = false;
+    };
+
+    ws.onmessage = (e) => {
+      let message;
+      try { message = JSON.parse(e.data); } catch (_) { return; }
+      if (message.event === "media") playUlaw(bytesFromB64(message.media.payload));
+      else if (message.event === "clear") { flushPlayback(); log("← clear (interruption)"); }
+    };
+
+    ws.onclose = () => {
+      if (seq !== callSeq) return; // un appel plus récent occupe déjà la ligne
+      log("← ligne fermée par l'agent");
+      hangUp(true);
+    };
+    ws.onerror = () => log("⚠ erreur websocket");
+  } catch (err) {
+    if (seq !== callSeq) return; // échec périmé (ex: permission micro refusée après coup)
+    log("⚠ " + err.message);
+    setStatus("échec : " + err.message, false);
+    hangUp(true);
+  }
+}
+
+function hangUp(silent) {
+  callSeq++; // invalide les callbacks de l'appel en cours
+  if (sendTimer) { clearInterval(sendTimer); sendTimer = null; }
+  if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    try { ws.send(JSON.stringify({ event: "stop" })); } catch (_) {}
+    ws.close();
+  }
+  ws = null;
+  micOpen = false;
+  flushPlayback();
+  if (micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
+  if (workletNode) { workletNode.port.onmessage = null; workletNode.disconnect(); workletNode = null; }
+  if (ctx) { ctx.close(); ctx = null; }
+  sendQueue = []; resampleTail = null; resamplePos = 0;
+  if (!silent) log("→ raccroché");
+  setStatus("prêt", false);
+  meter("meter-mic", 0); meter("meter-agent", 0);
+  const button = $("call");
+  button.textContent = "Décrocher · Pick up";
+  button.className = "";
+  button.onclick = pickUp;
+  button.disabled = false;
+}
+
+/* Choix de langue avant l'appel : signé dans les paramètres du flux, il pilote
+   toute la session (prompt, transcription Whisper, voix Piper). */
+let selectedLang = "fr";
+$("langs").addEventListener("click", (e) => {
+  const button = e.target.closest("button[data-lang]");
+  if (!button) return;
+  selectedLang = button.dataset.lang;
+  for (const b of $("langs").querySelectorAll("button")) b.classList.toggle("on", b === button);
+});
+
+$("call").onclick = pickUp;
+if (!window.isSecureContext)
+  log("⚠ getUserMedia exige un contexte sécurisé : http://localhost:8000/demo ou HTTPS.");
+</script>
+</body>
+</html>

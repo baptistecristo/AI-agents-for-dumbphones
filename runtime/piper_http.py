@@ -81,6 +81,7 @@ Deux pièges vérifiés dans le source, invisibles à la lecture des docs :
   check_voices_available). `/voices` est identique dans les deux versions.
 """
 
+import re
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
@@ -89,6 +90,27 @@ from loguru import logger
 from pipecat.frames.frames import ErrorFrame, Frame, TTSStoppedFrame
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
+
+# Ce qu'une voix ne doit jamais recevoir. Piper phonémise via espeak, qui LIT
+# les émojis — un « 👋 » du modèle devient « signe de la main » à voix haute,
+# entendu sur un vrai appel. On retire pictogrammes, sélecteurs de variantes,
+# joints ZWJ et décorations markdown ; la ponctuation, elle, reste : c'est de
+# la parole.
+_UNSPEAKABLE = re.compile(
+    "["
+    "\U0001f000-\U0001faff"  # émojis, symboles et pictogrammes
+    "\U00002600-\U000027bf"  # symboles divers + dingbats
+    "←-⇿"  # flèches
+    "⬀-⯿"  # flèches et symboles supplémentaires
+    "︎️‍"  # sélecteurs de variantes, joint ZWJ
+    "*_`#•"  # décor markdown et puces
+    "]+"
+)
+
+
+def speakable_text(text: str) -> str:
+    """Le texte tel qu'une voix peut le dire : sans émoji ni décor markdown."""
+    return re.sub(r"  +", " ", _UNSPEAKABLE.sub("", text)).strip()
 
 # Route de synthèse selon la version du serveur Piper. Le défaut vise la version
 # courante : c'est elle qu'installe `pip install "piper-tts[http]"` aujourd'hui.
@@ -354,6 +376,18 @@ class PiperHttpTTSService(TTSService):
 
     async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame, None]:
         """Synthétise `text` et émet les trames audio correspondantes."""
+        text = speakable_text(text)
+        if not any(char.isalnum() for char in text):
+            # Rien à prononcer : ni lettre ni chiffre. Deux cas réels, et le
+            # second est arrivé en plein appel.
+            #   - un segment fait uniquement d'émojis (« 👋 ») ;
+            #   - un segment de ponctuation seule. Le découpeur de phrases coupe
+            #     « entre... vingt-trois » en trois morceaux, dont un « . » isolé.
+            #     Piper répond HTTP 500 dessus, ce qui posait une ErrorFrame au
+            #     milieu de la réponse. Tester `not text` ne l'attrapait pas :
+            #     un point n'est pas une chaîne vide.
+            yield TTSStoppedFrame(context_id=context_id)
+            return
         logger.debug(f"{self}: synthèse [{text}]")
 
         try:

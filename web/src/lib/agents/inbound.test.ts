@@ -4,6 +4,7 @@ import {
   VOICE_SPEED_DEFAULT,
   VOICE_SPEED_MAX,
   VOICE_SPEED_MIN,
+  buildInboundAssistant,
   clampVoiceSpeed,
   inboundFirstMessage,
   inboundSystemPrompt,
@@ -47,6 +48,24 @@ const ctx = (over: Partial<CallerContext> = {}): CallerContext => ({
   agentInstructions: null,
   recapOffer: false,
   ...over,
+});
+
+// Les six prompts entrants disent « appelle end_call ». Pendant un moment
+// l'assistant ne l'avait pas : l'agent ne pouvait pas raccrocher, et l'appel
+// courait jusqu'à maxDurationSeconds. Un prompt qui nomme un outil absent ne
+// produit aucune erreur visible — d'où ce test.
+describe("buildInboundAssistant — l'agent peut raccrocher", () => {
+  it("déclare l'outil endCall que les prompts demandent d'appeler", () => {
+    const tools = buildInboundAssistant(ctx()).model.tools;
+    expect(tools.some((tool) => tool.type === "endCall")).toBe(true);
+  });
+
+  it("garde toutes les fonctions métier à côté", () => {
+    const tools = buildInboundAssistant(ctx()).model.tools;
+    const names = tools.map((tool) => ("function" in tool ? tool.function.name : tool.type));
+    for (const expected of ["get_weather", "request_code", "verify_code", "send_sms"])
+      expect(names).toContain(expected);
+  });
 });
 
 describe("inboundSystemPrompt — consignes de la personne", () => {
@@ -148,11 +167,25 @@ describe("inboundFirstMessage — l'offre de résumé", () => {
 // Le prompt annonce la capacité, et interdit de la déclencher tout seul.
 describe("inboundSystemPrompt — le résumé se demande", () => {
   it("names the tool and forbids reciting a summary unprompted", () => {
-    expect(inboundSystemPrompt(ctx({ language: "fr" }))).toContain("ne récite JAMAIS un résumé de toi-même");
+    expect(inboundSystemPrompt(ctx({ language: "fr" }))).toContain("Ne récite JAMAIS un résumé de toi-même");
     expect(inboundSystemPrompt(ctx({ language: "en" }))).toContain("NEVER recite a summary on your own");
     expect(inboundSystemPrompt(ctx({ language: "es" }))).toContain("NUNCA recites un resumen por tu cuenta");
     for (const language of ["fr", "en", "es"] as const)
       expect(inboundSystemPrompt(ctx({ language }))).toContain("get_last_call_summary");
+  });
+
+  // Le prompt disait aussi « n'ouvre jamais l'appel dessus » — alors que c'est
+  // exactement ce que fait notre propre accueil quand recapOffer est vrai. Le
+  // modèle voyait donc son premier message enfreindre sa consigne, et rien ne
+  // lui disait qu'un « oui » à cette offre valait demande : il pouvait refuser
+  // ce qu'il venait de proposer.
+  it("treats a yes to the greeting's own offer as a request", () => {
+    for (const language of ["fr", "en", "es"] as const)
+      expect(inboundSystemPrompt(ctx({ language }))).not.toContain("jamais l'appel dessus");
+
+    expect(inboundSystemPrompt(ctx({ language: "fr" }))).toContain("EST une demande");
+    expect(inboundSystemPrompt(ctx({ language: "en" }))).toContain("IS a request");
+    expect(inboundSystemPrompt(ctx({ language: "es" }))).toContain("ES una petición");
   });
 });
 

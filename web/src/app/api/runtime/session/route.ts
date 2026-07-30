@@ -25,6 +25,10 @@ export async function POST(req: Request) {
     direction: "inbound" | "outbound";
     caller_number?: string;
     job_id?: string;
+    // Console démo du runtime : prénom auto-déclaré, uniquement pour saluer.
+    demo_name?: string;
+    // Console démo : langue choisie avant l'appel ("fr" | "en" | "es").
+    demo_lang?: string;
   };
   const db = supabaseAdmin();
 
@@ -87,6 +91,17 @@ export async function POST(req: Request) {
     agentInstructions: null as string | null,
     recapOffer: false, // appelant inconnu -> rien à lui résumer
   };
+  // Prénom auto-déclaré (console démo du runtime) : il personnalise l'accueil
+  // et RIEN d'autre — l'appelant reste inconnu, prompt compact et outils
+  // publics. Borné : ce texte finit dans un prompt. Un vrai profil (numéro
+  // vérifié ci-dessous) l'écrase.
+  const demoName = (body.demo_name ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
+  if (demoName) ctx = { ...ctx, preferredName: demoName };
+  // Langue choisie sur la console : elle pilote toute la session (prompt,
+  // langue Whisper, voix Piper). Un profil vérifié (ci-dessous) l'écrase.
+  if (body.demo_lang === "fr" || body.demo_lang === "en" || body.demo_lang === "es") {
+    ctx = { ...ctx, language: body.demo_lang };
+  }
   if (caller) {
     const { data: phone } = await db
       .from("phones")
@@ -128,5 +143,9 @@ export async function POST(req: Request) {
     system_prompt: inboundSystemPrompt(ctx),
     first_message: inboundFirstMessage(ctx),
     language: ctx.language,
+    // Appelant sans compte -> le runtime réduit le schéma d'outils au périmètre
+    // public (runtime/tools.py, PUBLIC_TOOLS) : les outils personnels refusent
+    // de toute façon, autant ne pas les décrire au modèle.
+    known_caller: Boolean(ctx.userId),
   });
 }
