@@ -31,6 +31,14 @@ TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
 TELNYX_API_KEY = os.getenv("TELNYX_API_KEY", "")
 
+# STT : whisper (local, sans clé) | deepgram (téléphonie native, streaming).
+# Voir stt.py pour ce que chacun coûte et rapporte sur une ligne à 8 kHz.
+STT_PROVIDER = env("STT_PROVIDER", "whisper")
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
+# nova-2 et pas nova-3 : nova-3 ne couvre pas encore le français en streaming.
+# `nova-2-phonecall` est la variante réglée pour le 8 kHz, en anglais seulement.
+DEEPGRAM_MODEL = env("DEEPGRAM_MODEL", "nova-2")
+
 # STT local (faster-whisper) : tiny/base/small/medium/large — medium = bon FR sur CPU
 WHISPER_MODEL = env("WHISPER_MODEL", "medium")
 WHISPER_DEVICE = env("WHISPER_DEVICE", "auto")  # cpu | cuda | auto

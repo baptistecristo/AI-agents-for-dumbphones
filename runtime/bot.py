@@ -34,10 +34,10 @@ from pipecat.workers.runner import WorkerRunner
 
 import api_client
 import config
+import stt as stt_provider
 import tools as tool_defs
 import twilio_media
 from piper_http import PiperHttpTTSService, speakable_text
-from whisper_stt import PhoneWhisperSTTService
 
 logger.remove()
 # LOG_LEVEL=DEBUG fait parler tout Pipecat : VAD, transcriptions, trames LLM.
@@ -100,21 +100,15 @@ def _transcript_from(context: LLMContext) -> str:
 # Le service n'est jamais partagé entre deux appels : un service Pipecat est
 # attaché à son pipeline (gestionnaires d'événements, tâches, parent). L'avance
 # est donnée à un appel et un seul, puis remplacée.
-_stt_spare: tuple[str, PhoneWhisperSTTService] | None = None
+_stt_spare: tuple[str, object] | None = None
 _stt_load_lock = asyncio.Lock()
 
 
-def _build_stt(stt_language: Language) -> PhoneWhisperSTTService:
-    return PhoneWhisperSTTService(
-        device=config.WHISPER_DEVICE,
-        settings=PhoneWhisperSTTService.Settings(
-            model=config.WHISPER_MODEL,
-            language=stt_language,
-        ),
-    )
+def _build_stt(stt_language: Language):
+    return stt_provider.build_service(stt_language)
 
 
-async def _load_stt(stt_language: Language) -> PhoneWhisperSTTService:
+async def _load_stt(stt_language: Language):
     """Charge un service hors de la boucle asyncio, un seul à la fois.
 
     Dans un thread, pour que la boucle continue de servir le websocket pendant
@@ -132,6 +126,9 @@ async def stock_stt_spare(stt_language: Language) -> None:
     tourner quand même. L'appel paiera alors le chargement, comme avant.
     """
     global _stt_spare
+    # Deepgram n'a pas de poids à charger : rien à tenir en réserve.
+    if not stt_provider.loads_a_model():
+        return
     if _stt_spare is not None and _stt_spare[0] == str(stt_language):
         return
     try:
@@ -141,21 +138,12 @@ async def stock_stt_spare(stt_language: Language) -> None:
         logger.warning(f"Chargement Whisper impossible ({err}) : l'appel le chargera lui-même.")
 
 
-def stt_language_for(language: str) -> Language:
-    """Langue Whisper de la session ("fr" | "en" | "es").
-
-    Épinglée, jamais auto-détectée : le WhisperSTTService de Pipecat exige une
-    langue concrète (run_stt fait assert_given(settings.language)).
-    """
-    return {"en": Language.EN, "es": Language.ES}.get(language, Language.FR)
-
-
 async def preload_stt() -> None:
     """Met une avance en réserve au démarrage, dans la langue par défaut."""
-    await stock_stt_spare(stt_language_for("fr"))
+    await stock_stt_spare(stt_provider.stt_language_for("fr"))
 
 
-async def build_stt(stt_language: Language) -> PhoneWhisperSTTService:
+async def build_stt(stt_language: Language):
     """Service STT prêt à brancher, immédiat quand une avance est en réserve.
 
     Ne reconstitue PAS l'avance ici : charger un modèle prend plusieurs secondes
@@ -222,7 +210,7 @@ async def run_call(
     # Langue de la session ("fr" | "en" | "es") : pilote la voix Piper ET la
     # langue Whisper (voir stt_language_for).
     language = session.get("language", "fr")
-    stt_language = stt_language_for(language)
+    stt_language = stt_provider.stt_language_for(language)
 
     # Accueil immédiat, avant tout le reste (voir _speak_greeting_now).
     first = session.get("first_message")

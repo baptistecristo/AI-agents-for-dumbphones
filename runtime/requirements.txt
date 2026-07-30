@@ -8,7 +8,7 @@
 # variante HTTP de Pipecat. Le runtime parle au serveur Piper en HTTP
 # (piper_http.py), l'opérateur lance ce serveur à part (voir README).
 # La CI vérifie que piper-tts reste hors de l'arbre de dépendances.
-pipecat-ai[silero,whisper,anthropic,openai]>=1.5,<2
+pipecat-ai[silero,whisper,anthropic,openai,deepgram]>=1.5,<2
 aiohttp>=3.9
 fastapi>=0.115
 uvicorn[standard]>=0.30
