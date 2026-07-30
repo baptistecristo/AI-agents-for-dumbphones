@@ -25,7 +25,6 @@ const ALLOWED_HOSTS = new Set([
   "api.openrouteservice.org", // itinéraires
   "api.frankfurter.app", // conversion de devises
   "api.dictionaryapi.dev", // définitions
-  "worldtimeapi.org", // heure locale
   "www.googleapis.com", // agenda / contacts (via SDK googleapis)
 ]);
 

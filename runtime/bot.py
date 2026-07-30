@@ -86,16 +86,21 @@ def _transcript_from(context: LLMContext) -> str:
 
 
 # Whisper charge ses poids dans __init__ (WhisperSTTService._load), et il le fait
-# en bloquant. Appelée depuis la boucle asyncio, cette construction fige TOUT le
-# processus le temps du chargement — y compris la lecture du websocket : les
-# premiers mots de l'appelant ne sont pas mis en attente, ils sont perdus. D'où
-# deux corrections, l'une sans l'autre ne suffit pas :
-#   - construire le service dans un thread, pour que la boucle continue de
-#     servir le websocket pendant le chargement (audio mis en file, pas perdu) ;
-#   - précharger au démarrage du serveur (preload_stt), pour que le premier
-#     appel relise des poids déjà chauds au lieu de les lire depuis le disque.
-# Le verrou sérialise les chargements : deux modèles `medium` chargés en
-# parallèle, ce sont 3 Go de RSS pour un seul résultat utile.
+# en bloquant : ~4 s ici, cache disque chaud compris. Ces 4 s tombaient entre
+# l'accueil et le démarrage du pipeline, c'est-à-dire exactement au moment où
+# l'appelant répond — sa première phrase arrivait avant que le transport n'écoute
+# et se perdait, sans la moindre trace dans les logs.
+#
+# On tient donc une AVANCE : un service déjà chargé, prêt à être branché. L'appel
+# la prend (immédiat) et on en reconstitue une pour le suivant, en tâche de fond.
+# Une seule à la fois, pour la dernière langue servie : un modèle `medium` pèse
+# ~1,5 Go, en garder un par langue « au cas où » n'a pas de sens sur la machine
+# d'un particulier.
+#
+# Le service n'est jamais partagé entre deux appels : un service Pipecat est
+# attaché à son pipeline (gestionnaires d'événements, tâches, parent). L'avance
+# est donnée à un appel et un seul, puis remplacée.
+_stt_spare: tuple[str, WhisperSTTService] | None = None
 _stt_load_lock = asyncio.Lock()
 
 
@@ -109,31 +114,59 @@ def _build_stt(stt_language: Language) -> WhisperSTTService:
     )
 
 
-async def build_stt(stt_language: Language) -> WhisperSTTService:
-    """Construit le service STT hors de la boucle asyncio (voir _stt_load_lock)."""
+async def _load_stt(stt_language: Language) -> WhisperSTTService:
+    """Charge un service hors de la boucle asyncio, un seul à la fois.
+
+    Dans un thread, pour que la boucle continue de servir le websocket pendant
+    le chargement. Sérialisé, parce que deux modèles chargés en parallèle,
+    ce sont 3 Go de RSS pour un seul résultat utile.
+    """
     async with _stt_load_lock:
         return await asyncio.to_thread(_build_stt, stt_language)
 
 
-async def preload_stt() -> None:
-    """Charge les poids Whisper au démarrage plutôt qu'au décroché.
+async def stock_stt_spare(stt_language: Language) -> None:
+    """Remet une avance en réserve, si elle n'y est pas déjà.
 
-    Le service construit ici est jeté : ce qu'on garde, c'est le téléchargement
-    fait et le cache disque chaud. Un service Pipecat est attaché à son pipeline
-    (gestionnaires d'événements, tâches, parent) — le partager entre deux appels
-    n'est pas sûr, chaque appel reconstruit donc le sien, mais à partir de poids
-    déjà lus une fois.
-
-    Jamais fatal : sans réseau ni modèle en cache, le runtime doit démarrer quand
-    même. L'appel paiera alors le chargement, comme avant.
+    Jamais fatal : sans réseau ni modèle en cache, le runtime doit démarrer et
+    tourner quand même. L'appel paiera alors le chargement, comme avant.
     """
+    global _stt_spare
+    if _stt_spare is not None and _stt_spare[0] == str(stt_language):
+        return
     try:
-        await build_stt(Language.FR)
-        logger.info(f"Modèle Whisper « {config.WHISPER_MODEL} » préchargé.")
+        _stt_spare = (str(stt_language), await _load_stt(stt_language))
+        logger.info(f"Modèle Whisper « {config.WHISPER_MODEL} » prêt ({stt_language}).")
     except Exception as err:  # noqa: BLE001
-        logger.warning(
-            f"Préchargement Whisper impossible ({err}) : le premier appel chargera le modèle."
-        )
+        logger.warning(f"Chargement Whisper impossible ({err}) : l'appel le chargera lui-même.")
+
+
+def stt_language_for(language: str) -> Language:
+    """Langue Whisper de la session ("fr" | "en" | "es").
+
+    Épinglée, jamais auto-détectée : le WhisperSTTService de Pipecat exige une
+    langue concrète (run_stt fait assert_given(settings.language)).
+    """
+    return {"en": Language.EN, "es": Language.ES}.get(language, Language.FR)
+
+
+async def preload_stt() -> None:
+    """Met une avance en réserve au démarrage, dans la langue par défaut."""
+    await stock_stt_spare(stt_language_for("fr"))
+
+
+async def build_stt(stt_language: Language) -> WhisperSTTService:
+    """Service STT prêt à brancher, immédiat quand une avance est en réserve."""
+    global _stt_spare
+    service = None
+    if _stt_spare is not None and _stt_spare[0] == str(stt_language):
+        _, service = _stt_spare
+        _stt_spare = None
+    if service is None:
+        service = await _load_stt(stt_language)
+    # Reconstituer l'avance pour l'appel suivant, sans faire attendre celui-ci.
+    asyncio.create_task(stock_stt_spare(stt_language))
+    return service
 
 
 async def _speak_greeting_now(websocket, stream_sid: str, text: str, voice: str) -> bool:
@@ -182,13 +215,12 @@ async def run_call(
     )
     job_id = session.get("job_id") or job_id
 
-    # Langue de la session ("fr" | "en" | "es") : pilote la voix Piper ET la langue
-    # Whisper. STT épinglé (pas d'auto-détection) : le WhisperSTTService de Pipecat
-    # exige une langue concrète — run_stt fait assert_given(settings.language).
+    # Langue de la session ("fr" | "en" | "es") : pilote la voix Piper ET la
+    # langue Whisper (voir stt_language_for).
     language = session.get("language", "fr")
-    stt_language = {"en": Language.EN, "es": Language.ES}.get(language, Language.FR)
+    stt_language = stt_language_for(language)
 
-    # Accueil immédiat, avant que Whisper ne charge (voir _speak_greeting_now).
+    # Accueil immédiat, avant tout le reste (voir _speak_greeting_now).
     first = session.get("first_message")
     greeted = False
     if first and direction == "inbound" and stream_sid:

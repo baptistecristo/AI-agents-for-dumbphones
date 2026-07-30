@@ -107,8 +107,9 @@ docker compose up --build
 
 Le premier démarrage est long : construction de l'image de Piper depuis la
 source, téléchargement des trois voix, puis du modèle faster-whisper (~1,5 Go
-en `medium`) au premier appel. Les deux derniers atterrissent dans des volumes,
-donc une seule fois.
+en `medium`). Le runtime récupère et charge ce modèle à son démarrage, pas au
+premier appel : il répond au healthcheck pendant ce temps. Voix et modèle
+atterrissent dans des volumes, donc une seule fois.
 
 | Service | Rôle | Exposé |
 |---|---|---|
@@ -209,8 +210,13 @@ suivante, et laisse un enregistrement stéréo appelant/agent :
 docker compose exec runtime python fake_carrier.py \
     --ask "Quelle heure est-il à Tokyo ?" \
     --ask "Et quel temps fait-il à Lyon ?"
-docker compose cp runtime:/app/calls ./calls   # récupérer les WAV
+docker compose cp runtime:/tmp/fake-carrier ./calls   # récupérer les WAV
 ```
+
+Le dossier par défaut (`--out calls`) n'est pas inscriptible dans le conteneur,
+dont le système de fichiers est en lecture seule : l'outil se replie alors sur
+`/tmp/fake-carrier` et écrit le chemin retenu dans sa dernière ligne. Lancé
+depuis l'hôte, il écrit bien dans `./calls`.
 
 **`GET /demo`** — la même chose depuis un navigateur, au micro : la page
 encode le micro en µ-law et parle le protocole Twilio en JavaScript. Elle est
@@ -225,8 +231,9 @@ l'allow-list `DEMO_CALLERS`.
 
 L'appelant anonyme n'a accès qu'aux skills sans données personnelles (météo,
 heure, conversion…) : c'est le comportement normal du produit, pas une
-restriction de la démo. Premier appel lent : faster-whisper télécharge son
-modèle (~460 Mo en `small`) et Ollama charge le sien en mémoire.
+restriction de la démo. Le modèle faster-whisper est déjà chargé (le runtime
+s'en occupe à son démarrage) ; avec `LLM_PROVIDER=ollama`, le premier appel
+attend quand même qu'Ollama charge le sien en mémoire.
 
 `MAX_CALL_SECONDS` (0 = sans limite) borne chaque appel : l'agent annonce la
 fin dans la langue de la session puis raccroche, et la console l'affiche sous

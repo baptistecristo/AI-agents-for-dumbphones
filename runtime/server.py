@@ -67,7 +67,7 @@ async def lifespan(_app: FastAPI):
             )
 
     # Whisper : charger les poids maintenant, pas au décroché du premier appel
-    # (voir bot.preload_stt). En tâche de fond, à dessein — sur un conteneur
+    # (voir bot.stock_stt_spare). En tâche de fond, à dessein : sur un conteneur
     # neuf le modèle se télécharge (~1,5 Go en `medium`), et attendre ici
     # retarderait d'autant le healthcheck comme les webhooks.
     preload = asyncio.create_task(bot.preload_stt())

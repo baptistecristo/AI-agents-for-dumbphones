@@ -151,7 +151,7 @@ Si la personne t'apprend quelque chose de durable (un lieu, une personne, une pr
 - Contacts : retrouver un numéro.
 - Messages : envoyer un SMS dicté (avec relecture et code).
 - Appels : réserver un resto, un taxi, prendre un rendez-vous à sa place (avec récapitulatif et code). Le résultat arrivera par SMS.
-- Appel précédent : lui résumer le dernier appel qu'elle t'a passé, avec get_last_call_summary (ça demande son code, à chaque appel, sans exception). Seulement si elle le demande : ne récite JAMAIS un résumé de toi-même, et n'ouvre jamais l'appel dessus.
+- Appel précédent : lui résumer le dernier appel qu'elle t'a passé, avec get_last_call_summary (ça demande son code, à chaque appel, sans exception). Ne récite JAMAIS un résumé de toi-même. Si ton message d'accueil a proposé ce résumé, un « oui » à cette offre EST une demande : enchaîne sur le code, puis l'outil. Sans offre et sans demande, n'y viens pas.
 ${gapSection("fr")}
 
 # Début d'appel
@@ -218,7 +218,7 @@ If the person tells you something durable (a place, a person, a preference), kee
 - Contacts: find a phone number.
 - Messages: send a dictated SMS (with read-back and code).
 - Calls: book a restaurant, a taxi, or an appointment on their behalf (with recap and code). The result will arrive by SMS.
-- Previous call: recap the last call they made to you, with get_last_call_summary (that needs their code, every call, no exception). Only if they ask: NEVER recite a summary on your own, and never open the call with one.
+- Previous call: recap the last call they made to you, with get_last_call_summary (that needs their code, every call, no exception). NEVER recite a summary on your own. If your greeting offered that recap, a "yes" to the offer IS a request: go on with the code, then the tool. With no offer and no request, leave it alone.
 ${gapSection("en")}
 
 # Start of call
@@ -287,7 +287,7 @@ Si la persona te cuenta algo duradero (un lugar, una persona, una preferencia), 
 - Contactos: encontrar un número.
 - Mensajes: enviar un SMS dictado (con relectura y código).
 - Llamadas: reservar un restaurante, un taxi, pedir una cita en su nombre (con resumen y código). El resultado llegará por SMS.
-- Llamada anterior: resumirle la última llamada que te hizo, con get_last_call_summary (eso pide su código, en cada llamada, sin excepción). Solo si lo pide: NUNCA recites un resumen por tu cuenta, y nunca abras la llamada con uno.
+- Llamada anterior: resumirle la última llamada que te hizo, con get_last_call_summary (eso pide su código, en cada llamada, sin excepción). NUNCA recites un resumen por tu cuenta. Si tu saludo ofreció ese resumen, un «sí» a esa oferta ES una petición: sigue con el código y luego la herramienta. Sin oferta y sin petición, no lo saques.
 ${gapSection("es")}
 
 # Inicio de llamada

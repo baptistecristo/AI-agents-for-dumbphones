@@ -167,11 +167,25 @@ describe("inboundFirstMessage — l'offre de résumé", () => {
 // Le prompt annonce la capacité, et interdit de la déclencher tout seul.
 describe("inboundSystemPrompt — le résumé se demande", () => {
   it("names the tool and forbids reciting a summary unprompted", () => {
-    expect(inboundSystemPrompt(ctx({ language: "fr" }))).toContain("ne récite JAMAIS un résumé de toi-même");
+    expect(inboundSystemPrompt(ctx({ language: "fr" }))).toContain("Ne récite JAMAIS un résumé de toi-même");
     expect(inboundSystemPrompt(ctx({ language: "en" }))).toContain("NEVER recite a summary on your own");
     expect(inboundSystemPrompt(ctx({ language: "es" }))).toContain("NUNCA recites un resumen por tu cuenta");
     for (const language of ["fr", "en", "es"] as const)
       expect(inboundSystemPrompt(ctx({ language }))).toContain("get_last_call_summary");
+  });
+
+  // Le prompt disait aussi « n'ouvre jamais l'appel dessus » — alors que c'est
+  // exactement ce que fait notre propre accueil quand recapOffer est vrai. Le
+  // modèle voyait donc son premier message enfreindre sa consigne, et rien ne
+  // lui disait qu'un « oui » à cette offre valait demande : il pouvait refuser
+  // ce qu'il venait de proposer.
+  it("treats a yes to the greeting's own offer as a request", () => {
+    for (const language of ["fr", "en", "es"] as const)
+      expect(inboundSystemPrompt(ctx({ language }))).not.toContain("jamais l'appel dessus");
+
+    expect(inboundSystemPrompt(ctx({ language: "fr" }))).toContain("EST une demande");
+    expect(inboundSystemPrompt(ctx({ language: "en" }))).toContain("IS a request");
+    expect(inboundSystemPrompt(ctx({ language: "es" }))).toContain("ES una petición");
   });
 });
 
