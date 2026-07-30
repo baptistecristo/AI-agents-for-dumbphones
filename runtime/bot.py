@@ -25,7 +25,6 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
-from pipecat.services.whisper.stt import WhisperSTTService
 from pipecat.transcriptions.language import Language
 from pipecat.transports.websocket.fastapi import (
     FastAPIWebsocketParams,
@@ -38,6 +37,7 @@ import config
 import tools as tool_defs
 import twilio_media
 from piper_http import PiperHttpTTSService, speakable_text
+from whisper_stt import PhoneWhisperSTTService
 
 logger.remove()
 # LOG_LEVEL=DEBUG fait parler tout Pipecat : VAD, transcriptions, trames LLM.
@@ -100,21 +100,21 @@ def _transcript_from(context: LLMContext) -> str:
 # Le service n'est jamais partagé entre deux appels : un service Pipecat est
 # attaché à son pipeline (gestionnaires d'événements, tâches, parent). L'avance
 # est donnée à un appel et un seul, puis remplacée.
-_stt_spare: tuple[str, WhisperSTTService] | None = None
+_stt_spare: tuple[str, PhoneWhisperSTTService] | None = None
 _stt_load_lock = asyncio.Lock()
 
 
-def _build_stt(stt_language: Language) -> WhisperSTTService:
-    return WhisperSTTService(
+def _build_stt(stt_language: Language) -> PhoneWhisperSTTService:
+    return PhoneWhisperSTTService(
         device=config.WHISPER_DEVICE,
-        settings=WhisperSTTService.Settings(
+        settings=PhoneWhisperSTTService.Settings(
             model=config.WHISPER_MODEL,
             language=stt_language,
         ),
     )
 
 
-async def _load_stt(stt_language: Language) -> WhisperSTTService:
+async def _load_stt(stt_language: Language) -> PhoneWhisperSTTService:
     """Charge un service hors de la boucle asyncio, un seul à la fois.
 
     Dans un thread, pour que la boucle continue de servir le websocket pendant
@@ -155,18 +155,22 @@ async def preload_stt() -> None:
     await stock_stt_spare(stt_language_for("fr"))
 
 
-async def build_stt(stt_language: Language) -> WhisperSTTService:
-    """Service STT prêt à brancher, immédiat quand une avance est en réserve."""
+async def build_stt(stt_language: Language) -> PhoneWhisperSTTService:
+    """Service STT prêt à brancher, immédiat quand une avance est en réserve.
+
+    Ne reconstitue PAS l'avance ici : charger un modèle prend plusieurs secondes
+    de CPU à plein régime, et le faire pendant l'appel qui vient de commencer
+    prive de temps machine le traitement temps réel de l'audio — l'agent devient
+    sourd par intermittence, sans rien dans les logs puisque le VAD lui-même ne
+    voit plus passer les trames. Le réapprovisionnement se fait à la fin de
+    l'appel (run_call), quand la ligne est libre.
+    """
     global _stt_spare
-    service = None
     if _stt_spare is not None and _stt_spare[0] == str(stt_language):
         _, service = _stt_spare
         _stt_spare = None
-    if service is None:
-        service = await _load_stt(stt_language)
-    # Reconstituer l'avance pour l'appel suivant, sans faire attendre celui-ci.
-    asyncio.create_task(stock_stt_spare(stt_language))
-    return service
+        return service
+    return await _load_stt(stt_language)
 
 
 async def _speak_greeting_now(websocket, stream_sid: str, text: str, voice: str) -> bool:
@@ -340,3 +344,6 @@ async def run_call(
             await api_client.end_call(call_id, _transcript_from(context), "hangup", job_id)
         except Exception as err:  # noqa: BLE001
             logger.error(f"end_call a échoué pour {call_id}: {err}")
+        # 4. Ligne libre : c'est le moment de recharger l'avance pour le
+        # prochain appel (voir build_stt), pas pendant qu'on parle à quelqu'un.
+        asyncio.create_task(stock_stt_spare(stt_language))

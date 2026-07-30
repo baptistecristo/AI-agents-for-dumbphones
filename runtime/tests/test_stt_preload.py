@@ -32,18 +32,6 @@ class SttLoadTests(unittest.IsolatedAsyncioTestCase):
         bot._build_stt = self._original_build
         bot._stt_spare = None
 
-    @staticmethod
-    async def _settle(language: Language) -> None:
-        """Attend que la tâche de fond ait remis une avance dans CETTE langue.
-
-        Pas « une avance quelconque » : après un appel dans une autre langue,
-        l'ancienne est encore là et le test passerait sans rien attendre.
-        """
-        for _ in range(100):
-            await asyncio.sleep(0.02)
-            if bot._stt_spare is not None and bot._stt_spare[0] == str(language):
-                return
-
     async def test_the_loop_keeps_running_while_the_model_loads(self) -> None:
         bot._build_stt = lambda _language: time.sleep(_LOAD_SECONDS) or object()
 
@@ -91,20 +79,43 @@ class SttLoadTests(unittest.IsolatedAsyncioTestCase):
         await bot.preload_stt()
 
         first = await bot.build_stt(Language.FR)
-        await self._settle(Language.FR)
+        await bot.stock_stt_spare(Language.FR)  # ce que fait la fin d'appel
         second = await bot.build_stt(Language.FR)
 
         # Un service Pipecat est attaché à son pipeline : le même objet dans
         # deux appels, ce sont deux pipelines qui se marchent dessus.
         self.assertIsNot(first, second)
 
+    # Charger un modèle, c'est plusieurs secondes de CPU à plein régime. Le
+    # faire pendant l'appel qui vient de décrocher affamait le traitement
+    # temps réel : l'agent devenait sourd par intermittence, sans une ligne
+    # dans les logs puisque le VAD ne voyait plus passer les trames.
+    async def test_taking_the_spare_does_not_reload_during_the_call(self) -> None:
+        loads = 0
+
+        def counted_load(_language: Language) -> object:
+            nonlocal loads
+            loads += 1
+            return object()
+
+        bot._build_stt = counted_load
+        await bot.preload_stt()
+        self.assertEqual(1, loads)
+
+        await bot.build_stt(Language.FR)
+        await asyncio.sleep(0.1)  # laisse tourner une éventuelle tâche de fond
+        self.assertEqual(1, loads, "un modèle a été chargé pendant l'appel")
+        self.assertIsNone(bot._stt_spare)
+
     async def test_the_spare_follows_the_language_and_stays_alone(self) -> None:
         bot._build_stt = lambda _language: time.sleep(0.05) or object()
         await bot.preload_stt()
         self.assertEqual(str(Language.FR), bot._stt_spare[0])
 
+        # Appel en espagnol : l'avance française ne lui sert à rien, il charge
+        # la sienne, et la fin d'appel remet l'avance dans SA langue.
         await bot.build_stt(Language.ES)
-        await self._settle(Language.ES)
+        await bot.stock_stt_spare(Language.ES)
 
         # Une seule avance à la fois : trois modèles `medium` en réserve, ce
         # sont 4,5 Go sur la machine d'un particulier.
