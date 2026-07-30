@@ -35,13 +35,30 @@ TELNYX_API_KEY = os.getenv("TELNYX_API_KEY", "")
 # Voir stt.py pour ce que chacun coûte et rapporte sur une ligne à 8 kHz.
 STT_PROVIDER = env("STT_PROVIDER", "whisper")
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
-# nova-2 et pas nova-3 : nova-3 ne couvre pas encore le français en streaming.
-# `nova-2-phonecall` est la variante réglée pour le 8 kHz, en anglais seulement.
-DEEPGRAM_MODEL = env("DEEPGRAM_MODEL", "nova-2")
+# nova-3 : il couvre le français en streaming, et surtout c'est le seul à
+# accepter `keyterm` (pondération de vocabulaire à la volée, cf. vocabulary.py).
+# Le `keywords` de nova-2 fait rejeter toute la configuration sur un accent.
+DEEPGRAM_MODEL = env("DEEPGRAM_MODEL", "nova-3")
+# Silence (ms) après lequel Deepgram déclare le tour fini. 400 ms laisse
+# respirer sans faire traîner ; 0 ou False désactive.
+DEEPGRAM_ENDPOINTING = int(env("DEEPGRAM_ENDPOINTING", "400"))
 
 # STT local (faster-whisper) : tiny/base/small/medium/large — medium = bon FR sur CPU
 WHISPER_MODEL = env("WHISPER_MODEL", "medium")
 WHISPER_DEVICE = env("WHISPER_DEVICE", "auto")  # cpu | cuda | auto
+# Précision du calcul. int8 fait gagner ~1 s par tour et le paie en mots :
+# mesuré sur le banc, « Quel temps fait-il à Lyon » devient « Quelle heure
+# est-il à Lyon » ou « Qu'en fait-il à Lyon », faisceau large ou non. Une
+# transcription fausse rendue une seconde plus tôt ne vaut rien, et c'est
+# précisément le défaut qu'on cherche à corriger : on reste en float32.
+# La vraie réponse à la latence de Whisper est STT_PROVIDER=deepgram.
+WHISPER_COMPUTE_TYPE = env("WHISPER_COMPUTE_TYPE", "default")
+# Largeur du faisceau de décodage. Le glouton (1) fait gagner ~0,5 s par tour
+# et le paie en mots : sur le banc, « Quel temps fait-il à Lyon » est devenu
+# « Qu'est-ce qu'il a fait à Lyon ». C'est exactement le défaut qu'on cherchait
+# à corriger, donc on garde le faisceau de faster-whisper. Le gain de vitesse
+# vient de int8, qui lui ne coûte rien de visible.
+WHISPER_BEAM_SIZE = int(env("WHISPER_BEAM_SIZE", "5"))
 
 # TTS (Piper) : une voix par langue. La langue de la session (renvoyée par
 # /api/runtime/session) choisit la voix.

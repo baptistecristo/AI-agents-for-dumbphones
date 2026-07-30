@@ -26,6 +26,7 @@ from loguru import logger
 from pipecat.transcriptions.language import Language
 
 import config
+import vocabulary
 from whisper_stt import PhoneWhisperSTTService
 
 WHISPER = "whisper"
@@ -82,11 +83,17 @@ def build_service(stt_language: Language):
                 # Résultats partiels : c'est ce qui permet au reste du pipeline
                 # de savoir qu'on parle avant qu'on ait fini.
                 interim_results=True,
+                # Silence qui clôt le tour, en millisecondes.
+                endpointing=config.DEEPGRAM_ENDPOINTING,
+                # Le levier qui compte : pondérer notre vocabulaire pendant le
+                # décodage (villes, verbes d'outils). Voir vocabulary.py.
+                keyterm=vocabulary.terms_for(str(stt_language)),
             ),
         )
 
     return PhoneWhisperSTTService(
         device=config.WHISPER_DEVICE,
+        compute_type=config.WHISPER_COMPUTE_TYPE,
         settings=PhoneWhisperSTTService.Settings(
             model=config.WHISPER_MODEL,
             language=stt_language,

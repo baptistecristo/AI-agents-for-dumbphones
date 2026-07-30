@@ -377,8 +377,15 @@ class PiperHttpTTSService(TTSService):
     async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame, None]:
         """Synthétise `text` et émet les trames audio correspondantes."""
         text = speakable_text(text)
-        if not text:
-            # Un segment fait uniquement d'émojis (« 👋 ») : rien à dire.
+        if not any(char.isalnum() for char in text):
+            # Rien à prononcer : ni lettre ni chiffre. Deux cas réels, et le
+            # second est arrivé en plein appel.
+            #   - un segment fait uniquement d'émojis (« 👋 ») ;
+            #   - un segment de ponctuation seule. Le découpeur de phrases coupe
+            #     « entre... vingt-trois » en trois morceaux, dont un « . » isolé.
+            #     Piper répond HTTP 500 dessus, ce qui posait une ErrorFrame au
+            #     milieu de la réponse. Tester `not text` ne l'attrapait pas :
+            #     un point n'est pas une chaîne vide.
             yield TTSStoppedFrame(context_id=context_id)
             return
         logger.debug(f"{self}: synthèse [{text}]")

@@ -1,10 +1,14 @@
-# Chargement du modèle Whisper : hors boucle asyncio, sérialisé, en avance,
-# jamais fatal.
+# Le modèle Whisper est chargé UNE fois pour tout le processus.
 #
-# Le bug corrigé ici : WhisperSTTService charge ses poids dans __init__, en
-# bloquant, et ces ~4 s tombaient entre l'accueil et le démarrage du pipeline.
-# L'appelant répondait pendant ce trou : sa première phrase arrivait avant que
-# le transport n'écoute, et se perdait sans laisser de trace dans les logs.
+# Ce qu'on protège ici, c'est la correction d'une panne réelle du 30/07/2026.
+# Il y avait une mécanique d'« avance » qui rechargeait un modèle entre deux
+# appels. Chaque chargement, ce sont quatre secondes de CPU à plein régime : sur
+# un appel en cours, ça affame le traitement temps réel de l'audio. Selon le
+# moment, la ligne rendait un mot faux (« à Lyon » -> « l'avion ») ou devenait
+# complètement sourde, sans une ligne d'erreur nulle part.
+#
+# Le modèle ne dépend pas de la langue (`transcribe(language=...)` la reçoit, pas
+# le constructeur), donc un seul suffit et il n'y a jamais lieu d'en recharger un.
 
 import asyncio
 import os
@@ -19,22 +23,64 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pipecat.transcriptions.language import Language  # noqa: E402
 
 import bot  # noqa: E402
+import stt  # noqa: E402
+import whisper_stt  # noqa: E402
 
-_LOAD_SECONDS = 0.3
 
-
-class SttLoadTests(unittest.IsolatedAsyncioTestCase):
+class SharedModelTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._original_build = bot._build_stt
-        bot._stt_spare = None
+        whisper_stt._shared_model = None
+        whisper_stt._shared_key = None
+        self._loads = 0
+
+        class _FakeModel:
+            pass
+
+        def counted(name, device=None, compute_type=None):
+            self._loads += 1
+            time.sleep(0.05)
+            return _FakeModel()
+
+        self._original = whisper_stt.WhisperModel
+        whisper_stt.WhisperModel = counted
 
     def tearDown(self) -> None:
-        bot._build_stt = self._original_build
-        bot._stt_spare = None
+        whisper_stt.WhisperModel = self._original
+        whisper_stt._shared_model = None
+        whisper_stt._shared_key = None
+
+    def test_the_model_is_loaded_once_and_reused(self) -> None:
+        first = whisper_stt.shared_model("small", "auto", "int8")
+        second = whisper_stt.shared_model("small", "auto", "int8")
+
+        self.assertIs(first, second)
+        self.assertEqual(1, self._loads, "le modèle a été rechargé alors qu'il était déjà là")
+
+    def test_languages_share_the_same_model(self) -> None:
+        # `WhisperModel` ne connaît pas la langue : en tenir un par langue, ce
+        # serait trois fois la mémoire pour trois fois le même objet.
+        whisper_stt.shared_model("small", "auto", "int8")
+        whisper_stt.shared_model("small", "auto", "int8")
+        self.assertEqual(1, self._loads)
+
+    def test_changing_the_model_reloads(self) -> None:
+        whisper_stt.shared_model("small", "auto", "int8")
+        whisper_stt.shared_model("medium", "auto", "int8")
+        self.assertEqual(2, self._loads)
+
+
+class PreloadTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self._provider = stt.config.STT_PROVIDER
+        self._key = stt.config.DEEPGRAM_API_KEY
+
+    def tearDown(self) -> None:
+        stt.config.STT_PROVIDER = self._provider
+        stt.config.DEEPGRAM_API_KEY = self._key
 
     async def test_the_loop_keeps_running_while_the_model_loads(self) -> None:
-        bot._build_stt = lambda _language: time.sleep(_LOAD_SECONDS) or object()
-
+        original = stt.build_service
+        stt.build_service = lambda _language: time.sleep(0.3) or object()
         ticks = 0
 
         async def tick() -> None:
@@ -48,106 +94,42 @@ class SttLoadTests(unittest.IsolatedAsyncioTestCase):
             await bot.build_stt(Language.FR)
         finally:
             ticker.cancel()
+            stt.build_service = original
 
-        # Chargement bloquant sur la boucle : le compteur resterait à 0.
-        self.assertGreater(
-            ticks, 5, "la boucle asyncio est restée bloquée pendant le chargement du modèle"
-        )
+        # Un chargement bloquant sur la boucle laisserait le compteur à 0, et
+        # le websocket sans personne pour le lire.
+        self.assertGreater(ticks, 5, "la boucle est restée bloquée pendant le chargement")
 
-    async def test_a_call_gets_the_spare_without_waiting(self) -> None:
-        loads = 0
+    async def test_deepgram_has_nothing_to_preload(self) -> None:
+        stt.config.STT_PROVIDER = "deepgram"
+        stt.config.DEEPGRAM_API_KEY = "dg-not-a-real-key"
+        called = False
+        original = stt.build_service
 
-        def slow_load(_language: Language) -> object:
-            nonlocal loads
-            loads += 1
-            time.sleep(_LOAD_SECONDS)
+        def spy(_language):
+            nonlocal called
+            called = True
             return object()
 
-        bot._build_stt = slow_load
-        await bot.preload_stt()
-        self.assertEqual(1, loads, "le préchargement n'a pas chargé le modèle")
-
-        # C'est tout l'objet de l'avance : l'appel ne doit rien attendre, sinon
-        # le trou se rouvre entre l'accueil et le démarrage du pipeline.
-        started = time.monotonic()
-        service = await bot.build_stt(Language.FR)
-        self.assertLess(time.monotonic() - started, _LOAD_SECONDS)
-        self.assertIsNotNone(service)
-
-    async def test_the_spare_is_never_handed_to_two_calls(self) -> None:
-        bot._build_stt = lambda _language: time.sleep(0.05) or object()
-        await bot.preload_stt()
-
-        first = await bot.build_stt(Language.FR)
-        await bot.stock_stt_spare(Language.FR)  # ce que fait la fin d'appel
-        second = await bot.build_stt(Language.FR)
-
-        # Un service Pipecat est attaché à son pipeline : le même objet dans
-        # deux appels, ce sont deux pipelines qui se marchent dessus.
-        self.assertIsNot(first, second)
-
-    # Charger un modèle, c'est plusieurs secondes de CPU à plein régime. Le
-    # faire pendant l'appel qui vient de décrocher affamait le traitement
-    # temps réel : l'agent devenait sourd par intermittence, sans une ligne
-    # dans les logs puisque le VAD ne voyait plus passer les trames.
-    async def test_taking_the_spare_does_not_reload_during_the_call(self) -> None:
-        loads = 0
-
-        def counted_load(_language: Language) -> object:
-            nonlocal loads
-            loads += 1
-            return object()
-
-        bot._build_stt = counted_load
-        await bot.preload_stt()
-        self.assertEqual(1, loads)
-
-        await bot.build_stt(Language.FR)
-        await asyncio.sleep(0.1)  # laisse tourner une éventuelle tâche de fond
-        self.assertEqual(1, loads, "un modèle a été chargé pendant l'appel")
-        self.assertIsNone(bot._stt_spare)
-
-    async def test_the_spare_follows_the_language_and_stays_alone(self) -> None:
-        bot._build_stt = lambda _language: time.sleep(0.05) or object()
-        await bot.preload_stt()
-        self.assertEqual(str(Language.FR), bot._stt_spare[0])
-
-        # Appel en espagnol : l'avance française ne lui sert à rien, il charge
-        # la sienne, et la fin d'appel remet l'avance dans SA langue.
-        await bot.build_stt(Language.ES)
-        await bot.stock_stt_spare(Language.ES)
-
-        # Une seule avance à la fois : trois modèles `medium` en réserve, ce
-        # sont 4,5 Go sur la machine d'un particulier.
-        self.assertEqual(str(Language.ES), bot._stt_spare[0])
-
-    async def test_two_calls_do_not_load_two_models_at_once(self) -> None:
-        live = 0
-        peak = 0
-
-        def counted_load(_language: Language) -> object:
-            nonlocal live, peak
-            live += 1
-            peak = max(peak, live)
-            time.sleep(0.1)
-            live -= 1
-            return object()
-
-        bot._build_stt = counted_load
-        await asyncio.gather(bot.build_stt(Language.FR), bot.build_stt(Language.EN))
-
-        # Deux modèles `medium` chargés en parallèle, ce sont 3 Go de RSS.
-        self.assertEqual(peak, 1, "deux chargements de modèle se sont chevauchés")
+        stt.build_service = spy
+        try:
+            await bot.preload_stt()
+        finally:
+            stt.build_service = original
+        self.assertFalse(called, "un service a été construit alors qu'il n'y a rien à charger")
 
     async def test_preload_failure_does_not_stop_the_runtime(self) -> None:
-        def refuse(_language: Language) -> object:
+        original = stt.build_service
+
+        def refuse(_language):
             raise RuntimeError("pas de modèle en cache, pas de réseau")
 
-        bot._build_stt = refuse
-        # Sans réseau ni cache, le runtime doit démarrer quand même : l'appel
-        # paiera le chargement, comme avant l'avance.
-        await bot.preload_stt()
-        self.assertIsNone(bot._stt_spare)
+        stt.build_service = refuse
+        try:
+            # Sans réseau ni cache, le runtime doit démarrer quand même.
+            await bot.preload_stt()
+        finally:
+            stt.build_service = original
 
 
 if __name__ == "__main__":

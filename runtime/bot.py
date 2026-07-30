@@ -17,6 +17,7 @@ import sys
 import httpx
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import EndTaskFrame, TTSSpeakFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -53,6 +54,33 @@ _TIMEOUT_GOODBYE = {
 }
 _TIMEOUT_GOODBYE_SECONDS = 8  # marge pour que l'annonce parte sur la ligne avant la coupure
 
+# Silence, côté appelant, après que l'agent a fini de parler. 12 s : assez long
+# pour ne pas bousculer quelqu'un qui réfléchit, assez court pour qu'on ne
+# croie pas la ligne coupée. Sous ~8 s on relance des gens qui cherchent leurs
+# mots. Repris du hook `customer.speech.timeout` de l'agent Alain.
+IDLE_RELANCE_SECONDS = 12.0
+# Deux relances au maximum, puis on se tait : au-delà, insister sur une ligne
+# sans réponse c'est du harcèlement, et MAX_CALL_SECONDS finira l'appel.
+IDLE_RELANCE_MAX = 2
+_IDLE_RELANCES = {
+    "fr": ["Je suis toujours là, prenez votre temps.", "Je vous écoute, rien ne presse."],
+    "en": ["I'm still here, take your time.", "I'm listening, there's no rush."],
+    "es": ["Sigo aquí, tómate tu tiempo.", "Te escucho, no hay prisa."],
+}
+
+# Dit pendant qu'un outil travaille. Le modèle annonce parfois lui-même qu'il
+# cherche, parfois non, et le blanc dure alors tout l'appel réseau. Une ligne
+# muette pendant trois secondes se lit comme un appel coupé.
+_THINKING = {
+    "fr": "Un instant, je regarde.",
+    "en": "One moment, let me check.",
+    "es": "Un momento, lo miro.",
+}
+# Outils qui ne partent sur aucun réseau : annoncer une attente qui n'existe
+# pas est pire que le silence. end_call en tête — dire « un instant, je
+# regarde » juste avant de raccrocher s'entend comme un bug.
+_SILENT_TOOLS = frozenset({"end_call"})
+
 
 def _build_llm():
     """Cerveau de l'agent, au choix (LLM_PROVIDER) — interface unique OpenAI-compatible."""
@@ -85,80 +113,31 @@ def _transcript_from(context: LLMContext) -> str:
     return "\n".join(lines)
 
 
-# Whisper charge ses poids dans __init__ (WhisperSTTService._load), et il le fait
-# en bloquant : ~4 s ici, cache disque chaud compris. Ces 4 s tombaient entre
-# l'accueil et le démarrage du pipeline, c'est-à-dire exactement au moment où
-# l'appelant répond — sa première phrase arrivait avant que le transport n'écoute
-# et se perdait, sans la moindre trace dans les logs.
-#
-# On tient donc une AVANCE : un service déjà chargé, prêt à être branché. L'appel
-# la prend (immédiat) et on en reconstitue une pour le suivant, en tâche de fond.
-# Une seule à la fois, pour la dernière langue servie : un modèle `medium` pèse
-# ~1,5 Go, en garder un par langue « au cas où » n'a pas de sens sur la machine
-# d'un particulier.
-#
-# Le service n'est jamais partagé entre deux appels : un service Pipecat est
-# attaché à son pipeline (gestionnaires d'événements, tâches, parent). L'avance
-# est donnée à un appel et un seul, puis remplacée.
-_stt_spare: tuple[str, object] | None = None
-_stt_load_lock = asyncio.Lock()
-
-
-def _build_stt(stt_language: Language):
-    return stt_provider.build_service(stt_language)
-
-
-async def _load_stt(stt_language: Language):
-    """Charge un service hors de la boucle asyncio, un seul à la fois.
-
-    Dans un thread, pour que la boucle continue de servir le websocket pendant
-    le chargement. Sérialisé, parce que deux modèles chargés en parallèle,
-    ce sont 3 Go de RSS pour un seul résultat utile.
-    """
-    async with _stt_load_lock:
-        return await asyncio.to_thread(_build_stt, stt_language)
-
-
-async def stock_stt_spare(stt_language: Language) -> None:
-    """Remet une avance en réserve, si elle n'y est pas déjà.
-
-    Jamais fatal : sans réseau ni modèle en cache, le runtime doit démarrer et
-    tourner quand même. L'appel paiera alors le chargement, comme avant.
-    """
-    global _stt_spare
-    # Deepgram n'a pas de poids à charger : rien à tenir en réserve.
-    if not stt_provider.loads_a_model():
-        return
-    if _stt_spare is not None and _stt_spare[0] == str(stt_language):
-        return
-    try:
-        _stt_spare = (str(stt_language), await _load_stt(stt_language))
-        logger.info(f"Modèle Whisper « {config.WHISPER_MODEL} » prêt ({stt_language}).")
-    except Exception as err:  # noqa: BLE001
-        logger.warning(f"Chargement Whisper impossible ({err}) : l'appel le chargera lui-même.")
-
-
-async def preload_stt() -> None:
-    """Met une avance en réserve au démarrage, dans la langue par défaut."""
-    await stock_stt_spare(stt_provider.stt_language_for("fr"))
+# Construire un service STT est immédiat : le modèle Whisper est partagé par
+# tout le processus (whisper_stt.shared_model), et Deepgram n'a rien à charger.
+# Il y avait ici une mécanique d'« avance » qui rechargeait un modèle entre les
+# appels ; elle causait exactement la panne qu'elle prétendait éviter, en
+# consommant le CPU dont l'audio en cours avait besoin. Supprimée.
 
 
 async def build_stt(stt_language: Language):
-    """Service STT prêt à brancher, immédiat quand une avance est en réserve.
+    """Service STT prêt à brancher dans le pipeline."""
+    return await asyncio.to_thread(stt_provider.build_service, stt_language)
 
-    Ne reconstitue PAS l'avance ici : charger un modèle prend plusieurs secondes
-    de CPU à plein régime, et le faire pendant l'appel qui vient de commencer
-    prive de temps machine le traitement temps réel de l'audio — l'agent devient
-    sourd par intermittence, sans rien dans les logs puisque le VAD lui-même ne
-    voit plus passer les trames. Le réapprovisionnement se fait à la fin de
-    l'appel (run_call), quand la ligne est libre.
+
+async def preload_stt() -> None:
+    """Charge le modèle au démarrage, pour que le premier appel n'attende pas.
+
+    Jamais fatal : sans réseau ni modèle en cache, le runtime doit démarrer
+    quand même. Le premier appel paiera alors le chargement.
     """
-    global _stt_spare
-    if _stt_spare is not None and _stt_spare[0] == str(stt_language):
-        _, service = _stt_spare
-        _stt_spare = None
-        return service
-    return await _load_stt(stt_language)
+    if not stt_provider.loads_a_model():
+        return
+    try:
+        await build_stt(stt_provider.stt_language_for("fr"))
+        logger.info(f"Modèle Whisper « {config.WHISPER_MODEL} » prêt.")
+    except Exception as err:  # noqa: BLE001
+        logger.warning(f"Chargement Whisper impossible ({err}) : l'appel le chargera lui-même.")
 
 
 async def _speak_greeting_now(websocket, stream_sid: str, text: str, voice: str) -> bool:
@@ -263,7 +242,35 @@ async def run_call(
     )
     aggregators = LLMContextAggregatorPair(
         context,
-        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
+        user_params=LLMUserAggregatorParams(
+            vad_analyzer=SileroVADAnalyzer(
+                params=VADParams(
+                    # min_volume est un ET avec la confiance Silero : sous ce
+                    # seuil, la trame est jetée quoi que Silero en pense, et
+                    # SANS une ligne de log. Un micro discret rendait donc
+                    # l'agent sourd sans laisser de trace. On laisse Silero
+                    # décider seul, c'est son métier.
+                    min_volume=0.0,
+                    # Le début de tour déclenche l'interruption immédiatement,
+                    # sans compte de mots ni transcription : 0,2 s de bruit
+                    # suffisaient à couper l'agent. 0,3 s et une confiance plus
+                    # haute écartent la toux et la porte, et coûtent 100 ms sur
+                    # une vraie interruption.
+                    start_secs=0.3,
+                    confidence=0.8,
+                    # N'ARRÊTE PAS le tour de parole : c'est le modèle
+                    # smart-turn qui en décide. Ne fait que clore un SEGMENT
+                    # audio, et chaque segment coûte un décodage Whisper entier.
+                    # Doubler ce délai, c'est moitié moins de décodages sur
+                    # quelqu'un qui hésite.
+                    stop_secs=0.4,
+                ),
+            ),
+            # Silence après le tour de l'agent : au-delà, il relance au lieu de
+            # laisser une ligne morte. Sur un téléphone sans écran, un blanc ne
+            # se distingue pas d'un appel coupé.
+            user_idle_timeout=IDLE_RELANCE_SECONDS,
+        ),
     )
 
     pipeline = Pipeline(
@@ -281,7 +288,10 @@ async def run_call(
     worker = PipelineWorker(
         pipeline,
         name=f"call-{call_id[:8]}",
-        params=PipelineParams(enable_metrics=False),
+        # Métriques ON : sans elles, on ne peut pas dire si l'attente vient de
+        # Whisper, du LLM ou de Piper, et on règle à l'aveugle. Les deux services
+        # locaux savent les produire (can_generate_metrics), ça ne coûte que du log.
+        params=PipelineParams(enable_metrics=True),
     )
     runner = WorkerRunner(handle_sigint=False)
 
@@ -289,6 +299,33 @@ async def run_call(
         await worker.queue_frame(EndTaskFrame())
 
     llm.register_function(None, tool_defs.make_tool_handler(call_id, job_id, hangup))
+
+    @llm.event_handler("on_function_calls_started")
+    async def on_function_calls_started(_service, function_calls) -> None:
+        # Pas de mot d'attente pour ce qui ne fait rien attendre. Vu en test :
+        # « Un instant, je regarde. » juste avant de raccrocher sur end_call.
+        names = {getattr(call, "function_name", "") for call in function_calls or []}
+        if not names - _SILENT_TOOLS:
+            return
+        await worker.queue_frames([TTSSpeakFrame(_THINKING.get(language, _THINKING["fr"]))])
+
+    # Relance sur silence : bornée, et remise à zéro dès que l'appelant reparle,
+    # sinon l'agent répète sa relance à quelqu'un qui a simplement raccroché.
+    idle_relances = 0
+
+    @aggregators.user().event_handler("on_user_turn_idle")
+    async def on_user_turn_idle(_aggregator) -> None:
+        nonlocal idle_relances
+        if idle_relances >= IDLE_RELANCE_MAX:
+            return
+        phrases = _IDLE_RELANCES.get(language, _IDLE_RELANCES["fr"])
+        await worker.queue_frames([TTSSpeakFrame(phrases[idle_relances % len(phrases)])])
+        idle_relances += 1
+
+    @aggregators.user().event_handler("on_user_turn_stopped")
+    async def on_user_turn_stopped(_aggregator, *_args) -> None:
+        nonlocal idle_relances
+        idle_relances = 0
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(_transport, _client) -> None:
@@ -332,6 +369,3 @@ async def run_call(
             await api_client.end_call(call_id, _transcript_from(context), "hangup", job_id)
         except Exception as err:  # noqa: BLE001
             logger.error(f"end_call a échoué pour {call_id}: {err}")
-        # 4. Ligne libre : c'est le moment de recharger l'avance pour le
-        # prochain appel (voir build_stt), pas pendant qu'on parle à quelqu'un.
-        asyncio.create_task(stock_stt_spare(stt_language))
