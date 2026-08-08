@@ -37,6 +37,8 @@ export type ConnexionCopy = {
   // Note SafeLinks : trois recours possibles selon la config déployée (bouton
   // OAuth actif, code à 6 chiffres, ou lien magique seul).
   outlookNote: { buttons: string; code: string; linkOnly: string };
+  // Sous la page : la porte sans e-mail, vers la démo aux données fictives.
+  demo: { lead: string; link: string };
   bientot: { fallbackName: string; codeName: string; body: string; back: string };
 };
 
@@ -79,6 +81,7 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
       linkOnly:
         "L'e-mail n'arrive pas, ou le lien indique « expiré » ? Regarde dans les indésirables. Certaines messageries pro (Outlook…) ouvrent le lien à ta place et le grillent : essaie alors avec une adresse perso (Gmail…).",
     },
+    demo: { lead: "Envie de voir d'abord ? ", link: "Explore la démo du tableau de bord" },
     bientot: {
       fallbackName: "Cette connexion",
       codeName: "La connexion par code à 6 chiffres",
@@ -124,6 +127,7 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
       linkOnly:
         "Email not arriving, or the link says it expired? Check your spam folder. Some work mail services (Outlook…) open the link for you and burn it: if so, try a personal address (Gmail…) instead.",
     },
+    demo: { lead: "Want a look first? ", link: "Explore the dashboard demo" },
     bientot: {
       fallbackName: "This sign-in method",
       codeName: "Signing in with a 6-digit code",
@@ -169,6 +173,7 @@ export const CONNEXION: Record<Language, ConnexionCopy> = {
       linkOnly:
         "¿No llega el correo, o el enlace dice « caducado »? Mira en la carpeta de spam. Algunas cuentas de correo profesionales (Outlook…) abren el enlace por ti y lo inutilizan: en ese caso, prueba con una dirección personal (Gmail…).",
     },
+    demo: { lead: "¿Quieres verlo antes? ", link: "Explora la demo del panel" },
     bientot: {
       fallbackName: "Este método de conexión",
       codeName: "La conexión con código de 6 cifras",

@@ -299,6 +299,13 @@ export function ConnexionForm({ linkExpired, lang }: { linkExpired: boolean; lan
             ? tr.outlookNote.code
             : tr.outlookNote.linkOnly}
       </p>
+
+      <p className="mt-4 text-center text-sm text-muted">
+        {tr.demo.lead}
+        <a href="/demo" className="font-medium text-clay underline-offset-2 transition-colors hover:underline">
+          {tr.demo.link}
+        </a>
+      </p>
     </main>
   );
 }

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/baptistecristo/AI-agents-for-dumbphones/actions/workflows/ci.yml/badge.svg)](https://github.com/baptistecristo/AI-agents-for-dumbphones/actions/workflows/ci.yml)
 
-**Live site:** [ai-agents-for-dumbphones.vercel.app](https://ai-agents-for-dumbphones.vercel.app). Create an account and set up your agent from the browser. One caveat: phone verification sends a code by SMS, no SMS provider is connected right now, so onboarding stops at that step.
+**Live site:** [ai-agents-for-dumbphones.vercel.app](https://ai-agents-for-dumbphones.vercel.app). Create an account and set up your agent from the browser. One caveat: phone verification sends a code by SMS, no SMS provider is connected right now, so onboarding stops at that step. A [guest demo](https://ai-agents-for-dumbphones.vercel.app/demo) shows the dashboard with fictitious data, no account needed.
 
 **Ditch the smartphone without losing the useful stuff.** Instead of an app, you
 **call a number and ask** — weather, directions, a reminder, your calendar, a quick

@@ -42,6 +42,9 @@ export default async function OverviewPage() {
 
   const lang = await siteLanguage();
   const tr = DASHBOARD[lang].overview;
+  // Les libellés de récurrence de la page mémoire, pour que « chaque jour » se
+  // lise pareil ici — la valeur en base (daily…) n'est pas un texte d'interface.
+  const recurrenceLabels = DASHBOARD[lang].memoire.recurrence;
 
   return (
     <>
@@ -127,7 +130,14 @@ export default async function OverviewPage() {
               <div key={i} className="flex items-baseline justify-between gap-4 p-4">
                 <p className="text-sm text-ink">
                   {r.text}
-                  {r.recurrence ? <span className="text-muted"> · {r.recurrence}</span> : ""}
+                  {r.recurrence ? (
+                    <span className="text-muted">
+                      {" · "}
+                      {recurrenceLabels[r.recurrence as keyof typeof recurrenceLabels] ?? r.recurrence}
+                    </span>
+                  ) : (
+                    ""
+                  )}
                 </p>
                 <span className="shrink-0 text-xs text-muted">{fr(r.due_at, lang)}</span>
               </div>
