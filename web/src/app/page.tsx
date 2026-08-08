@@ -68,6 +68,9 @@ export default async function Home({
             <Button href="/connexion" size="lg">
               {tr.hero.cta}
             </Button>
+            <Button href="/demo" variant="ghost" size="lg">
+              {tr.hero.demoCta}
+            </Button>
             <p className="text-sm leading-snug text-muted">
               {tr.hero.readyLine1}
               <br />

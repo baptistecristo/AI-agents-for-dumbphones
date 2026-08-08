@@ -12,6 +12,7 @@ export type LandingCopy = {
     titleHighlight: string;
     lead: string;
     cta: string;
+    demoCta: string;
     readyLine1: string;
     readyLine2: string;
   };
@@ -37,6 +38,7 @@ export const LANDING: Record<Language, LandingCopy> = {
       titleHighlight: "Garde le côté utile.",
       lead: "%BRAND% est un assistant au bout du fil, pour celles et ceux qui ont troqué le doomscroll contre un téléphone simple. Météo, itinéraires, rappels, un SMS dicté, une table réservée : tu appelles, tu demandes, tu raccroches. Et tu retournes à ta vie.",
       cta: "Créer mon compte →",
+      demoCta: "Voir la démo",
       readyLine1: "Prêt en 10 minutes.",
       readyLine2: "Un dumbphone et ce site suffisent.",
     },
@@ -100,6 +102,7 @@ export const LANDING: Record<Language, LandingCopy> = {
       titleHighlight: "Keep the useful part.",
       lead: "%BRAND% is an assistant at the end of the line, for people who traded the doomscroll for a simple phone. Weather, directions, reminders, a dictated text, a booked table: you call, you ask, you hang up. And you get back to your life.",
       cta: "Create my account →",
+      demoCta: "See the demo",
       readyLine1: "Ready in 10 minutes.",
       readyLine2: "A dumbphone and this site are all you need.",
     },
@@ -163,6 +166,7 @@ export const LANDING: Record<Language, LandingCopy> = {
       titleHighlight: "Quédate con lo útil.",
       lead: "%BRAND% es un asistente al otro lado de la línea, para quienes cambiaron el doomscroll por un teléfono básico. El tiempo, rutas, recordatorios, un SMS dictado, una mesa reservada: llamas, pides, cuelgas. Y vuelves a tu vida.",
       cta: "Crear mi cuenta →",
+      demoCta: "Ver la demo",
       readyLine1: "Listo en 10 minutos.",
       readyLine2: "Basta con un dumbphone y esta web.",
     },

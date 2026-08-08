@@ -10,23 +10,25 @@ import { usePathname } from "next/navigation";
 import { Language } from "@/lib/language";
 import { DASHBOARD, DashboardCopy } from "./copy";
 
-const LINKS: { href: string; key: keyof DashboardCopy["nav"]["labels"] }[] = [
-  { href: "/tableau-de-bord", key: "overview" },
-  { href: "/tableau-de-bord/agent", key: "agent" },
-  { href: "/tableau-de-bord/memoire", key: "memory" },
-  { href: "/tableau-de-bord/autorisations", key: "permissions" },
-  { href: "/tableau-de-bord/compte", key: "account" },
+const LINKS: { path: string; key: keyof DashboardCopy["nav"]["labels"] }[] = [
+  { path: "", key: "overview" },
+  { path: "/agent", key: "agent" },
+  { path: "/memoire", key: "memory" },
+  { path: "/autorisations", key: "permissions" },
+  { path: "/compte", key: "account" },
 ];
 
-export function PersonalAreaNav({ lang }: { lang: Language }) {
+// Le même rail sert l'espace personnel et la démo : seul le préfixe change.
+export function PersonalAreaNav({ lang, basePath = "/tableau-de-bord" }: { lang: Language; basePath?: string }) {
   const pathname = usePathname();
   const tr = DASHBOARD[lang].nav;
   return (
     <nav aria-label={tr.aria} className="flex gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
-      {LINKS.map(({ href, key }) => {
+      {LINKS.map(({ path, key }) => {
+        const href = `${basePath}${path}`;
         // « Aperçu » est la racine : actif seulement si l'URL correspond exactement,
         // sinon il resterait allumé sur toutes les sous-pages.
-        const active = href === "/tableau-de-bord" ? pathname === href : pathname.startsWith(href);
+        const active = path === "" ? pathname === href : pathname.startsWith(href);
         return (
           <Link
             key={href}
