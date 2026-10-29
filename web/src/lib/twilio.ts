@@ -10,6 +10,16 @@ function client() {
   return twilio(env("TWILIO_ACCOUNT_SID"), env("TWILIO_AUTH_TOKEN"));
 }
 
+// Pilote d'envoi. « twilio » (défaut) envoie vraiment ; « log » — dev et démo,
+// jamais la prod — n'envoie rien : sendSms écrit le message complet dans les
+// logs du serveur et répond comme si l'envoi avait réussi, pour que les skills
+// à livraison SMS (itinéraire, SMS dicté, rappels) aillent au bout sans compte
+// Twilio. Le chemin « verify » n'est PAS couvert : un code jetable simulé
+// n'authentifie personne, il n'y a rien d'honnête à simuler là.
+function smsDriver(): "twilio" | "log" {
+  return process.env.SMS_DRIVER === "log" ? "log" : "twilio";
+}
+
 // Y a-t-il un fournisseur SMS branché ? On lit process.env directement, PAS env()
 // qui lève : c'est justement ce prédicat qui sert à décider avant de lever.
 // Sans lui, une instance sans compte Twilio refuse tout en silence et la personne
@@ -17,6 +27,7 @@ function client() {
 // Deux chemins, qui peuvent être configurés séparément : « verify » (code
 // jetable) et « send » (SMS sortant).
 export function smsProviderConfigured(path: "verify" | "send" = "send"): boolean {
+  if (path === "send" && smsDriver() === "log") return true;
   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) return false;
   return path === "verify" ? Boolean(process.env.TWILIO_VERIFY_SERVICE_SID) : Boolean(process.env.TWILIO_FROM_NUMBER);
 }
@@ -45,10 +56,16 @@ export async function sendSms(opts: {
   userId?: string;
   kind?: string;
 }): Promise<void> {
+  const kind = opts.kind ?? "generic";
+  // Pilote « log » : le message est complet dans les logs, rien ne part, et pas
+  // de ligne sms_logs — cette table ne raconte que de vrais envois.
+  if (smsDriver() === "log") {
+    console.info(`[sms] SMS_DRIVER=log — rien n'est parti. « ${kind} » vers ${opts.to} : ${opts.body}`);
+    return;
+  }
   // Garde-fou de dernier recours : les appelants qui parlent à quelqu'un testent
   // smsProviderConfigured() en amont pour le lui dire. Ici on évite surtout le
   // « Variable d'environnement manquante » nu, illisible dans les logs.
-  const kind = opts.kind ?? "generic";
   if (!smsProviderConfigured("send")) {
     warnSmsProviderMissing(`SMS « ${kind} » vers ${opts.to}`);
     throw new SmsProviderNotConfiguredError(`envoi du SMS « ${kind} »`);

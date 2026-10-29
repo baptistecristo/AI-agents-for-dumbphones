@@ -78,6 +78,8 @@ const schema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
   TWILIO_VERIFY_SERVICE_SID: z.string().optional(),
+  // Pilote d'envoi SMS : « log » (dev/démo) journalise au lieu d'envoyer.
+  SMS_DRIVER: z.enum(["twilio", "log"]).optional(),
 
   // Google OAuth
   GOOGLE_CLIENT_ID: z.string().optional(),

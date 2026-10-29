@@ -1,7 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { smsProviderConfigured } from "./twilio";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { sendSms, smsProviderConfigured } from "./twilio";
 
-const KEYS = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_VERIFY_SERVICE_SID", "TWILIO_FROM_NUMBER"] as const;
+const KEYS = [
+  "TWILIO_ACCOUNT_SID",
+  "TWILIO_AUTH_TOKEN",
+  "TWILIO_VERIFY_SERVICE_SID",
+  "TWILIO_FROM_NUMBER",
+  "SMS_DRIVER",
+] as const;
 
 describe("smsProviderConfigured", () => {
   const saved = new Map<string, string | undefined>();
@@ -45,5 +51,42 @@ describe("smsProviderConfigured", () => {
 
     process.env.TWILIO_FROM_NUMBER = "+33612345678";
     expect(smsProviderConfigured("send")).toBe(true);
+  });
+});
+
+describe("SMS_DRIVER=log", () => {
+  const saved = new Map<string, string | undefined>();
+
+  beforeEach(() => {
+    for (const k of KEYS) {
+      saved.set(k, process.env[k]);
+      delete process.env[k];
+    }
+    process.env.SMS_DRIVER = "log";
+  });
+
+  afterEach(() => {
+    for (const k of KEYS) {
+      const v = saved.get(k);
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    vi.restoreAllMocks();
+  });
+
+  it("declares the send path ready without any Twilio credentials", () => {
+    expect(smsProviderConfigured("send")).toBe(true);
+  });
+
+  it("never fakes the verify path: a simulated one-time code authenticates nobody", () => {
+    expect(smsProviderConfigured("verify")).toBe(false);
+  });
+
+  it("logs the full message instead of sending, and resolves", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await expect(sendSms({ to: "+33612345678", body: "Rappel : rendez-vous à 15 h" })).resolves.toBeUndefined();
+    expect(info).toHaveBeenCalledOnce();
+    expect(info.mock.calls[0][0]).toContain("Rappel : rendez-vous à 15 h");
+    expect(info.mock.calls[0][0]).toContain("rien n'est parti");
   });
 });
